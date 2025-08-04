@@ -9,7 +9,9 @@ import {
   Tooltip,
   IconButton,
   CircularProgress,
-  Alert
+  Alert,
+  TextField,
+  InputAdornment
 } from '@mui/material';
 import {
   Assignment,
@@ -21,7 +23,9 @@ import {
   Business,
   Dashboard,
   Assessment,
-  Security
+  Security,
+  Search,
+  Clear
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
@@ -36,6 +40,8 @@ const ModuleSelection = () => {
   const [accessibleModules, setAccessibleModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredModules, setFilteredModules] = useState([]);
 
   // Smart icon mapping based on application name keywords
   const getIconForApplication = (applicationName) => {
@@ -220,6 +226,15 @@ const ModuleSelection = () => {
     navigate('/signin');
   };
 
+  // Add these missing functions
+  const handleSearchChange = (event) => {
+    setSearchQuery(event.target.value);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+  };
+
   const formatDateTime = (date) => {
     return date.toLocaleString('en-US', {
       weekday: 'long',
@@ -232,6 +247,19 @@ const ModuleSelection = () => {
       hour12: true
     });
   };
+
+  // Filter modules based on search query
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredModules(accessibleModules);
+    } else {
+      const filtered = accessibleModules.filter(module =>
+        module.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        module.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredModules(filtered);
+    }
+  }, [searchQuery, accessibleModules]);
 
   return (
     <Box sx={{ 
@@ -291,7 +319,8 @@ const ModuleSelection = () => {
               color: 'white',
               fontWeight: 500,
               textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-              fontSize: '0.9rem'
+              fontSize: '0.9rem',
+              whiteSpace: 'nowrap'
             }}
           >
             {formatDateTime(currentDateTime)}
@@ -299,203 +328,284 @@ const ModuleSelection = () => {
         </Paper>
       </Box>
 
-      <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
-        {/* Header */}
-        <Paper 
-          elevation={0}
-          sx={{ 
-            p: 4, 
-            mb: 8, 
-            textAlign: 'center',
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: 4,
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-            mt: 6
-          }}
-        >
-          <Typography variant="h3" gutterBottom sx={{ 
-            fontWeight: 'bold',
-            color: 'white',
-            textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-            mb: 2
-          }}>
-            Welcome, {user?.firstName} {user?.lastName}
-          </Typography>
-        </Paper>
-
-        {/* Glass Container for Applications */}
-        <Paper
-          elevation={0}
+      {/* Search Box - Top Center */}
+      <Box sx={{ 
+        position: 'absolute', 
+        top: 20, 
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 10 
+      }}>
+        <TextField
+          placeholder="Search applications..."
+          value={searchQuery}
+          onChange={handleSearchChange}
+          variant="outlined"
           sx={{
-            background: 'rgba(255, 255, 255, 0.08)',
-            backdropFilter: 'blur(25px)',
-            WebkitBackdropFilter: 'blur(25px)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            borderRadius: 6,
-            p: 6,
-            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)'
+            width: 350,
+            '& .MuiOutlinedInput-root': {
+              background: 'rgba(255, 255, 255, 0.15)',
+              backdropFilter: 'blur(15px)',
+              WebkitBackdropFilter: 'blur(15px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: 3,
+              color: 'white',
+              fontSize: '0.9rem',
+              height: '40px',
+              '& fieldset': {
+                border: 'none'
+              },
+              '&:hover': {
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.4)'
+              },
+              '&.Mui-focused': {
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.5)',
+                boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)'
+              }
+            },
+            '& .MuiInputBase-input': {
+              color: 'white',
+              '&::placeholder': {
+                color: 'rgba(255, 255, 255, 0.7)',
+                opacity: 1
+              }
+            },
+            '& .MuiInputAdornment-root': {
+              color: 'rgba(255, 255, 255, 0.8)'
+            }
           }}
-        >
-          {/* Error Alert */}
-          {error && (
-            <Alert 
-              severity="warning" 
-              sx={{ 
-                mb: 4,
-                background: 'rgba(255, 193, 7, 0.1)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 193, 7, 0.3)',
-                color: 'white',
-                '& .MuiAlert-icon': {
-                  color: '#ffc107'
-                }
-              }}
-            >
-              {error}
-            </Alert>
-          )}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '1.2rem' }} />
+              </InputAdornment>
+            ),
+            endAdornment: searchQuery && (
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={clearSearch}
+                  size="small"
+                  sx={{ 
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    '&:hover': {
+                      color: 'white',
+                      background: 'rgba(255, 255, 255, 0.1)'
+                    }
+                  }}
+                >
+                  <Clear fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            )
+          }}
+        />
+      </Box>
 
-          {/* Loading State */}
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-              <CircularProgress 
+      {/* Main Content - Centered */}
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        pt: 1, // Add top padding to account for search box
+        pb: 1
+      }}>
+        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+          {/* Glass Container for Applications */}
+          <Paper
+            elevation={0}
+            sx={{
+              background: 'rgba(255, 255, 255, 0.08)',
+              backdropFilter: 'blur(25px)',
+              WebkitBackdropFilter: 'blur(25px)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: 6,
+              p: 6,
+              boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)'
+            }}
+          >
+            {/* Error Alert */}
+            {error && (
+              <Alert 
+                severity="warning" 
                 sx={{ 
+                  mb: 4,
+                  background: 'rgba(255, 193, 7, 0.1)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 193, 7, 0.3)',
                   color: 'white',
-                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
-                }} 
-              />
-            </Box>
-          ) : (
-            <>
-              {/* No Access Message */}
-              {accessibleModules.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 8 }}>
-                  <Typography 
-                    variant="h5" 
-                    sx={{ 
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                      mb: 2
-                    }}
-                  >
-                    No Applications Available
-                  </Typography>
-                  <Typography 
-                    variant="body1" 
-                    sx={{ 
-                      color: 'rgba(255, 255, 255, 0.6)',
-                      textShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                    }}
-                  >
-                    Please contact your administrator to request access to applications.
-                  </Typography>
-                </Box>
-              ) : (
-                /* Module Grid */
-                <Grid container spacing={6} justifyContent="center">
-                  {accessibleModules.map((module) => (
-                    <Grid item key={module.id}>
-                      <Tooltip 
-                        title={`${module.title}`} 
-                        placement="bottom"
-                        arrow
-                        sx={{
-                          '& .MuiTooltip-tooltip': {
-                            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                            backdropFilter: 'blur(10px)',
-                            fontSize: '0.9rem',
-                            borderRadius: 2,
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            maxWidth: 300
-                          },
-                          '& .MuiTooltip-arrow': {
-                            color: 'rgba(0, 0, 0, 0.85)'
-                          }
-                        }}
-                      >
-                        <ButtonBase
-                          onClick={() => handleModuleClick(module)}
-                          onMouseEnter={() => setHoveredModule(module.id)}
-                          onMouseLeave={() => setHoveredModule(null)}
+                  '& .MuiAlert-icon': {
+                    color: '#ffc107'
+                  }
+                }}
+              >
+                {error}
+              </Alert>
+            )}
+
+            {/* Loading State */}
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                <CircularProgress 
+                  sx={{ 
+                    color: 'white',
+                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                  }} 
+                />
+              </Box>
+            ) : (
+              <>
+                {/* No Results Message */}
+                {filteredModules.length === 0 && searchQuery ? (
+                  <Box sx={{ textAlign: 'center', py: 8 }}>
+                    <Typography 
+                      variant="h5" 
+                      sx={{ 
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                        mb: 2
+                      }}
+                    >
+                      No applications found
+                    </Typography>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                      }}
+                    >
+                      Try searching with different keywords
+                    </Typography>
+                  </Box>
+                ) : filteredModules.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 8 }}>
+                    <Typography 
+                      variant="h5" 
+                      sx={{ 
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                        mb: 2
+                      }}
+                    >
+                      No Applications Available
+                    </Typography>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                      }}
+                    >
+                      Please contact your administrator to request access to applications.
+                    </Typography>
+                  </Box>
+                ) : (
+                  /* Module Grid */
+                  <Grid container spacing={6} justifyContent="center">
+                    {filteredModules.map((module) => (
+                      <Grid item key={module.id}>
+                        <Tooltip 
+                          title={`${module.title}`} 
+                          placement="bottom"
+                          arrow
                           sx={{
-                            borderRadius: 4,
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            '&:hover': {
-                              transform: 'translateY(-4px) scale(1.05)'
+                            '& .MuiTooltip-tooltip': {
+                              backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                              backdropFilter: 'blur(10px)',
+                              fontSize: '0.9rem',
+                              borderRadius: 2,
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              maxWidth: 300
+                            },
+                            '& .MuiTooltip-arrow': {
+                              color: 'rgba(0, 0, 0, 0.85)'
                             }
                           }}
                         >
-                          {/* Colored Icon Container */}
-                          <Box
+                          <ButtonBase
+                            onClick={() => handleModuleClick(module)}
+                            onMouseEnter={() => setHoveredModule(module.id)}
+                            onMouseLeave={() => setHoveredModule(null)}
                             sx={{
-                              width: 100,
-                              height: 100,
                               borderRadius: 4,
-                              background: hoveredModule === module.id 
-                                ? `linear-gradient(135deg, ${module.backgroundColor}, ${module.backgroundColor}dd)`
-                                : `linear-gradient(135deg, ${module.backgroundColor}cc, ${module.backgroundColor}99)`,
-                              backdropFilter: 'blur(20px)',
-                              WebkitBackdropFilter: 'blur(20px)',
-                              border: hoveredModule === module.id 
-                                ? '2px solid rgba(255, 255, 255, 0.4)'
-                                : '1px solid rgba(255, 255, 255, 0.2)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              boxShadow: hoveredModule === module.id 
-                                ? `0 16px 32px ${module.backgroundColor}40, inset 0 1px 0 rgba(255,255,255,0.3)`
-                                : `0 8px 20px ${module.backgroundColor}30, inset 0 1px 0 rgba(255,255,255,0.2)`,
                               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                              position: 'relative',
-                              overflow: 'hidden',
-                              '&::before': {
-                                content: '""',
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                borderRadius: 4,
-                                background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 100%)',
-                                opacity: hoveredModule === module.id ? 1 : 0.7,
-                                transition: 'opacity 0.3s ease'
+                              '&:hover': {
+                                transform: 'translateY(-4px) scale(1.05)'
                               }
                             }}
                           >
-                            {React.cloneElement(module.icon, {
-                              sx: {
-                                ...module.icon.props.sx,
-                                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-                                transition: 'all 0.3s ease',
-                                transform: hoveredModule === module.id ? 'scale(1.1)' : 'scale(1)',
-                                zIndex: 1,
-                                position: 'relative'
-                              }
-                            })}
-                          </Box>
-                        </ButtonBase>
-                      </Tooltip>
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-            </>
-          )}
-        </Paper>
+                            {/* Colored Icon Container */}
+                            <Box
+                              sx={{
+                                width: 100,
+                                height: 100,
+                                borderRadius: 4,
+                                background: hoveredModule === module.id 
+                                  ? `linear-gradient(135deg, ${module.backgroundColor}, ${module.backgroundColor}dd)`
+                                  : `linear-gradient(135deg, ${module.backgroundColor}cc, ${module.backgroundColor}99)`,
+                                backdropFilter: 'blur(20px)',
+                                WebkitBackdropFilter: 'blur(20px)',
+                                border: hoveredModule === module.id 
+                                  ? '2px solid rgba(255, 255, 255, 0.4)'
+                                  : '1px solid rgba(255, 255, 255, 0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: hoveredModule === module.id 
+                                  ? `0 16px 32px ${module.backgroundColor}40, inset 0 1px 0 rgba(255,255,255,0.3)`
+                                  : `0 8px 20px ${module.backgroundColor}30, inset 0 1px 0 rgba(255,255,255,0.2)`,
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                '&::before': {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  borderRadius: 4,
+                                  background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 100%)',
+                                  opacity: hoveredModule === module.id ? 1 : 0.7,
+                                  transition: 'opacity 0.3s ease'
+                                }
+                              }}
+                            >
+                              {React.cloneElement(module.icon, {
+                                sx: {
+                                  ...module.icon.props.sx,
+                                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+                                  transition: 'all 0.3s ease',
+                                  transform: hoveredModule === module.id ? 'scale(1.1)' : 'scale(1)',
+                                  zIndex: 1,
+                                  position: 'relative'
+                                }
+                              })}
+                            </Box>
+                          </ButtonBase>
+                        </Tooltip>
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
+              </>
+            )}
+          </Paper>
 
-        {/* Footer */}
-        <Box sx={{ mt: 8, textAlign: 'center' }}>
-          <Typography variant="body2" sx={{ 
-            color: 'rgba(255, 255, 255, 0.7)',
-            textShadow: '0 1px 2px rgba(0,0,0,0.3)'
-          }}>
-            © 2024 Willowglen Systems. All rights reserved.
-          </Typography>
-        </Box>
-      </Container>
+          {/* Footer */}
+          <Box sx={{ mt: 8, textAlign: 'center' }}>
+            <Typography variant="body2" sx={{ 
+              color: 'rgba(255, 255, 255, 0.7)',
+              textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+            }}>
+              © 2024 Willowglen Systems. All rights reserved.
+            </Typography>
+          </Box>
+        </Container>
+      </Box>
     </Box>
   );
 };

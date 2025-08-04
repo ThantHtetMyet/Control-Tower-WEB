@@ -15,6 +15,35 @@ import CustomModal from '../common/CustomModal';
 const API_BASE_URL = 'https://localhost:7145/api';
 
 const ServiceReportForm = () => {
+  const initialFormData = {
+    customer: '',
+    contactNo: '',
+    projectNo: { id: '', displayValue: '' },
+    system: { id: '', displayValue: '' },
+    location: { id: '', displayValue: '' },
+    followUpAction: { id: '', displayValue: '' },
+    serviceTypes: { id: '', displayValue: '' }, // Changed to match initialFormData
+    formStatusID: '',
+    failureDetectedTime: null,
+    responseTime: null,
+    arrivalTime: null,
+    completionTime: null,
+    issueReported: '', // Changed to string
+    issueFound: '', // Changed to string
+    actionTaken: '', // Changed to string
+    furtherAction: { id: '', displayValue: '' },
+    formStatus: { id: '', displayValue: '' },
+    jobNumber: '',
+    // Remark fields
+    serviceTypeRemark: '',
+    issueReportedRemark: '',
+    issueFoundRemark: '',
+    actionTakenRemark: '',
+    furtherActionRemark: '',
+    formStatusRemark: ''
+};
+
+
   const navigate = useNavigate();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const { user } = useAuth();
@@ -25,15 +54,15 @@ const ServiceReportForm = () => {
     system: { id: '', displayValue: '' },
     location: { id: '', displayValue: '' },
     followUpAction: { id: '', displayValue: '' },  
-    serviceTypes: [{ id: '', displayValue: '' }], // Changed to array
+    serviceTypes: { id: '', displayValue: '' }, // Changed from array to object to match initialFormData
     formStatusID: '',
     failureDetectedTime: null,
     responseTime: null,
     arrivalTime: null,
     completionTime: null,
-    issueReported: { id: '', displayValue: '' },
-    issueFound: { id: '', displayValue: '' },
-    actionTaken: { id: '', displayValue: '' },
+    issueReportedDescription: '',
+    issueFoundDescription: '',
+    actionTakenDescription: '',
     furtherAction: { id: '', displayValue: '' },
     formStatus: { id: '', displayValue: '' },
     jobNumber: '',
@@ -68,34 +97,23 @@ const ServiceReportForm = () => {
     systems: [],
     locations: [],
     followupActions: [],
-    issueReports: [],
-    issueFindings: [],
-    actionsTaken: [],
-    furtherActions: [],
     formStatuses: [],
     serviceTypes: [],
-    issueFound: [],
-    issueReport: [],
-    actionTaken: [],
-    furtherActionTaken: [],
-    formStatus: []
+    furtherActions: [] // Added this back
   });
 
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
         const [projectNosRes, systemsRes, locationsRes, followupActionsRes, serviceTypesRes,
-              issueReportRes, issueFoundRes, actionTakenRes, furtherActionRes, formStatusRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/ProjectNoWarehouse`),
-          fetch(`${API_BASE_URL}/SystemWarehouse`),
-          fetch(`${API_BASE_URL}/LocationWarehouse`),
-          fetch(`${API_BASE_URL}/FollowupActionWarehouse`),
-          fetch(`${API_BASE_URL}/ServiceTypeWarehouse`),
-          fetch(`${API_BASE_URL}/IssueReportWarehouse`),
-          fetch(`${API_BASE_URL}/IssueFoundWarehouse`),
-          fetch(`${API_BASE_URL}/ActionTakenWarehouse`),
-          fetch(`${API_BASE_URL}/FurtherActionTakenWarehouse`),
-          fetch(`${API_BASE_URL}/FormStatusWarehouse`)
+              furtherActionRes, formStatusRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/ProjectNoWarehouse`),
+            fetch(`${API_BASE_URL}/SystemWarehouse`),
+            fetch(`${API_BASE_URL}/LocationWarehouse`),
+            fetch(`${API_BASE_URL}/FollowupActionWarehouse`),
+            fetch(`${API_BASE_URL}/ServiceTypeWarehouse`),
+            fetch(`${API_BASE_URL}/FurtherActionTakenWarehouse`),
+            fetch(`${API_BASE_URL}/FormStatusWarehouse`)
         ]);
         
         const responses = await Promise.all([
@@ -104,16 +122,13 @@ const ServiceReportForm = () => {
           locationsRes.json(),
           followupActionsRes.json(),
           serviceTypesRes.json(),
-          issueReportRes.json(),
-          issueFoundRes.json(),
-          actionTakenRes.json(),
           furtherActionRes.json(),
           formStatusRes.json()
         ]);
 
         const [projectNos, systems, locations, followupActions, serviceTypes,
-              issueReports, issueFindings, actionsTaken, furtherActions, formStatuses] = responses.map(response => 
-          Array.isArray(response) ? response : []
+              furtherActions, formStatuses] = responses.map(response => 
+            Array.isArray(response) ? response : []
         );
 
         setDropdownData({
@@ -122,9 +137,6 @@ const ServiceReportForm = () => {
           locations,
           followupActions,
           serviceTypes,
-          issueReports,
-          issueFindings,
-          actionsTaken,
           furtherActions,
           formStatuses
         });
@@ -156,58 +168,58 @@ const ServiceReportForm = () => {
       const selectedId = event.target.value;
       let displayValue = '';
       
-      // Find the display value based on the field type
-      switch(field) {
-        case 'projectNo':
-          displayValue = dropdownData.projectNos.find(item => item.id === selectedId)?.projectNumber || '';
-          break;
-        case 'system':
-          displayValue = dropdownData.systems.find(item => item.id === selectedId)?.name || '';
-          break;
-        case 'location':
-          displayValue = dropdownData.locations.find(item => item.id === selectedId)?.name || '';
-          break;
-        case 'followUpAction':
-          displayValue = dropdownData.followupActions.find(item => item.id === selectedId)?.followupActionNo || '';
-          break;
-        case 'serviceTypes':
-          displayValue = dropdownData.serviceTypes.find(item => item.id === selectedId)?.name || '';
-          break;
-        case 'issueReported':
-          displayValue = dropdownData.issueReports.find(item => item.id === selectedId)?.name || '';
-          break;
-        case 'issueFound':
-          displayValue = dropdownData.issueFindings.find(item => item.id === selectedId)?.name || '';
-          break;
-        case 'actionTaken':
-          displayValue = dropdownData.actionsTaken.find(item => item.id === selectedId)?.name || '';
-          break;
-        case 'furtherAction':
-          displayValue = dropdownData.furtherActions.find(item => item.id === selectedId)?.name || '';
-          break;
-        case 'formStatus':
-          displayValue = dropdownData.formStatuses.find(item => item.id === selectedId)?.name || '';
-          break;
-        case 'serviceTypeRemark':
-        case 'issueReportedRemark':
-        case 'issueFoundRemark':
-        case 'actionTakenRemark':
-        case 'furtherActionRemark':
-        case 'customer':
-        case 'formStatusRemark':
+      // For text fields that were previously dropdowns, handle them directly
+      if (field === 'issueReportedDescription' || field === 'issueFoundDescription' || field === 'actionTakenDescription') {
           setFormData({
-            ...formData,
-            [field]: event.target.value
+              ...formData,
+              [field]: event.target.value
           });
-          return;
-        default:
-          setFormData({ ...formData, [field]: event.target.value });
           return;
       }
       
+      // Find the display value based on the field type
+      switch(field) {
+          case 'projectNo':
+              displayValue = dropdownData.projectNos.find(item => item.id === selectedId)?.projectNumber || '';
+              break;
+          case 'system':
+              displayValue = dropdownData.systems.find(item => item.id === selectedId)?.name || '';
+              break;
+          case 'location':
+              displayValue = dropdownData.locations.find(item => item.id === selectedId)?.name || '';
+              break;
+          case 'followUpAction':
+              displayValue = dropdownData.followupActions.find(item => item.id === selectedId)?.followupActionNo || '';
+              break;
+          case 'serviceTypes':
+              displayValue = dropdownData.serviceTypes.find(item => item.id === selectedId)?.name || '';
+              break;
+          case 'furtherAction':
+              displayValue = dropdownData.furtherActions.find(item => item.id === selectedId)?.name || '';
+              break;
+          case 'formStatus':
+              displayValue = dropdownData.formStatuses.find(item => item.id === selectedId)?.name || '';
+              break;
+          case 'serviceTypeRemark':
+          case 'issueReportedRemark':
+          case 'issueFoundRemark':
+          case 'actionTakenRemark':
+          case 'furtherActionRemark':
+          case 'customer':
+          case 'formStatusRemark':
+              setFormData({
+                  ...formData,
+                  [field]: event.target.value
+              });
+              return;
+          default:
+              setFormData({ ...formData, [field]: event.target.value });
+              return;
+      }
+      
       setFormData({
-        ...formData,
-        [field]: { id: selectedId, displayValue }
+          ...formData,
+          [field]: { id: selectedId, displayValue }
       });
   };
 
@@ -218,14 +230,15 @@ const ServiceReportForm = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
+        // Inside handleSubmit function, update the requestData construction
         const requestData = {
             customer: formData.customer,
             contactNo: formData.contactNo,
-            jobNumber: formData.jobNumber, 
-            projectNoID: formData.projectNo.id, // Remove parseInt
-            systemID: formData.system.id, // Remove parseInt
-            locationID: formData.location.id, // Remove parseInt
-            followupActionID: formData.followUpAction.id, // Remove parseInt
+            jobNumber: formData.jobNumber,
+            projectNoID: formData.projectNo.id,  // Changed from projectNo to projectNoID
+            systemID: formData.system.id,        // Changed from system to systemID
+            locationID: formData.location.id,    // Changed from location to locationID
+            followupActionID: formData.followUpAction.id, // Changed from followUpAction to followupActionID
             failureDetectedDate: formData.failureDetectedTime?.toISOString(),
             responseDate: formData.responseTime?.toISOString(),
             arrivalDate: formData.arrivalTime?.toISOString(),
@@ -239,19 +252,19 @@ const ServiceReportForm = () => {
                 remark: formData.formStatusRemark
             }],
             issueReported: [{
-                id: formData.issueReported.id || null, // Remove parseInt, handle null case
+                description: formData.issueReportedDescription, // Use the new description field
                 remark: formData.issueReportedRemark
             }],
             issueFound: [{
-                id: formData.issueFound.id || null, // Remove parseInt, handle null case
+                description: formData.issueFoundDescription, // Use the new description field
                 remark: formData.issueFoundRemark
             }],
             actionTaken: [{
-                id: formData.actionTaken.id || null, // Remove parseInt, handle null case
+                description: formData.actionTakenDescription, // Use the new description field
                 remark: formData.actionTakenRemark
             }],
             furtherAction: [{
-                id: formData.furtherAction.id || null, // Remove parseInt, handle null case
+                id: formData.furtherAction.id || null,
                 remark: formData.furtherActionRemark
             }],
             createdBy: user.id // This should already be a GUID string
@@ -279,7 +292,7 @@ const ServiceReportForm = () => {
   };
   const handleModalClose = () => {
       setShowSuccessModal(false);
-      navigate('/service-reports'); // Navigate to the list page
+      navigate('/service-report-system'); // Navigate to the list page
   };
 
   const labelWidth = 140;
@@ -333,7 +346,27 @@ const ServiceReportForm = () => {
       borderColor: '#2563eb'
     }
   };
-
+  // Update the descriptionFieldStyles constant
+  const descriptionFieldStyles = {
+    width: '400px',
+    backgroundColor: 'white',
+    '& .MuiOutlinedInput-root': {
+      backgroundColor: 'white',
+      '& fieldset': {
+        borderColor: '#bdbdbd',
+        borderWidth: '1px',
+      },
+      '&:hover fieldset': {
+        borderColor: '#757575',
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: '#1976d2',
+      }
+    },
+    '& .MuiInputBase-input': {
+      padding: '10px 12px',
+    }
+  };
   // Update table row spacing
   const tableRowStyles = {
     height: '60px' // Consistent height for all rows
@@ -670,32 +703,15 @@ const ServiceReportForm = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Typography sx={{ width: labelWidth }}>Issue Reported:</Typography>
                       <TextField
-                        select
-                        value={formData.issueReported.id}
-                        onChange={handleChange('issueReported')}
-                        SelectProps={getSelectProps('issueReported')}
+                        value={formData.issueReportedDescription}
+                        onChange={handleChange('issueReportedDescription')}
                         size="small"
-                        sx={{
-                          width: '400px',
-                          '& .MuiSelect-select': {
-                            whiteSpace: 'normal',
-                            wordWrap: 'break-word',
-                            minHeight: '30px'
-                          },
-                          '& .MuiMenuItem-root': {
-                            whiteSpace: 'normal',
-                            wordWrap: 'break-word',
-                            minHeight: '48px',
-                            padding: '8px 16px'
-                          }
-                        }}
-                      >
-                        {dropdownData.issueReports.map((issue) => (
-                          <MenuItem key={issue.id} value={issue.id}>
-                            {issue.name}
-                          </MenuItem>
-                        ))}
-                      </TextField>
+                        multiline
+                        rows={2}
+                        placeholder="Enter issue reported"
+                        sx={descriptionFieldStyles}
+                      />
+
                       <TextField
                         value={formData.issueReportedRemark}
                         onChange={handleChange('issueReportedRemark')}
@@ -710,32 +726,14 @@ const ServiceReportForm = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <Typography sx={{ width: labelWidth }}>Issue Found:</Typography>
                         <TextField
-                          select
-                          value={formData.issueFound.id}
-                          onChange={handleChange('issueFound')}
+                          value={formData.issueFoundDescription}
+                          onChange={handleChange('issueFoundDescription')}
                           size="small"
-                          sx={{
-                            width: '400px',
-                            '& .MuiSelect-select': {
-                              whiteSpace: 'normal',
-                              wordWrap: 'break-word',
-                              minHeight: '30px'
-                            },
-                            '& .MuiMenuItem-root': {
-                              whiteSpace: 'normal',
-                              wordWrap: 'break-word',
-                              minHeight: '48px',
-                              padding: '8px 16px'
-                            }
-                          }}
-                          SelectProps={getSelectProps('issueFound')}
-                        >
-                        {dropdownData.issueFindings.map((issue) => (
-                          <MenuItem key={issue.id} value={issue.id}>
-                            {issue.name}
-                          </MenuItem>
-                        ))}
-                        </TextField>
+                          multiline
+                          rows={2}
+                          placeholder="Enter issue found"
+                          sx={descriptionFieldStyles}
+                        />
                         <TextField
                           value={formData.issueFoundRemark}
                           onChange={handleChange('issueFoundRemark')}
@@ -758,32 +756,14 @@ const ServiceReportForm = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Typography sx={{ width: labelWidth }}>Action Taken:</Typography>
                   <TextField
-                    select
-                    value={formData.actionTaken.id}
-                    onChange={handleChange('actionTaken')}
+                    value={formData.actionTakenDescription}
+                    onChange={handleChange('actionTakenDescription')}
                     size="small"
-                          sx={{
-                            width: '400px',
-                            '& .MuiSelect-select': {
-                              whiteSpace: 'normal',
-                              wordWrap: 'break-word',
-                              minHeight: '30px'
-                            },
-                            '& .MuiMenuItem-root': {
-                              whiteSpace: 'normal',
-                              wordWrap: 'break-word',
-                              minHeight: '48px',
-                              padding: '8px 16px'
-                            }
-                          }}
-                          SelectProps={getSelectProps('actionTaken')}
-                      >
-                      {dropdownData.actionsTaken.map((actiondata) => (
-                          <MenuItem key={actiondata.id} value={actiondata.id}>
-                            {actiondata.name}
-                          </MenuItem>
-                      ))}
-                  </TextField>
+                    multiline
+                    rows={2}
+                    placeholder="Enter action taken"
+                    sx={descriptionFieldStyles}
+                  />
                   <TextField
                     value={formData.actionTakenRemark}
                     onChange={handleChange('actionTakenRemark')}
@@ -958,4 +938,3 @@ const ServiceReportForm = () => {
 };
 
 export default ServiceReportForm;
-

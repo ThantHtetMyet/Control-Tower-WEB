@@ -2,7 +2,8 @@ import axios from 'axios';
 
 // Default API instance (fallback)
 const defaultApi = axios.create({
-  baseURL: 'https://localhost:7145/api'
+  baseURL: 'https://localhost:7145/api',
+  withCredentials: true, // ✅ Ensure this is present
 });
 
 // Function to create API instance with dynamic endpoint

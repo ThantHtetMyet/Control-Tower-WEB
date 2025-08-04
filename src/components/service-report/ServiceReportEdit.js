@@ -40,6 +40,10 @@ const ServiceReportEdit = () => {
     furtherAction: { id: '', displayValue: '' },
     formStatus: { id: '', displayValue: '' },
     jobNumber: '',
+    // Description fields for direct text input
+    issueReportedDescription: '',
+    issueFoundDescription: '',
+    actionTakenDescription: '',
     // Remark fields
     serviceTypeRemark: '',
     issueReportedRemark: '',
@@ -79,7 +83,8 @@ const ServiceReportEdit = () => {
     
     // Handle simple text fields
     if (['customer', 'contactNo', 'serviceTypeRemark', 'issueReportedRemark', 
-         'issueFoundRemark', 'actionTakenRemark', 'furtherActionRemark', 'formStatusRemark'].includes(field)) {
+         'issueFoundRemark', 'actionTakenRemark', 'furtherActionRemark', 'formStatusRemark',
+         'issueReportedDescription', 'issueFoundDescription', 'actionTakenDescription'].includes(field)) {
       setFormData({ ...formData, [field]: value });
       return;
     }
@@ -148,15 +153,12 @@ const ServiceReportEdit = () => {
     const fetchDropdownData = async () => {
       try {
         const [projectNosRes, systemsRes, locationsRes, followupActionsRes, serviceTypesRes,
-              issueReportRes, issueFoundRes, actionTakenRes, furtherActionRes, formStatusRes] = await Promise.all([
+              furtherActionRes, formStatusRes] = await Promise.all([
           fetch(`${API_BASE_URL}/ProjectNoWarehouse`),
           fetch(`${API_BASE_URL}/SystemWarehouse`),
           fetch(`${API_BASE_URL}/LocationWarehouse`),
           fetch(`${API_BASE_URL}/FollowupActionWarehouse`),
           fetch(`${API_BASE_URL}/ServiceTypeWarehouse`),
-          fetch(`${API_BASE_URL}/IssueReportWarehouse`),
-          fetch(`${API_BASE_URL}/IssueFoundWarehouse`),
-          fetch(`${API_BASE_URL}/ActionTakenWarehouse`),
           fetch(`${API_BASE_URL}/FurtherActionTakenWarehouse`),
           fetch(`${API_BASE_URL}/FormStatusWarehouse`)
         ]);
@@ -167,15 +169,12 @@ const ServiceReportEdit = () => {
           locationsRes.json(),
           followupActionsRes.json(),
           serviceTypesRes.json(),
-          issueReportRes.json(),
-          issueFoundRes.json(),
-          actionTakenRes.json(),
           furtherActionRes.json(),
           formStatusRes.json()
         ]);
 
         const [projectNos, systems, locations, followupActions, serviceTypes,
-              issueReports, issueFindings, actionsTaken, furtherActions, formStatuses] = responses.map(response => 
+              furtherActions, formStatuses] = responses.map(response => 
           Array.isArray(response) ? response : []
         );
 
@@ -185,9 +184,6 @@ const ServiceReportEdit = () => {
           locations,
           followupActions,
           serviceTypes,
-          issueReports,
-          issueFindings,
-          actionsTaken,
           furtherActions,
           formStatuses
         });
@@ -242,6 +238,9 @@ const ServiceReportEdit = () => {
                 id: reportData.actionTaken?.[0]?.id || '',
                 displayValue: reportData.actionTaken?.[0]?.description || ''
               },
+              issueReportedDescription: reportData.issueReported?.[0]?.description || '',
+              issueFoundDescription: reportData.issueFound?.[0]?.description || '',
+              actionTakenDescription: reportData.actionTaken?.[0]?.description || '',
               furtherAction: {
                 id: reportData.furtherActionTaken?.[0]?.id || '',
                 displayValue: reportData.furtherActionTaken?.[0]?.description || ''
@@ -260,11 +259,11 @@ const ServiceReportEdit = () => {
             });
           } else {
             console.error('Failed to fetch report data');
-            navigate('/service-reports');
+            navigate('/service-report-system');
           }
         } catch (error) {
           console.error('Error fetching report data:', error);
-          navigate('/service-reports');
+          navigate('/service-report-system');
         } finally {
           setIsLoading(false);
         }
@@ -300,15 +299,18 @@ const ServiceReportEdit = () => {
         }],
         issueReported: [{
           id: formData.issueReported.id || null,
-          remark: formData.issueReportedRemark
+          remark: formData.issueReportedRemark,
+          description: formData.issueReportedDescription
         }],
         issueFound: [{
           id: formData.issueFound.id || null,
-          remark: formData.issueFoundRemark
+          remark: formData.issueFoundRemark,
+          description: formData.issueFoundDescription
         }],
         actionTaken: [{
           id: formData.actionTaken.id || null,
-          remark: formData.actionTakenRemark
+          remark: formData.actionTakenRemark,
+          description: formData.actionTakenDescription
         }],
         furtherAction: [{
           id: formData.furtherAction.id || null,
@@ -338,7 +340,7 @@ const ServiceReportEdit = () => {
 
   const handleModalClose = () => {
     setShowSuccessModal(false);
-    navigate('/service-reports');
+    navigate('/service-report-system');
   };
 
   // Style constants
@@ -361,6 +363,24 @@ const ServiceReportEdit = () => {
       display: 'block',
       height: '32px !important',
       padding: '4px 8px',
+      ...commonStyles
+    },
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderColor: '#94a3b8'
+    },
+    '&:hover .MuiOutlinedInput-notchedOutline': {
+      borderColor: '#3b82f6'
+    },
+    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+      borderColor: '#2563eb'
+    }
+  };
+
+  const descriptionFieldStyles = {
+    width: '400px',
+    backgroundColor: '#fff',
+    '& .MuiOutlinedInput-input': {
+      padding: '8px',
       ...commonStyles
     },
     '& .MuiOutlinedInput-notchedOutline': {
@@ -734,32 +754,14 @@ const ServiceReportEdit = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Typography sx={{ width: labelWidth }}>Issue Reported:</Typography>
                       <TextField
-                        select
-                        value={formData.issueReported.id}
-                        onChange={handleChange('issueReported')}
-                        SelectProps={getSelectProps('issueReported')}
+                        value={formData.issueReportedDescription}
+                        onChange={handleChange('issueReportedDescription')}
                         size="small"
-                        sx={{
-                          width: '400px',
-                          '& .MuiSelect-select': {
-                            whiteSpace: 'normal',
-                            wordWrap: 'break-word',
-                            minHeight: '30px'
-                          },
-                          '& .MuiMenuItem-root': {
-                            whiteSpace: 'normal',
-                            wordWrap: 'break-word',
-                            minHeight: '48px',
-                            padding: '8px 16px'
-                          }
-                        }}
-                      >
-                        {dropdownData.issueReports.map((issue) => (
-                          <MenuItem key={issue.id} value={issue.id}>
-                            {issue.name}
-                          </MenuItem>
-                        ))}
-                      </TextField>
+                        multiline
+                        rows={2}
+                        placeholder="Enter issue reported"
+                        sx={descriptionFieldStyles}
+                      />
                       <TextField
                         value={formData.issueReportedRemark}
                         onChange={handleChange('issueReportedRemark')}
@@ -774,32 +776,14 @@ const ServiceReportEdit = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <Typography sx={{ width: labelWidth }}>Issue Found:</Typography>
                         <TextField
-                          select
-                          value={formData.issueFound.id}
-                          onChange={handleChange('issueFound')}
+                          value={formData.issueFoundDescription}
+                          onChange={handleChange('issueFoundDescription')}
                           size="small"
-                          sx={{
-                            width: '400px',
-                            '& .MuiSelect-select': {
-                              whiteSpace: 'normal',
-                              wordWrap: 'break-word',
-                              minHeight: '30px'
-                            },
-                            '& .MuiMenuItem-root': {
-                              whiteSpace: 'normal',
-                              wordWrap: 'break-word',
-                              minHeight: '48px',
-                              padding: '8px 16px'
-                            }
-                          }}
-                          SelectProps={getSelectProps('issueFound')}
-                        >
-                        {dropdownData.issueFindings.map((issue) => (
-                          <MenuItem key={issue.id} value={issue.id}>
-                            {issue.name}
-                          </MenuItem>
-                        ))}
-                        </TextField>
+                          multiline
+                          rows={2}
+                          placeholder="Enter issue found"
+                          sx={descriptionFieldStyles}
+                        />
                         <TextField
                           value={formData.issueFoundRemark}
                           onChange={handleChange('issueFoundRemark')}
@@ -822,32 +806,14 @@ const ServiceReportEdit = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Typography sx={{ width: labelWidth }}>Action Taken:</Typography>
                   <TextField
-                    select
-                    value={formData.actionTaken.id}
-                    onChange={handleChange('actionTaken')}
+                    value={formData.actionTakenDescription}
+                    onChange={handleChange('actionTakenDescription')}
                     size="small"
-                          sx={{
-                            width: '400px',
-                            '& .MuiSelect-select': {
-                              whiteSpace: 'normal',
-                              wordWrap: 'break-word',
-                              minHeight: '30px'
-                            },
-                            '& .MuiMenuItem-root': {
-                              whiteSpace: 'normal',
-                              wordWrap: 'break-word',
-                              minHeight: '48px',
-                              padding: '8px 16px'
-                            }
-                          }}
-                          SelectProps={getSelectProps('actionTaken')}
-                      >
-                      {dropdownData.actionsTaken.map((actiondata) => (
-                          <MenuItem key={actiondata.id} value={actiondata.id}>
-                            {actiondata.name}
-                          </MenuItem>
-                      ))}
-                  </TextField>
+                    multiline
+                    rows={2}
+                    placeholder="Enter action taken"
+                    sx={descriptionFieldStyles}
+                  />
                   <TextField
                     value={formData.actionTakenRemark}
                     onChange={handleChange('actionTakenRemark')}
@@ -999,7 +965,7 @@ const ServiceReportEdit = () => {
             </Button>
             <Button 
               variant="contained" 
-              onClick={() => navigate('/service-reports')}
+              onClick={() => navigate('/service-report-system')}
               sx={{ 
                 minWidth: '120px',
                 height: '40px',
