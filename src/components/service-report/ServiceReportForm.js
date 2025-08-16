@@ -6,8 +6,16 @@ import {
   Button,
   MenuItem,
   Typography,
-  Paper
+  Paper,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material';
+import { FiTrash2 as DeleteIcon, FiPlus as AddIcon } from 'react-icons/fi';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
 import { useNavigate } from 'react-router-dom';
@@ -47,6 +55,28 @@ const ServiceReportForm = () => {
   const navigate = useNavigate();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const { user } = useAuth();
+  // Add state for materials used
+  const [materialsUsed, setMaterialsUsed] = useState([]);
+
+  // Handle adding a new material
+  const handleAddMaterial = () => {
+    setMaterialsUsed([...materialsUsed, { quantity: 0, description: '', serialNo: '' }]);
+  };
+
+  // Handle removing a material
+  const handleRemoveMaterial = (index) => {
+    const updatedMaterials = [...materialsUsed];
+    updatedMaterials.splice(index, 1);
+    setMaterialsUsed(updatedMaterials);
+  };
+
+  // Handle material field changes
+  const handleMaterialChange = (index, field, value) => {
+    const updatedMaterials = [...materialsUsed];
+    updatedMaterials[index][field] = value;
+    setMaterialsUsed(updatedMaterials);
+  };
+
   const [formData, setFormData] = useState({
     customer: '',
     contactNo: '',
@@ -267,6 +297,12 @@ const ServiceReportForm = () => {
                 id: formData.furtherAction.id || null,
                 remark: formData.furtherActionRemark
             }],
+            // Add materials used to the request
+            materialsUsed: materialsUsed.map(material => ({
+                quantity: parseInt(material.quantity, 10) || 0,
+                description: material.description || '',
+                serialNo: material.serialNo || ''
+            })),
             createdBy: user.id // This should already be a GUID string
         };
   
@@ -776,55 +812,141 @@ const ServiceReportForm = () => {
               </tbody>
             </table>
           </Box>
-
-          <Box sx={{ p: 3,mt:3, backgroundColor: '#fafafa', borderRadius: '4px', border: '1px solid #ccc' }}>
-          {/* Further Action & Form Status */}
-          <table style={{ width: '100%', borderCollapse: 'collapse' }} {...sectionSpacing}>
-            <tbody>
-              <tr>
-                <td style={{ width: '50%' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography sx={{ width: labelWidth }}>Further Action To Be Taken:</Typography>
-                    <TextField
-                      select
-                      value={formData.furtherAction.id}
-                      onChange={handleChange('furtherAction')}
-                      size="small"
-                      sx={{
-                        width: '400px',
-                        '& .MuiSelect-select': {
-                          whiteSpace: 'normal',
-                          wordWrap: 'break-word',
-                          minHeight: '30px'
-                        },
-                        '& .MuiMenuItem-root': {
-                          whiteSpace: 'normal',
-                          wordWrap: 'break-word',
-                          minHeight: '48px',
-                          padding: '8px 16px'
-                        }
-                      }}
-                      SelectProps={getSelectProps('furtherAction')}
-                      >
-                      {dropdownData.furtherActions.map((responsedata) => (
-                          <MenuItem key={responsedata.id} value={responsedata.id}>
-                            {responsedata.name}
-                          </MenuItem>
-                      ))}
-                    </TextField>
-                    <TextField
-                      value={formData.furtherActionRemark}
-                      onChange={handleChange('furtherActionRemark')}
-                      size="small"
-                      sx={{ ...textFieldStyles, marginLeft: '16px' }}
-                    />
-                  </Box>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-         </Box>
+          
+          <Box sx={{ p: 3, mt: 3, backgroundColor: '#fafafa', borderRadius: '4px', border: '1px solid #ccc' }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                mb: 3,
+                fontSize: '18px',
+                fontWeight: 500,
+                color: '#1976d2'
+              }}
+            >
+              Materials Used
+            </Typography>
+            
+            <TableContainer component={Paper} sx={{ mb: 2, maxHeight: '300px', overflowY: 'auto' }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: '#f0f0f0' }}>
+                    <TableCell width="15%">Quantity</TableCell>
+                    <TableCell width="40%">Description</TableCell>
+                    <TableCell width="35%">Serial No</TableCell>
+                    <TableCell width="10%">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {materialsUsed.map((material, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <TextField
+                          type="number"
+                          value={material.quantity}
+                          onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
+                          size="small"
+                          fullWidth
+                          inputProps={{ min: 0 }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          value={material.description}
+                          onChange={(e) => handleMaterialChange(index, 'description', e.target.value)}
+                          size="small"
+                          fullWidth
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          value={material.serialNo}
+                          onChange={(e) => handleMaterialChange(index, 'serialNo', e.target.value)}
+                          size="small"
+                          fullWidth
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <IconButton 
+                          onClick={() => handleRemoveMaterial(index)}
+                          size="small"
+                          sx={{ color: '#d32f2f' }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            
+            <Button
+              startIcon={<AddIcon />}
+              onClick={handleAddMaterial}
+              variant="outlined"
+              size="small"
+              sx={{ 
+                mb: 2,
+                color: '#1976d2',
+                borderColor: '#1976d2',
+                '&:hover': {
+                  backgroundColor: '#e3f2fd',
+                  borderColor: '#1976d2'
+                }
+              }}
+            >
+              Add Material
+            </Button>
+          </Box>
         
+            <Box sx={{ p: 3,mt:3, backgroundColor: '#fafafa', borderRadius: '4px', border: '1px solid #ccc' }}>
+            {/* Further Action & Form Status */}
+            <table style={{ width: '100%', borderCollapse: 'collapse' }} {...sectionSpacing}>
+              <tbody>
+                <tr>
+                  <td style={{ width: '50%' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Typography sx={{ width: labelWidth }}>Further Action To Be Taken:</Typography>
+                      <TextField
+                        select
+                        value={formData.furtherAction.id}
+                        onChange={handleChange('furtherAction')}
+                        size="small"
+                        sx={{
+                          width: '400px',
+                          '& .MuiSelect-select': {
+                            whiteSpace: 'normal',
+                            wordWrap: 'break-word',
+                            minHeight: '30px'
+                          },
+                          '& .MuiMenuItem-root': {
+                            whiteSpace: 'normal',
+                            wordWrap: 'break-word',
+                            minHeight: '48px',
+                            padding: '8px 16px'
+                          }
+                        }}
+                        SelectProps={getSelectProps('furtherAction')}
+                        >
+                        {dropdownData.furtherActions.map((responsedata) => (
+                            <MenuItem key={responsedata.id} value={responsedata.id}>
+                              {responsedata.name}
+                            </MenuItem>
+                        ))}
+                      </TextField>
+                      <TextField
+                        value={formData.furtherActionRemark}
+                        onChange={handleChange('furtherActionRemark')}
+                        size="small"
+                        sx={{ ...textFieldStyles, marginLeft: '16px' }}
+                      />
+                    </Box>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </Box>
+    
         <Box sx={{ p: 3,mt:3, backgroundColor: '#fafafa', borderRadius: '4px', border: '1px solid #ccc' }}>
           {/* Form Status */}
           <table style={{ width: '100%', borderCollapse: 'collapse' }} {...sectionSpacing}>

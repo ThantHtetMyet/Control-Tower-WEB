@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -11,6 +11,7 @@ import {
   TableHead,
   TableRow,
   Alert,
+  AlertTitle,
   LinearProgress,
   Chip,
   IconButton,
@@ -24,259 +25,250 @@ import {
   Select,
   MenuItem,
   Grid,
-  TextField
+  TextField,
+  Container,
+  CircularProgress
 } from '@mui/material';
-import {
-  CloudUpload,
-  Download,
-  Visibility,
-  CheckCircle,
-  Error,
-  Warning
-} from '@mui/icons-material';
+import { 
+  FiDownload, 
+  FiUploadCloud, 
+  FiEye, 
+  FiCheckCircle, 
+  FiXCircle,
+  FiAlertTriangle
+} from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 import api from '../api-services/api';
+import mqtt from 'mqtt';
+import { useNavigate } from 'react-router-dom';
 
 const ServiceReportImport = () => {
+  const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [results, setResults] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [templateOpen, setTemplateOpen] = useState(false);
-  
-  // New states for import form type
-  const [importFormTypes, setImportFormTypes] = useState([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedImportFormType, setSelectedImportFormType] = useState('');
+  const [importFormTypes, setImportFormTypes] = useState([]);
   const [loadingFormTypes, setLoadingFormTypes] = useState(true);
-
-  // Template structure for Excel file
-  const templateColumns = [
-    'ServiceType',
-    'FormStatus',
-    'IssueReported',
-    'IssueFound',
-    'ActionTaken',
-    'FurtherAction',
-    'ReportDate',
-    'CreatedBy'
-  ];
+  const [uploadedFileId, setUploadedFileId] = useState(null);
+  const [mqttClient, setMqttClient] = useState(null);
+  const [processing, setProcessing] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState('');
+  const [processingError, setProcessingError] = useState('');
+  const [statusTimestamp, setStatusTimestamp] = useState(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   // Load import form types on component mount
   useEffect(() => {
+    const loadImportFormTypes = async () => {
+      try {
+        setLoadingFormTypes(true);
+        const response = await api.get('/ImportFormTypes');
+        console.log('Import form types response:', response.data);
+        
+        if (response.data && Array.isArray(response.data.data)) {
+          setImportFormTypes(response.data.data);
+        } else if (response.data && Array.isArray(response.data)) {
+          setImportFormTypes(response.data);
+        } else {
+          console.warn('Unexpected response format for import form types:', response.data);
+          setImportFormTypes([]);
+        }
+      } catch (error) {
+        console.error('Error loading import form types:', error);
+        setImportFormTypes([]);
+      } finally {
+        setLoadingFormTypes(false);
+      }
+    };
+
     loadImportFormTypes();
   }, []);
 
-  const loadImportFormTypes = async () => {
+  // Cleanup MQTT connection on unmount
+  useEffect(() => {
+    return () => {
+      if (mqttClient) {
+        mqttClient.end();
+      }
+    };
+  }, [mqttClient]);
+
+  // MQTT message handler
+  const handleMqttMessage = useCallback((topic, message) => {
+    console.log('MQTT Message received:', { topic, message });
+    
+    if (topic === 'servicereportsystem/status') {
+      try {
+        const statusData = JSON.parse(message.toString());
+        console.log('Status data:', statusData);
+        
+        // Log the fileId comparison for debugging (but don't use it for processing)
+        if (statusData.fileId && uploadedFileId) {
+          const normalizeId = (id) => String(id).replace(/[""']/g, '').trim();
+          const mqttFileId = normalizeId(statusData.fileId);
+          const uploadedId = normalizeId(uploadedFileId);
+          
+          console.log('FileId comparison (for debugging only):', {
+            mqttFileId,
+            uploadedId,
+            match: mqttFileId === uploadedId,
+            originalMqttFileId: statusData.fileId,
+            originalUploadedFileId: uploadedFileId
+          });
+        }
+        
+        // Process ANY success/failure message (no fileId check)
+        if (statusData.status === 'success') {
+          console.log('Processing completed successfully!');
+          setProcessingStatus('Processing completed successfully!');
+          setProcessingError('');
+          
+          // Hide loading overlay and show success dialog immediately
+          setProcessing(false);
+          setShowSuccessDialog(true);
+        } else if (statusData.status === 'failed') {
+          console.log('Processing failed!');
+          setProcessingStatus('Processing failed');
+          setProcessingError(statusData.error || 'Unknown error occurred');
+          
+          // Hide loading overlay after showing error
+          setTimeout(() => {
+            setProcessing(false);
+            setProcessingStatus('');
+            setProcessingError('');
+          }, 5000);
+        }
+      } catch (error) {
+        console.error('Error parsing MQTT status message:', error);
+      }
+    }
+  }, [uploadedFileId]);
+
+  const connectToMqtt = () => {
     try {
-      setLoadingFormTypes(true);
-      const response = await api.get('/ImportFormTypes');
-      setImportFormTypes(response.data);
+      console.log('Connecting to MQTT...');
+      // Change from mqtt:// to ws:// for WebSocket connection
+      const client = mqtt.connect('ws://localhost:9001');
+      
+      client.on('connect', () => {
+        console.log('Connected to MQTT broker');
+        const topic = 'servicereportsystem/status';
+        console.log('Subscribing to topic:', topic);
+        client.subscribe(topic);
+      });
+      
+      client.on('message', handleMqttMessage);
+      
+      client.on('error', (error) => {
+        console.error('MQTT connection error:', error);
+      });
+      
+      setMqttClient(client);
     } catch (error) {
-      console.error('Error loading import form types:', error);
-      alert('Error loading import form types. Please try again.');
-    } finally {
-      setLoadingFormTypes(false);
+      console.error('Error connecting to MQTT:', error);
     }
   };
 
-  const [uploadedFileId, setUploadedFileId] = useState(null);
-
-  // Modified file upload to use FileUpload API
-  const handleFileUpload = async (event) => {
-    const selectedFile = event.target.files[0];
-    if (!selectedFile) return;
-  
-    console.log('=== FILE UPLOAD DEBUG START ===');
-    console.log('Selected file:', selectedFile);
-    console.log('File name:', selectedFile.name);
-    console.log('File size:', selectedFile.size);
-    console.log('File type:', selectedFile.type);
-    console.log('Selected import form type:', selectedImportFormType);
-  
-    if (!selectedImportFormType) {
-      console.log('ERROR: No import form type selected');
-      alert('Please select an import form type first.');
+  const handleConfirmUpload = async () => {
+    if (!file || !selectedImportFormType) {
+      alert('Please select a file and import form type.');
       return;
     }
-  
-    setFile(selectedFile);
-    setLoading(true);
-  
+
     try {
-      // Step 1: Upload file via FileUpload API
+      setLoading(true);
+      setProcessing(true);
+      setProcessingStatus('Uploading file and starting processing...');
+      setProcessingError('');
+      
       const formData = new FormData();
-      formData.append('file', selectedFile);
+      formData.append('file', file);
       formData.append('importFormTypeId', selectedImportFormType);
       
-      console.log('FormData contents:');
-      for (let [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
-      
       console.log('Making API call to ImportFileRecords/ProcessImportData...');
-      // In handleFileUpload function, replace the API call with:
       const uploadResponse = await api.post('/ImportFileRecords/ProcessImportData', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
       
-      console.log('Upload response:', uploadResponse);
-      console.log('Upload response data:', uploadResponse.data);
-      console.log('File ID from response:', uploadResponse.data.fileId);
-  
-      setUploadedFileId(uploadResponse.data.fileId);
-  
-      // Step 2: Read and parse the Excel file for preview
-      console.log('Starting Excel file parsing...');
+      console.log('Upload response:', uploadResponse.data);
+      
+      // Replace line 189:
+      if (uploadResponse.data && uploadResponse.data.fileId) {
+        const fileId = uploadResponse.data.fileId;
+        setUploadedFileId(fileId);
+        setProcessingStatus('File uploaded successfully. Processing in progress...');
+        
+        // Connect to MQTT to listen for status updates
+        connectToMqtt();
+        
+        // Close dialogs
+        setConfirmOpen(false);
+        setPreviewOpen(false);
+      } else {
+        throw new Error(uploadResponse.data?.message || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('File upload error:', error);
+      setProcessing(false);
+      setProcessingStatus('');
+      setProcessingError('');
+      alert(`File upload failed: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (event) => {
+    const selectedFile = event.target.files[0];
+    if (!selectedFile) return;
+
+    if (!selectedImportFormType) {
+      alert('Please select an import form type first.');
+      return;
+    }
+
+    setFile(selectedFile);
+    setLoading(true);
+    setProcessingStatus(null);
+    setStatusTimestamp(null);
+    setResults(null);
+    setData([]);
+
+    try {
       const reader = new FileReader();
       reader.onload = (e) => {
-        console.log('FileReader onload triggered');
         const data = new Uint8Array(e.target.result);
-        console.log('File data length:', data.length);
-        
         const workbook = XLSX.read(data, { type: 'array' });
-        console.log('Workbook:', workbook);
-        console.log('Sheet names:', workbook.SheetNames);
-        
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
         
-        console.log('Parsed JSON data:', jsonData);
-        console.log('Number of rows:', jsonData.length);
-        
         setData(jsonData);
         setLoading(false);
-        console.log('=== FILE UPLOAD DEBUG END (SUCCESS) ===');
+        setConfirmOpen(true);
       };
       
       reader.onerror = (error) => {
         console.error('FileReader error:', error);
         setLoading(false);
+        alert('Error reading file. Please try again.');
       };
       
       reader.readAsArrayBuffer(selectedFile);
     } catch (error) {
-      console.log('=== FILE UPLOAD DEBUG END (ERROR) ===');
-      console.error('File upload error details:');
-      console.error('Error object:', error);
-      console.error('Error message:', error.message);
-      console.error('Error response:', error.response);
-      console.error('Error response data:', error.response?.data);
-      console.error('Error response status:', error.response?.status);
-      console.error('Error response headers:', error.response?.headers);
-      console.error('Error config:', error.config);
-      
-      alert(`File upload failed: ${error.response?.data?.message || error.message}. Check console for details.`);
+      console.error('File processing error:', error);
+      alert('Error processing file. Please try again.');
       setLoading(false);
     }
   };
 
-  // Modified import function
-  const handleImport = async () => {
-    if (data.length === 0) {
-      alert('No data to import');
-      return;
-    }
-
-    if (!uploadedFileId) {
-      alert('Please upload a file first.');
-      return;
-    }
-
-    setImporting(true);
-    const importResults = {
-      successful: 0,
-      failed: 0,
-      errors: []
-    };
-
-    try {
-      // Get the selected import form type details
-      const selectedFormType = importFormTypes.find(type => type.id === selectedImportFormType);
-      const importFormTypeName = selectedFormType?.name || 'Location';
-      
-      // Process data based on import type
-      for (let i = 0; i < data.length; i++) {
-        const row = data[i];
-        
-        try {
-          let apiEndpoint;
-          let requestData;
-          
-          // Route to appropriate API based on import type
-          switch (importFormTypeName) {
-            case 'Location':
-              apiEndpoint = '/LocationWarehouse';
-              requestData = {
-                name: row.Name,
-                isDeleted: false,
-                createdDate: new Date().toISOString(),
-                updatedDate: new Date().toISOString()
-              };
-              break;
-            case 'IssueReported':
-              apiEndpoint = '/IssueReportWarehouse';
-              requestData = {
-                name: row.Name,
-                isDeleted: false,
-                createdDate: new Date().toISOString(),
-                updatedDate: new Date().toISOString()
-              };
-              break;
-            // Add other cases as needed
-            default:
-              throw new Error(`Unsupported import type: ${importFormTypeName}`);
-          }
-
-          await api.post(apiEndpoint, requestData);
-          importResults.successful++;
-        } catch (error) {
-          importResults.failed++;
-          importResults.errors.push({
-            row: i + 1,
-            errors: [error.response?.data?.message || 'Import failed']
-          });
-        }
-      }
-
-      // Step 3: Update ImportFileRecord status via ImportFileRecords API
-      const importStatus = importResults.failed === 0 ? 'Completed' : 'Partial';
-      await api.put(`/ImportFileRecords/${uploadedFileId}`, {
-        importFormTypeID: selectedImportFormType,
-        name: file.name,
-        importedStatus: importStatus,
-        updatedBy: 'current-user-id' // You'll need to get this from auth context
-      });
-
-    } catch (error) {
-      console.error('Import error:', error);
-      
-      // Update file record as failed
-      if (uploadedFileId) {
-        try {
-          await api.put(`/ImportFileRecords/${uploadedFileId}`, {
-            importFormTypeID: selectedImportFormType,
-            name: file.name,
-            importedStatus: 'Failed',
-            updatedBy: 'current-user-id'
-          });
-        } catch (updateError) {
-          console.error('Failed to update file record:', updateError);
-        }
-      }
-      
-      alert('Import failed. Please try again.');
-    } finally {
-      setImporting(false);
-      setResults(importResults);
-    }
-  };
-
-  // Replace the hardcoded templateColumns with a dynamic function
   const getTemplateColumns = (importFormTypeName) => {
     switch (importFormTypeName) {
       case 'Location':
@@ -287,43 +279,29 @@ const ServiceReportImport = () => {
         return [
           'ServiceType',
           'FormStatus',
-          'IssueReported', 
-          'IssueFound',
-          'ActionTaken',
-          'FurtherAction',
-          'ReportDate',
-          'CreatedBy'
+          'LocationName',
+          'ProjectNo',
+          'SystemName',
+          'Status',
+          'FurtherAction'
         ];
       default:
-        return ['Name']; // Default fallback
+        return ['Name'];
     }
-  };
-  
-  // Update the validateData function to be dynamic
-  const validateData = (rowData, importFormTypeName) => {
-    const errors = [];
-    const warnings = [];
-  
-    switch (importFormTypeName) {
-      case 'Location':
-      case 'IssueReported':
-        if (!rowData.Name) errors.push('Name is required');
-        break;
-      case 'ServiceReportForm':
-        if (!rowData.ServiceType) errors.push('ServiceType is required');
-        if (!rowData.FormStatus) errors.push('FormStatus is required');
-        if (!rowData.ReportDate) errors.push('ReportDate is required');
-        if (!rowData.CreatedBy) errors.push('CreatedBy is required');
-        
-        if (rowData.ReportDate && isNaN(new Date(rowData.ReportDate))) {
-          errors.push('Invalid ReportDate format');
-        }
-        break;
-    }
-  
-    return { errors, warnings };
   };
 
+  const validateData = (rowData, importFormTypeName) => {
+    const errors = [];
+    const columns = getTemplateColumns(importFormTypeName);
+    
+    columns.forEach(column => {
+      if (!rowData[column] || rowData[column].toString().trim() === '') {
+        errors.push(`${column} is required`);
+      }
+    });
+    
+    return errors;
+  };
 
   const downloadTemplate = () => {
     if (!selectedImportFormType) {
@@ -332,17 +310,12 @@ const ServiceReportImport = () => {
     }
     
     const selectedFormType = importFormTypes.find(type => type.id === selectedImportFormType);
-    const importFormTypeName = selectedFormType?.name || 'Location';
+    const importFormTypeName = selectedFormType?.name || 'Template';
     const columns = getTemplateColumns(importFormTypeName);
     
-    const templateData = [columns.reduce((obj, col) => {
-      obj[col] = '';
-      return obj;
-    }, {})];
-  
-    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    const worksheet = XLSX.utils.aoa_to_sheet([columns]);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, importFormTypeName);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
     XLSX.writeFile(workbook, `${importFormTypeName}_Template.xlsx`);
   };
 
@@ -350,232 +323,313 @@ const ServiceReportImport = () => {
     setFile(null);
     setData([]);
     setResults(null);
+    setUploadedFileId(null);
+    setProcessingStatus(null);
+    setStatusTimestamp(null);
+    if (mqttClient) {
+      mqttClient.end();
+      setMqttClient(null);
+    }
+  };
+
+  const handleSuccessOk = () => {
+    setShowSuccessDialog(false);
+    resetImport();
+    navigate('/service-report-system');
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Import Service Reports
-      </Typography>
-
-      <Paper sx={{ p: 3, mb: 3 }}>
-        {/* Import Form Type Selection */}
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} md={8}>
-            <TextField
-              fullWidth
-              select
-              label="Import Form Type"
-              value={selectedImportFormType}
-              onChange={(e) => setSelectedImportFormType(e.target.value)}
-              required
-              disabled={loadingFormTypes}
-              sx={{
-                minWidth: '300px'
-              }}
-            >
-              <MenuItem value="" disabled>
-                <em style={{ color: '#9e9e9e' }}>Select a form type</em>
-              </MenuItem>
-              {importFormTypes.map((formType) => (
-                <MenuItem key={formType.id} value={formType.id}>
-                  {formType.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            {loadingFormTypes && (
-              <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-                Loading form types...
-              </Typography>
-            )}
-          </Grid>
-        </Grid>
-
-        {/* File Upload Section */}
-        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-          <Button
-            variant="outlined"
-            startIcon={<Download />}
-            onClick={downloadTemplate}
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      {/* Processing Overlay */}
+      {processing && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            flexDirection: 'column'
+          }}
+        >
+          <Paper
+            elevation={8}
+            sx={{
+              p: 4,
+              textAlign: 'center',
+              minWidth: 400,
+              maxWidth: 600,
+              backgroundColor: 'white'
+            }}
           >
-            Download Template
-          </Button>
-          
+            <CircularProgress size={60} sx={{ mb: 3 }} />
+            <Typography variant="h6" gutterBottom>
+              Processing Import File
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+              {processingStatus || 'Please wait while we process your file...'}
+            </Typography>
+            {processingError && (
+              <Alert severity="error" sx={{ mt: 2, textAlign: 'left' }}>
+                <AlertTitle>Processing Error</AlertTitle>
+                {processingError}
+              </Alert>
+            )}
+          </Paper>
+        </Box>
+      )}
+
+      {/* Success Dialog */}
+      <Dialog
+        open={showSuccessDialog}
+        onClose={handleSuccessOk}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FiCheckCircle color="success" />
+            Import Successful
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">
+            Your file has been processed successfully! All data has been imported into the system.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
           <Button
             variant="contained"
-            component="label"
-            startIcon={<CloudUpload />}
-            disabled={loading || importing || !selectedImportFormType}
+            color="primary"
+            onClick={handleSuccessOk}
+            autoFocus
           >
-            Upload Excel File
-            <input
-              type="file"
-              hidden
-              accept=".xlsx,.xls"
-              onChange={handleFileUpload}
-            />
+            OK
           </Button>
+        </DialogActions>
+      </Dialog>
 
-          {data.length > 0 && (
-            <>
-              <Button
-                variant="outlined"
-                startIcon={<Visibility />}
-                onClick={() => setPreviewOpen(true)}
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Import Service Reports
+        </Typography>
+
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={12} md={8}>
+              <TextField
+                fullWidth
+                select
+                label="Import Form Type"
+                value={selectedImportFormType}
+                onChange={(e) => setSelectedImportFormType(e.target.value)}
+                required
+                disabled={loadingFormTypes}
+                sx={{
+                  minWidth: '300px'
+                }}
               >
-                Preview Data ({data.length} rows)
-              </Button>
-              
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleImport}
-                disabled={importing}
-              >
-                {importing ? 'Importing...' : 'Import Data'}
-              </Button>
-              
-              <Button
-                variant="outlined"
-                color="secondary"
-                onClick={resetImport}
-              >
-                Reset
-              </Button>
-            </>
-          )}
-        </Box>
-
-        {/* Show selected import form type */}
-        {selectedImportFormType && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Selected Import Form Type: {importFormTypes.find(ft => ft.id === selectedImportFormType)?.name}
-          </Alert>
-        )}
-
-        {loading && (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" gutterBottom>
-              Reading file...
-            </Typography>
-            <LinearProgress />
-          </Box>
-        )}
-
-        {importing && (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" gutterBottom>
-              Importing data...
-            </Typography>
-            <LinearProgress />
-          </Box>
-        )}
-
-        {file && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            File selected: {file.name} ({data.length} rows detected)
-          </Alert>
-        )}
-
-        {results && (
-          <Alert 
-            severity={results.failed === 0 ? "success" : "warning"} 
-            sx={{ mb: 2 }}
-          >
-            Import completed: {results.successful} successful, {results.failed} failed
-            {results.errors.length > 0 && (
-              <Box sx={{ mt: 1 }}>
-                <Typography variant="body2" fontWeight="bold">
-                  Errors:
-                </Typography>
-                {results.errors.slice(0, 5).map((error, index) => (
-                  <Typography key={index} variant="body2">
-                    Row {error.row}: {error.errors.join(', ')}
-                  </Typography>
+                <MenuItem value="" disabled>
+                  <em style={{ color: '#9e9e9e' }}>Select a form type</em>
+                </MenuItem>
+                {importFormTypes.map((type) => (
+                  <MenuItem key={type.id} value={type.id}>
+                    {type.name}
+                  </MenuItem>
                 ))}
-                {results.errors.length > 5 && (
-                  <Typography variant="body2">
-                    ... and {results.errors.length - 5} more errors
+              </TextField>
+              {loadingFormTypes && (
+                <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                  Loading form types...
+                </Typography>
+              )}
+            </Grid>
+          </Grid>
+
+          <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+            <Button
+              variant="outlined"
+              startIcon={<FiDownload />}
+              onClick={downloadTemplate}
+              disabled={!selectedImportFormType}
+            >
+              Download Template
+            </Button>
+
+            <Button
+              variant="contained"
+              component="label"
+              startIcon={<FiUploadCloud />}
+              disabled={loading || importing || !selectedImportFormType}
+            >
+              Upload Excel File
+              <input
+                type="file"
+                hidden
+                accept=".xlsx,.xls"
+                onChange={handleFileUpload}
+              />
+            </Button>
+
+            
+          </Box>
+
+          {selectedImportFormType && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Selected import type: {importFormTypes.find(type => type.id === selectedImportFormType)?.name || 'Unknown'}
+            </Alert>
+          )}
+
+          {loading && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" gutterBottom>
+                Reading file...
+              </Typography>
+              <LinearProgress />
+            </Box>
+          )}
+
+          {importing && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" gutterBottom>
+                Processing uploaded file...
+              </Typography>
+              <LinearProgress />
+            </Box>
+          )}
+
+          {processingStatus && !processing && (
+            <Alert
+              severity={
+                String(processingStatus).toLowerCase() === 'success' ? 'success'
+                : String(processingStatus).toLowerCase() === 'failed' ? 'error'
+                : String(processingStatus).toLowerCase() === 'completed' ? 'success'
+                : 'info'
+              }
+              sx={{ mb: 2 }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="body1">
+                  Processing Status: {processingStatus}
+                </Typography>
+                {statusTimestamp && (
+                  <Typography variant="caption" color="text.secondary">
+                    {new Date(statusTimestamp).toLocaleTimeString()}
                   </Typography>
                 )}
               </Box>
-            )}
-          </Alert>
-        )}
-      </Paper>
+            </Alert>
+          )}
+        </Paper>
 
-      {/* Data Preview Dialog */}
-      <Dialog 
-        open={previewOpen} 
-        onClose={() => setPreviewOpen(false)}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>Data Preview</DialogTitle>
-        <DialogContent>
-          <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  {(() => {
+        {/* Confirmation Dialog */}
+        <Dialog
+          open={confirmOpen}
+          onClose={() => setConfirmOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Confirm Upload</DialogTitle>
+          <DialogContent>
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              Are you sure you want to upload this file?
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              File: <strong>{file?.name}</strong>
+            </Typography>
+            {selectedImportFormType && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                Import Type: <strong>{importFormTypes.find(type => type.id === selectedImportFormType)?.name}</strong>
+              </Typography>
+            )}
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
+              The system will upload the file, process it, and report status via MQTT.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleConfirmUpload}
+              disabled={loading || importing}
+            >
+              Upload
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Data Preview Dialog */}
+        <Dialog 
+          open={previewOpen} 
+          onClose={() => setPreviewOpen(false)}
+          maxWidth="lg"
+          fullWidth
+        >
+          <DialogTitle>Data Preview</DialogTitle>
+          <DialogContent>
+            <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    {(() => {
+                      if (data.length > 0) {
+                        return Object.keys(data[0]).map((key) => (
+                          <TableCell key={key}>{key}</TableCell>
+                        ));
+                      }
+                      return null;
+                    })()}
+                    <TableCell>Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {data.slice(0, 100).map((row, index) => {
                     const selectedFormType = importFormTypes.find(type => type.id === selectedImportFormType);
                     const importFormTypeName = selectedFormType?.name || 'Location';
-                    const columns = getTemplateColumns(importFormTypeName);
+                    const errors = validateData(row, importFormTypeName);
                     
-                    return columns.map((column) => (
-                      <TableCell key={column}>{column}</TableCell>
-                    ));
-                  })()}
-                  <TableCell>Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.slice(0, 100).map((row, index) => {
-                  const selectedFormType = importFormTypes.find(type => type.id === selectedImportFormType);
-                  const importFormTypeName = selectedFormType?.name || 'Location';
-                  const columns = getTemplateColumns(importFormTypeName);
-                  const validation = validateData(row, importFormTypeName);
-                  const hasErrors = validation.errors.length > 0;
-                  
-                  return (
-                    <TableRow key={index}>
-                      {columns.map((column) => (
-                        <TableCell key={column}>
-                          {row[column] || '-'}
+                    return (
+                      <TableRow key={index}>
+                        {Object.values(row).map((value, cellIndex) => (
+                          <TableCell key={cellIndex}>
+                            {value !== null && value !== undefined ? String(value) : ''}
+                          </TableCell>
+                        ))}
+                        <TableCell>
+                          {errors.length === 0 ? (
+                            <Chip icon={<FiCheckCircle />} label="Valid" color="success" size="small" />
+                          ) : (
+                            <Tooltip title={errors.join(', ')}>
+                              <Chip icon={<FiXCircle />} label="Invalid" color="error" size="small" />
+                            </Tooltip>
+                          )}
                         </TableCell>
-                      ))}
-                      <TableCell>
-                        <Chip
-                          icon={hasErrors ? <Error /> : <CheckCircle />}
-                          label={hasErrors ? 'Error' : 'Valid'}
-                          color={hasErrors ? 'error' : 'success'}
-                          size="small"
-                        />
-                        {hasErrors && (
-                          <Tooltip title={validation.errors.join(', ')}>
-                            <IconButton size="small">
-                              <Warning fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          {data.length > 100 && (
-            <Typography variant="body2" sx={{ mt: 1, textAlign: 'center' }}>
-              Showing first 100 rows of {data.length} total rows
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPreviewOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {data.length > 100 && (
+              <Typography variant="body2" sx={{ mt: 1, textAlign: 'center' }}>
+                Showing first 100 rows of {data.length} total rows
+              </Typography>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setPreviewOpen(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
+    </Container>
   );
 };
 

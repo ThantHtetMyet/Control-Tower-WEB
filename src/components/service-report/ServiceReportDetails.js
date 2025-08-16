@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Button, Paper, TextField,
   CircularProgress, Alert, Dialog, DialogContent, DialogActions,
-  Collapse, IconButton, Divider
+  Collapse, IconButton, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 import { 
   ArrowBack, Edit, Print, ExpandLess, ExpandMore, 
-  Close, Info, Schedule, Build, Assignment 
+  Close, Info, Schedule, Build, Assignment, Inventory 
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api-services/api';
@@ -31,7 +31,8 @@ const ServiceReportDetails = () => {
     comments: true,
     actionTaken: true,
     furtherAction: true,
-    formStatus: true
+    formStatus: true,
+    materialsUsed: true // Add this line
   });
 
   useEffect(() => {
@@ -58,6 +59,24 @@ const ServiceReportDetails = () => {
 
   const formatDate = (dateString) => {
     return dateString ? moment(dateString).format('DD/MM/YYYY HH:mm') : 'N/A';
+  };
+
+  const formatJobNumber = (jobNumber) => {
+    return jobNumber || 'N/A';
+  };
+
+  // Helper function to format job number with red styling for numbers after 'M'
+  const formatJobNumberWithStyling = (jobNo) => {
+    if (!jobNo || jobNo === 'N/A') return 'N/A';
+    
+    // Check if job number starts with 'M'
+    if (jobNo.startsWith('M')) {
+      const prefix = 'M ';
+      const numbers = jobNo.substring(1); // Get everything after 'M'
+      return `${prefix}<span class="job-number-value">${numbers}</span>`;
+    }
+    
+    return jobNo; // Return as is if it doesn't start with 'M'
   };
 
   const handleSectionToggle = (section) => {
@@ -95,95 +114,189 @@ const ServiceReportDetails = () => {
             margin: 0;
             padding: 0;
             color: #333;
+            font-size: 12px;
           }
           .letterhead {
-            border-bottom: 3px solid #800080;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-          }
-          .company-logo {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-          }
-          .company-name {
-            font-size: 28px;
-            font-weight: bold;
-            color: #FF6B35;
-            margin-right: 20px;
-          }
-          .company-details {
-            font-size: 12px;
-            color: #666;
-            line-height: 1.4;
+            border-bottom: 2px solid #800080;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
           }
           .report-title {
             text-align: center;
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
-            color: #1976d2;
-            margin: 20px 0;
+            color: #0078d4;
+            margin: 15px 0;
           }
           .job-number {
             text-align: right;
-            font-size: 14px;
-            margin-bottom: 20px;
+            font-size: 12px;
+            margin-bottom: 15px;
+          }
+          .job-number-value {
+            font-size: 16px;
+            color: red;
+            font-weight: bold;
           }
           .section {
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             page-break-inside: avoid;
           }
           .section-title {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
-            color: #1976d2;
-            margin-bottom: 10px;
+            color: #0078d4;
+            margin-bottom: 8px;
             border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
+            padding-bottom: 4px;
           }
           .field-row {
             display: flex;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             align-items: center;
           }
           .field-label {
             font-weight: bold;
-            width: 150px;
-            margin-right: 10px;
+            width: 120px;
+            margin-right: 5px;
           }
           .field-value {
             flex: 1;
-            padding: 4px 8px;
+            padding: 3px 6px;
+            border-bottom: 1px solid #ddd;
+            min-height: 18px;
           }
-          .date-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
+          .date-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
           }
-          .date-field {
+          .date-table th, .date-table td {
+            border: 1px solid #000000;
+            padding: 8px;
+            text-align: center;
+            font-size: 12px;
+          }
+          .date-table th {
+            font-weight: bold;
+          }
+          .date-table td {
+            background-color: #ffffff;
+          }
+          .materials-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
             text-align: center;
           }
-          .date-label {
+          .materials-table th, .materials-table td {
+            border: 1px solid #000000;
+            padding: 6px;
+            text-align: left;
+            font-size: 11px;
+          }
+          .materials-table th {
+            background-color: #ffffff;
             font-weight: bold;
-            font-size: 12px;
+            text-align: center;
+          }
+          .remark-row {
+            display: flex;
+            margin-top: 4px;
+            margin-bottom: 8px;
+          }
+          .remark-label {
+            font-weight: bold;
+            width: 70px;
+            margin-right: 10px;
+          }
+          .remark-value {
+            flex: 1;
+            padding: 3px 6px;
+            border-bottom: 1px solid #ddd;
+            min-height: 18px;
+          }
+          .three-column-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+          }
+          .column {
+            width: 100%;
+          }
+          .two-column-layout {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+          }
+          .two-column-layout-with-remark {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 10px;
+          }
+          .label-value-pair {
+            display: flex;
+            align-items: center;
+          }
+          .label-value-pair .field-label {
+            min-width: 120px;
+          }
+          .remark-container {
+            display: flex;
+            align-items: center;
+          }
+          .signature-section {
+            margin-top: 30px;
+          }
+          .signature-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+          }
+          .signature-item {
+            display: flex;
+            align-items: flex-start;
+          }
+          .signature-label {
+            font-weight: bold;
+            width: 100px;
+            padding-top: 5px;
+          }
+          .signature-box {
+            display: flex;
+            flex-direction: column;
+            width: 250px;
+          }
+          .signature-line {
+            border-bottom: 1px solid #000;
             margin-bottom: 5px;
+            min-height: 20px;
           }
-          .date-value {
-            padding: 8px;
-            border: 1px solid #ddd;
-            background-color: #f9f9f9;
-            font-size: 12px;
+          .signature-caption {
+            font-size: 10px;
+            text-align: center;
+            color: #666;
           }
-          .comments-section {
-            margin-top: 20px;
+          .date-time-container {
+            display: flex;
+            align-items: flex-start;
           }
-          .comment-item {
-            margin-bottom: 15px;
+          .date-time-label {
+            font-weight: bold;
+            width: 80px;
+            padding-top: 5px;
           }
-          .remark-field {
-            margin-left: 10px;
-            width: 200px;
+          .date-time-box {
+            display: flex;
+            flex-direction: column;
+            width: 250px;
+          }
+          .date-time-line {
+            border-bottom: 1px solid #000;
+            min-height: 20px;
           }
           @media print {
             .no-print {
@@ -198,131 +311,221 @@ const ServiceReportDetails = () => {
           <img src="${letterheadImage}" alt="Willowglen Letterhead" />
         </div>
 
-        <!-- Report Content -->
+        <!-- Report Title -->
         <div class="report-title">Service Report Details</div>
         
-        <div class="job-number">
-          <strong>Job No: ${report.jobNumber || 'N/A'}</strong>
-        </div>
-
         <!-- Basic Information -->
         <div class="section">
           <div class="section-title">Basic Information</div>
-          <div class="field-row">
-            <span class="field-label">Customer:</span>
-            <span class="field-value">${report.customer || ''}</span>
+          <div class="job-number" style="margin-top: -30px;">
+            <strong>Job No: ${formatJobNumberWithStyling(report.jobNumber || 'N/A')}</strong>
           </div>
-          <div class="field-row">
-            <span class="field-label">Project No:</span>
-            <span class="field-value">${report.projectNumberName || ''}</span>
-          </div>
-          <div class="field-row">
-            <span class="field-label">System:</span>
-            <span class="field-value">${report.systemName || ''}</span>
-          </div>
-          <div class="field-row">
-            <span class="field-label">Location:</span>
-            <span class="field-value">${report.locationName || ''}</span>
-          </div>
-          <div class="field-row">
-            <span class="field-label">Follow-up Action:</span>
-            <span class="field-value">${report.followupActionNo || ''}</span>
+          
+          <div class="three-column-layout">
+            <div class="column">
+              <div class="field-row">
+                <span class="field-label">Customer:</span>
+                <span class="field-value">${report.customer || ''}</span>
+              </div>
+              
+              <div class="field-row">
+                <span class="field-label">System:</span>
+                <span class="field-value">${report.systemName || ''}</span>
+              </div>
+            </div>
+            
+            <div class="column">
+              <div class="field-row">
+                <span class="field-label">Contact No:</span>
+                <span class="field-value">${report.contactNo || ''}</span>
+              </div>
+              
+              <div class="field-row">
+                <span class="field-label">Location:</span>
+                <span class="field-value">${report.locationName || ''}</span>
+              </div>
+            </div>
+            
+            <div class="column">
+              <div class="field-row">
+                <span class="field-label">Project No:</span>
+                <span class="field-value">${report.projectNumberName || ''}</span>
+              </div>
+              
+              <div class="field-row">
+                <span class="field-label">Follow-up Action:</span>
+                <span class="field-value">${report.followupActionNo || ''}</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Date/Time Section -->
         <div class="section">
           <div class="section-title">Date / Time Information</div>
-          <div class="date-section">
-            <div class="date-field">
-              <div class="date-label">Failure Detected</div>
-              <div class="date-value">${formatDate(report.failureDetectedDate)}</div>
-            </div>
-            <div class="date-field">
-              <div class="date-label">Response</div>
-              <div class="date-value">${formatDate(report.responseDate)}</div>
-            </div>
-            <div class="date-field">
-              <div class="date-label">Arrival</div>
-              <div class="date-value">${formatDate(report.arrivalDate)}</div>
-            </div>
-            <div class="date-field">
-              <div class="date-label">Completion</div>
-              <div class="date-value">${formatDate(report.completionDate)}</div>
-            </div>
-          </div>
+          <table class="date-table">
+            <thead>
+              <tr>
+                <th>Date/Time of Failure Detected <br/>Problem Reported</th>
+                <th>Date/Time of Response</th>
+                <th>Date/Time of Arrival</th>
+                <th>Date/Time of Completion</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${formatDate(report.failureDetectedDate)}</td>
+                <td>${formatDate(report.responseDate)}</td>
+                <td>${formatDate(report.arrivalDate)}</td>
+                <td>${formatDate(report.completionDate)}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         <!-- Type of Service -->
         <div class="section">
           <div class="section-title">Type of Service</div>
-          <div class="field-row">
-            <span class="field-label">Service Type:</span>
-            <span class="field-value">${report.serviceType?.[0]?.name || 'N/A'}</span>
+          <div class="two-column-layout">
+            <div class="field-label">Service Type:</div>
+            <div class="field-value">${report.serviceType?.[0]?.name || 'N/A'}</div>
           </div>
-          <div class="field-row">
-            <span class="field-label">Remark:</span>
-            <span class="field-value">${report.serviceTypeRemark || ''}</span>
+          <div class="two-column-layout">
+            <div class="field-label">Remark:</div>
+            <div class="field-value">${report.serviceTypeRemark || ''}</div>
           </div>
         </div>
 
         <!-- Comments -->
         <div class="section">
           <div class="section-title">Comments / Description of Problem</div>
-          <div class="field-row">
-            <span class="field-label">Issue Reported:</span>
-            <span class="field-value">${report.issueReported?.[0]?.description || 'N/A'}</span>
+          <div class="two-column-layout-with-remark">
+            <div class="label-value-pair">
+              <div class="field-label">Issue Reported:</div>
+              <div class="field-value">${report.issueReported?.[0]?.description || 'N/A'}</div>
+            </div>
+            <div class="remark-container">
+              <div class="remark-label">Remark:</div>
+              <div class="remark-value">${report.issueReportedRemark || ''}</div>
+            </div>
           </div>
-          <div class="field-row">
-            <span class="field-label">Remark:</span>
-            <span class="field-value">${report.issueReportedRemark || ''}</span>
-          </div>
-          <div class="field-row">
-            <span class="field-label">Issue Found:</span>
-            <span class="field-value">${report.issueFound?.[0]?.description || 'N/A'}</span>
-          </div>
-          <div class="field-row">
-            <span class="field-label">Remark:</span>
-            <span class="field-value">${report.issueFoundRemark || ''}</span>
+          
+          <div class="two-column-layout-with-remark">
+            <div class="label-value-pair">
+              <div class="field-label">Issue Found:</div>
+              <div class="field-value">${report.issueFound?.[0]?.description || 'N/A'}</div>
+            </div>
+            <div class="remark-container">
+              <div class="remark-label">Remark:</div>
+              <div class="remark-value">${report.issueFoundRemark || ''}</div>
+            </div>
           </div>
         </div>
 
         <!-- Action Taken -->
         <div class="section">
           <div class="section-title">Action Taken</div>
-          <div class="field-row">
-            <span class="field-label">Action Taken:</span>
-            <span class="field-value">${report.actionTaken?.[0]?.description || 'N/A'}</span>
+          <div class="two-column-layout-with-remark">
+            <div class="label-value-pair">
+              <div class="field-label">Action Taken:</div>
+              <div class="field-value">${report.actionTaken?.[0]?.description || 'N/A'}</div>
+            </div>
+            <div class="remark-container">
+              <div class="remark-label">Remark:</div>
+              <div class="remark-value">${report.actionTakenRemark || ''}</div>
+            </div>
           </div>
-          <div class="field-row">
-            <span class="field-label">Remark:</span>
-            <span class="field-value">${report.actionTakenRemark || ''}</span>
-          </div>
+        </div>
+
+        <!-- Materials Used -->
+        <div class="section">
+          <div class="section-title">Materials Used</div>
+          ${report.materialsUsed && report.materialsUsed.length > 0 ? `
+            <table class="materials-table">
+              <thead>
+                <tr>
+                  <th style="width: 15%">Quantity</th>
+                  <th style="width: 55%">Description</th>
+                  <th style="width: 30%">Serial No</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${report.materialsUsed.map(material => `
+                  <tr>
+                    <td>${material.quantity}</td>
+                    <td>${material.description || 'N/A'}</td>
+                    <td>${material.serialNo || 'N/A'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : `
+            <div style="padding: 10px; text-align: center; color: #666;">No materials used for this service report.</div>
+          `}
         </div>
 
         <!-- Further Action -->
         <div class="section">
           <div class="section-title">Further Action</div>
-          <div class="field-row">
-            <span class="field-label">Further Action:</span>
-            <span class="field-value">${report.furtherActionTaken?.[0]?.description || 'N/A'}</span>
-          </div>
-          <div class="field-row">
-            <span class="field-label">Remark:</span>
-            <span class="field-value">${report.furtherActionTakenRemark || ''}</span>
+          <div class="two-column-layout-with-remark">
+            <div class="label-value-pair">
+              <div class="field-label">Further Action:</div>
+              <div class="field-value">${report.furtherActionTaken?.[0]?.description || 'N/A'}</div>
+            </div>
+            <div class="remark-container">
+              <div class="remark-label">Remark:</div>
+              <div class="remark-value">${report.furtherActionTakenRemark || ''}</div>
+            </div>
           </div>
         </div>
 
         <!-- Form Status -->
         <div class="section">
           <div class="section-title">Form Status</div>
-          <div class="field-row">
-            <span class="field-label">Status:</span>
-            <span class="field-value">${report.formStatus?.[0]?.name || 'N/A'}</span>
+          <div class="two-column-layout-with-remark">
+            <div class="label-value-pair">
+              <div class="field-label">Status:</div>
+              <div class="field-value">${report.formStatus?.[0]?.name || 'N/A'}</div>
+            </div>
+            <div class="remark-container">
+              <div class="remark-label">Remark:</div>
+              <div class="remark-value">${report.formStatusRemark || ''}</div>
+            </div>
           </div>
-          <div class="field-row">
-            <span class="field-label">Remark:</span>
-            <span class="field-value">${report.formStatusRemark || ''}</span>
+        </div>
+        
+        <!-- Signature Section -->
+        <div class="section signature-section">
+          <div class="signature-row">
+            <div class="signature-item">
+              <div class="signature-label">Attended by:</div>
+              <div class="signature-box">
+                <div class="signature-line">${report.attendedBy || ''}</div>
+                <div class="signature-caption">(Name and Signature)</div>
+              </div>
+            </div>
+            <div class="date-time-container">
+              <div class="date-time-label">Date/Time:</div>
+              <div class="date-time-box">
+                <div class="date-time-line"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="signature-row">
+            <div class="signature-item">
+              <div class="signature-label">Accepted by:</div>
+              <div class="signature-box">
+                <div class="signature-line">${report.acceptedBy || ''}</div>
+                <div class="signature-caption">(Name and Signature)</div>
+              </div>
+            </div>
+            <div class="date-time-container">
+              <div class="date-time-label">Date/Time:</div>
+              <div class="date-time-box">
+                <div class="date-time-line"></div>
+              </div>
+            </div>
           </div>
         </div>
       </body>
@@ -344,7 +547,7 @@ const ServiceReportDetails = () => {
         <Alert severity="error">{error}</Alert>
         <Button
           startIcon={<ArrowBack />}
-          onClick={() => navigate('/service-reports')}
+          onClick={() => navigate('/service-report-system')}
           sx={{ mt: 2, color: '#800080' }}
         >
           Back to Reports
@@ -359,7 +562,7 @@ const ServiceReportDetails = () => {
         <Alert severity="warning">Report not found</Alert>
         <Button
           startIcon={<ArrowBack />}
-          onClick={() => navigate('/service-reports')}
+          onClick={() => navigate('/service-report-system')}
           sx={{ mt: 2, color: '#800080' }}
         >
           Back to Reports
@@ -451,7 +654,7 @@ const ServiceReportDetails = () => {
           }}>
             <Button
               startIcon={<ArrowBack />}
-              onClick={() => navigate('/service-reports')}
+              onClick={() => navigate('/service-report-system')}
               sx={{ color: '#800080' }}
             >
               Back to Reports
@@ -827,6 +1030,56 @@ const ServiceReportDetails = () => {
                   sx={{ ...readOnlyFieldStyles, width: remarkWidth }}
                 />
               </Box>
+            </Box>
+          </Collapse>
+        </Box>
+        
+        {/* Materials Used Section */}
+        <Box sx={{ mb: 2 }}>
+          <Box sx={sectionHeaderStyles}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Inventory sx={{ color: theme.palette.primary.main, fontSize: '18px' }} />
+              <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600, color: theme.palette.primary.main }}>
+                Materials Used
+              </Typography>
+            </Box>
+            <IconButton 
+              onClick={() => handleSectionToggle('materialsUsed')}
+              sx={{ color: theme.palette.primary.main, p: 0.5 }}
+              size="small"
+            >
+              {expandedSections.materialsUsed ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+            </IconButton>
+          </Box>
+          
+          <Collapse in={expandedSections.materialsUsed}>
+            <Box sx={{ p: sectionPadding, backgroundColor: '#fafafa', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              {report.materialsUsed && report.materialsUsed.length > 0 ? (
+                <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0' }}>
+                  <Table size="small" aria-label="materials used table">
+                    <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '13px', width: '15%' }}>Quantity</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '13px', width: '55%' }}>Description</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '13px', width: '30%' }}>Serial No</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {report.materialsUsed.map((material, index) => (
+                        <TableRow key={material.id || index} sx={{ '&:nth-of-type(odd)': { backgroundColor: '#fafafa' } }}>
+                          <TableCell sx={{ fontSize: '13px' }}>{material.quantity}</TableCell>
+                          <TableCell sx={{ fontSize: '13px' }}>{material.description || 'N/A'}</TableCell>
+                          <TableCell sx={{ fontSize: '13px' }}>{material.serialNo || 'N/A'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Box sx={{ p: 2, textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                  No materials used for this service report.
+                </Box>
+              )}
             </Box>
           </Collapse>
         </Box>

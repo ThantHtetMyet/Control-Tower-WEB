@@ -47,34 +47,114 @@ const ModuleSelection = () => {
   const getIconForApplication = (applicationName) => {
     const name = applicationName.toLowerCase();
     
-    // Define keyword-based icon mapping
+    // Define keyword-based icon mapping with glass effect and colored center
     if (name.includes('user') || name.includes('staff') || name.includes('hr')) {
-      return <People sx={{ fontSize: 48, color: 'white' }} />;
+      return (
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <People sx={{ fontSize: 48, color: 'rgb(255, 255, 255)' }} />
+          
+        </Box>
+      );
     }
     if (name.includes('service') || name.includes('report') || name.includes('ticket')) {
-      return <Assignment sx={{ fontSize: 48, color: 'white' }} />;
+      return (
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Assignment sx={{ fontSize: 48, color: 'rgb(255, 255, 255)' }} />
+          
+        </Box>
+      );
     }
     if (name.includes('configuration') || name.includes('config') || name.includes('setting')) {
-      return <Settings sx={{ fontSize: 48, color: 'white' }} />;
+      return (
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Settings sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+          <Settings sx={{ 
+            fontSize: 20, 
+            color: '#FF9500', 
+            position: 'absolute',
+            filter: 'drop-shadow(0 2px 8px rgba(255, 149, 0, 0.4))'
+          }} />
+        </Box>
+      );
     }
     if (name.includes('leave') || name.includes('vacation') || name.includes('time off')) {
-      return <EventNote sx={{ fontSize: 48, color: 'white' }} />;
+      return (
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <EventNote sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+          <EventNote sx={{ 
+            fontSize: 20, 
+            color: '#FF3B30', 
+            position: 'absolute',
+            filter: 'drop-shadow(0 2px 8px rgba(255, 59, 48, 0.4))'
+          }} />
+        </Box>
+      );
     }
     if (name.includes('dashboard') || name.includes('overview')) {
-      return <Dashboard sx={{ fontSize: 48, color: 'white' }} />;
+      return (
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Dashboard sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+          <Dashboard sx={{ 
+            fontSize: 20, 
+            color: '#5856D6', 
+            position: 'absolute',
+            filter: 'drop-shadow(0 2px 8px rgba(88, 86, 214, 0.4))'
+          }} />
+        </Box>
+      );
     }
     if (name.includes('assessment') || name.includes('evaluation') || name.includes('performance')) {
-      return <Assessment sx={{ fontSize: 48, color: 'white' }} />;
+      return (
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Assessment sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+          <Assessment sx={{ 
+            fontSize: 20, 
+            color: '#FF2D92', 
+            position: 'absolute',
+            filter: 'drop-shadow(0 2px 8px rgba(255, 45, 146, 0.4))'
+          }} />
+        </Box>
+      );
     }
     if (name.includes('security') || name.includes('access') || name.includes('permission')) {
-      return <Security sx={{ fontSize: 48, color: 'white' }} />;
+      return (
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Security sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+          <Security sx={{ 
+            fontSize: 20, 
+            color: '#00C7BE', 
+            position: 'absolute',
+            filter: 'drop-shadow(0 2px 8px rgba(0, 199, 190, 0.4))'
+          }} />
+        </Box>
+      );
     }
     if (name.includes('business') || name.includes('company') || name.includes('organization')) {
-      return <Business sx={{ fontSize: 48, color: 'white' }} />;
+      return (
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Business sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+          <Business sx={{ 
+            fontSize: 20, 
+            color: '#FFD60A', 
+            position: 'absolute',
+            filter: 'drop-shadow(0 2px 8px rgba(255, 214, 10, 0.4))'
+          }} />
+        </Box>
+      );
     }
     
     // Default fallback icon
-    return <Apps sx={{ fontSize: 48, color: 'white' }} />;
+    return (
+      <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Apps sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+        <Apps sx={{ 
+          fontSize: 20, 
+          color: '#8E8E93', 
+          position: 'absolute',
+          filter: 'drop-shadow(0 2px 8px rgba(142, 142, 147, 0.4))'
+        }} />
+      </Box>
+    );
   };
 
   // Smart color mapping based on application type
@@ -544,19 +624,19 @@ const ModuleSelection = () => {
                                 height: 100,
                                 borderRadius: 4,
                                 background: hoveredModule === module.id 
-                                  ? `linear-gradient(135deg, ${module.backgroundColor}, ${module.backgroundColor}dd)`
-                                  : `linear-gradient(135deg, ${module.backgroundColor}cc, ${module.backgroundColor}99)`,
-                                backdropFilter: 'blur(20px)',
-                                WebkitBackdropFilter: 'blur(20px)',
+                                  ? 'rgba(255, 255, 255, 0.15)'
+                                  : 'rgba(255, 255, 255, 0.08)',
+                                backdropFilter: 'blur(25px)',
+                                WebkitBackdropFilter: 'blur(25px)',
                                 border: hoveredModule === module.id 
-                                  ? '2px solid rgba(255, 255, 255, 0.4)'
-                                  : '1px solid rgba(255, 255, 255, 0.2)',
+                                  ? '2px solid rgba(255, 255, 255, 0.3)'
+                                  : '1px solid rgba(255, 255, 255, 0.15)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 boxShadow: hoveredModule === module.id 
-                                  ? `0 16px 32px ${module.backgroundColor}40, inset 0 1px 0 rgba(255,255,255,0.3)`
-                                  : `0 8px 20px ${module.backgroundColor}30, inset 0 1px 0 rgba(255,255,255,0.2)`,
+                                  ? '0 16px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255,255,255,0.4)'
+                                  : '0 8px 20px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.25)',
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                 position: 'relative',
                                 overflow: 'hidden',
@@ -568,22 +648,34 @@ const ModuleSelection = () => {
                                   right: 0,
                                   bottom: 0,
                                   borderRadius: 4,
-                                  background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 100%)',
-                                  opacity: hoveredModule === module.id ? 1 : 0.7,
+                                  background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 100%)',
+                                  opacity: hoveredModule === module.id ? 1 : 0.8,
                                   transition: 'opacity 0.3s ease'
+                                },
+                                '&::after': {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: '50%',
+                                  left: '50%',
+                                  width: '60%',
+                                  height: '60%',
+                                  transform: 'translate(-50%, -50%)',
+                                  borderRadius: '50%',
+                                  background: hoveredModule === module.id 
+                                    ? `radial-gradient(circle, ${module.backgroundColor}20 0%, transparent 70%)`
+                                    : `radial-gradient(circle, ${module.backgroundColor}10 0%, transparent 70%)`,
+                                  transition: 'all 0.3s ease'
                                 }
                               }}
                             >
-                              {React.cloneElement(module.icon, {
-                                sx: {
-                                  ...module.icon.props.sx,
-                                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-                                  transition: 'all 0.3s ease',
-                                  transform: hoveredModule === module.id ? 'scale(1.1)' : 'scale(1)',
-                                  zIndex: 1,
-                                  position: 'relative'
-                                }
-                              })}
+                              <Box sx={{
+                                zIndex: 2,
+                                position: 'relative',
+                                transform: hoveredModule === module.id ? 'scale(1.1)' : 'scale(1)',
+                                transition: 'transform 0.3s ease'
+                              }}>
+                                {module.icon}
+                              </Box>
                             </Box>
                           </ButtonBase>
                         </Tooltip>

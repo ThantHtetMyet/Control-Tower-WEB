@@ -54,14 +54,11 @@ const ServiceReportEdit = () => {
   });
 
   const [isLoading, setIsLoading] = useState(true);
-  const [dropdownData, setDropdownData] = useState({
+    const [dropdownData, setDropdownData] = useState({
     projectNos: [],
     systems: [],
     locations: [],
     followupActions: [],
-    issueReports: [],
-    issueFindings: [],
-    actionsTaken: [],
     furtherActions: [],
     formStatuses: [],
     serviceTypes: []
