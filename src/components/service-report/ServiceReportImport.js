@@ -452,6 +452,7 @@ const ServiceReportImport = () => {
           </Grid>
 
           <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+            {/*
             <Button
               variant="outlined"
               startIcon={<FiDownload />}
@@ -460,7 +461,7 @@ const ServiceReportImport = () => {
             >
               Download Template
             </Button>
-
+            */}
             <Button
               variant="contained"
               component="label"
