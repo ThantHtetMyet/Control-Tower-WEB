@@ -13,7 +13,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext'; // Add this import
 import EmployeeNavBar from './EmployeeNavBar';
 
-const API_BASE_URL = 'https://localhost:7145/api';
+import { API_URL } from '../../config/apiConfig';
+
+const API_BASE_URL = API_URL;
 
 const DepartmentForm = () => {
   const navigate = useNavigate();

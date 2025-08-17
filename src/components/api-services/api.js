@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { API_URL } from '../../config/apiConfig';
 
 // Default API instance (fallback)
 const defaultApi = axios.create({
-  baseURL: 'https://localhost:7145/api',
+  baseURL: API_URL,
   withCredentials: true, // ✅ Ensure this is present
 });
 

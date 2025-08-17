@@ -30,7 +30,9 @@ import applicationService from '../api-services/applicationService';
 import accessLevelService from '../api-services/accessLevelService';
 import employeeApplicationAccessService from '../api-services/employeeApplicationAccessService';
 
-const API_BASE_URL = 'https://localhost:7145/api';
+import { API_URL } from '../../config/apiConfig';
+
+const API_BASE_URL = API_URL;
 
 const EmployeeForm = () => {
   const navigate = useNavigate();

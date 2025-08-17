@@ -18,7 +18,9 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import moment from 'moment';
 import EmployeeNavBar from './EmployeeNavBar';
 
-const API_BASE_URL = 'https://localhost:7145/api';
+import { API_URL } from '../../config/apiConfig';
+
+const API_BASE_URL = API_URL;
 
 const EmployeeEdit = () => {
   const navigate = useNavigate();

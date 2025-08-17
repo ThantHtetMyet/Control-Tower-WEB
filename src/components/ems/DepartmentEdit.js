@@ -15,7 +15,9 @@ import { Save, Cancel } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import EmployeeNavBar from './EmployeeNavBar';
 
-const API_BASE_URL = 'https://localhost:7145/api';
+import { API_URL } from '../../config/apiConfig';
+
+const API_BASE_URL = API_URL;
 
 const DepartmentEdit = () => {
   const navigate = useNavigate();

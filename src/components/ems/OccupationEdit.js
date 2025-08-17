@@ -15,7 +15,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import EmployeeNavBar from './EmployeeNavBar';
 
-const API_BASE_URL = 'https://localhost:7145/api';
+import { API_URL } from '../../config/apiConfig';
+
+const API_BASE_URL = API_URL;
 
 const OccupationEdit = () => {
   const navigate = useNavigate();

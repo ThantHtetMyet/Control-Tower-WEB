@@ -8,7 +8,9 @@ import { Edit, Delete, Add,  Work } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import EmployeeNavBar from './EmployeeNavBar';
 
-const API_BASE_URL = 'https://localhost:7145/api';
+import { API_URL } from '../../config/apiConfig';
+
+const API_BASE_URL = API_URL;
 
 const OccupationList = () => {
   const [occupations, setOccupations] = useState([]);
