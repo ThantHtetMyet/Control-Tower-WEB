@@ -6,13 +6,22 @@ import {
   Button,
   MenuItem,
   Typography,
-  Paper
+  Paper,
+  TableContainer,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  IconButton
 } from '@mui/material';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
 import { useNavigate, useParams } from 'react-router-dom';
 import CustomModal from '../common/CustomModal';
 import moment from 'moment';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 
 import { API_URL } from '../../config/apiConfig';
 
@@ -55,8 +64,27 @@ const ServiceReportEdit = () => {
     formStatusRemark: ''
   });
 
+  // Add MaterialUsed state and handlers
+  const [materialsUsed, setMaterialsUsed] = useState([]);
+
+  const handleAddMaterial = () => {
+    setMaterialsUsed([...materialsUsed, { id: null, quantity: '', description: '', serialNo: '' }]);
+  };
+
+  const handleRemoveMaterial = (index) => {
+    const updatedMaterials = materialsUsed.filter((_, i) => i !== index);
+    setMaterialsUsed(updatedMaterials);
+  };
+
+  const handleMaterialChange = (index, field, value) => {
+    const updatedMaterials = materialsUsed.map((material, i) => 
+      i === index ? { ...material, [field]: value } : material
+    );
+    setMaterialsUsed(updatedMaterials);
+  };
+
   const [isLoading, setIsLoading] = useState(true);
-    const [dropdownData, setDropdownData] = useState({
+  const [dropdownData, setDropdownData] = useState({
     projectNos: [],
     systems: [],
     locations: [],
@@ -256,6 +284,18 @@ const ServiceReportEdit = () => {
               furtherActionRemark: reportData.furtherActionTakenRemark || '',
               formStatusRemark: reportData.formStatusRemark || ''
             });
+
+            // Add MaterialUsed data loading
+            if (reportData.materialsUsed && Array.isArray(reportData.materialsUsed)) {
+              setMaterialsUsed(reportData.materialsUsed.map(material => ({
+                id: material.id || null, // Include the ID for existing materials
+                quantity: material.quantity || '',
+                description: material.description || '',
+                serialNo: material.serialNo || ''
+              })));
+            } else {
+              setMaterialsUsed([]);
+            }
           } else {
             console.error('Failed to fetch report data');
             navigate('/service-report-system');
@@ -273,51 +313,56 @@ const ServiceReportEdit = () => {
     fetchExistingReport();
   }, [id, navigate]);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async () => {
     try {
       const requestData = {
-        customer: formData.customer,
-        jobNumber: formData.jobNumber,
-        contactNo: formData.contactNo,
-        projectNoID: formData.projectNo.id,
-        systemID: formData.system.id,
-        locationID: formData.location.id,
-        followupActionID: formData.followUpAction.id,
+        // Add missing required field
+        jobNumber: formData.jobNumber || '',
+        customer: formData.customer || '',
+        contactNo: formData.contactNo || '',
+        // Convert empty strings to null for nullable Guid fields
+        projectNoID: formData.projectNo.id || null,
+        systemID: formData.system.id || null,
+        locationID: formData.location.id || null,
+        followupActionID: formData.followUpAction.id || null,
         failureDetectedDate: formData.failureDetectedTime?.toISOString(),
         responseDate: formData.responseTime?.toISOString(),
         arrivalDate: formData.arrivalTime?.toISOString(),
         completionDate: formData.completionTime?.toISOString(),
         serviceType: [{
           id: formData.serviceTypes.id || null,
-          remark: formData.serviceTypeRemark
+          remark: formData.serviceTypeRemark || ''
         }],
         formStatus: [{
           id: formData.formStatus.id || null,
-          remark: formData.formStatusRemark
+          remark: formData.formStatusRemark || ''
         }],
         issueReported: [{
-          id: formData.issueReported.id || null,
-          remark: formData.issueReportedRemark,
-          description: formData.issueReportedDescription
+          description: formData.issueReportedDescription || '',
+          remark: formData.issueReportedRemark || ''
         }],
         issueFound: [{
-          id: formData.issueFound.id || null,
-          remark: formData.issueFoundRemark,
-          description: formData.issueFoundDescription
+          description: formData.issueFoundDescription || '',
+          remark: formData.issueFoundRemark || ''
         }],
         actionTaken: [{
-          id: formData.actionTaken.id || null,
-          remark: formData.actionTakenRemark,
-          description: formData.actionTakenDescription
+          description: formData.actionTakenDescription || '',
+          remark: formData.actionTakenRemark || ''
         }],
         furtherAction: [{
           id: formData.furtherAction.id || null,
-          remark: formData.furtherActionRemark
+          remark: formData.furtherActionRemark || ''
         }],
+        // Add MaterialUsed data
+        materialsUsed: materialsUsed.map(material => ({
+          ID: material.id, // Send ID for existing materials (null for new ones)
+          Quantity: parseInt(material.quantity) || 0, // Convert to integer
+          Description: material.description || '',
+          SerialNo: material.serialNo || ''
+        })),
         updatedBy: user.id
       };
-
+  
       const response = await fetch(`${API_BASE_URL}/ServiceReport/${id}`, {
         method: 'PUT',
         headers: {
@@ -325,7 +370,7 @@ const ServiceReportEdit = () => {
         },
         body: JSON.stringify(requestData)
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to update report');
@@ -824,6 +869,83 @@ const ServiceReportEdit = () => {
                 </tr>
               </tbody>
             </table>
+          </Box>
+
+          {/* Materials Used Section */}
+          <Box sx={{ p: 3, mt: 3, backgroundColor: '#fafafa', borderRadius: '4px', border: '1px solid #ccc' }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                mb: 3,
+                fontSize: '18px',
+                fontWeight: 500,
+                color: '#1976d2'
+              }}
+            >
+              Materials Used
+            </Typography>
+            <TableContainer component={Paper} sx={{ mb: 2 }}>
+              <Table>
+                <TableHead>
+                  <TableRow sx={tableRowStyles}>
+                    <TableCell sx={{ width: '20%', fontWeight: 'bold' }}>Quantity</TableCell>
+                    <TableCell sx={{ width: '50%', fontWeight: 'bold' }}>Description</TableCell>
+                    <TableCell sx={{ width: '20%', fontWeight: 'bold' }}>Serial No</TableCell>
+                    <TableCell sx={{ width: '10%', fontWeight: 'bold' }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {materialsUsed.map((material, index) => (
+                    <TableRow key={index} sx={tableRowStyles}>
+                      <TableCell>
+                        <TextField
+                          value={material.quantity}
+                          onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          value={material.description}
+                          onChange={(e) => handleMaterialChange(index, 'description', e.target.value)}
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          value={material.serialNo}
+                          onChange={(e) => handleMaterialChange(index, 'serialNo', e.target.value)}
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <IconButton
+                          onClick={() => handleRemoveMaterial(index)}
+                          color="error"
+                          size="small"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Button
+              variant="outlined"
+              onClick={handleAddMaterial}
+              startIcon={<AddIcon />}
+              sx={{ mt: 1 }}
+            >
+              Add Material
+            </Button>
           </Box>
 
           <Box sx={{ p: 3,mt:3, backgroundColor: '#fafafa', borderRadius: '4px', border: '1px solid #ccc' }}>

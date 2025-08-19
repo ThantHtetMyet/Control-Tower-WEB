@@ -9,6 +9,7 @@ import {
   Container,
   IconButton,
   InputAdornment,
+  CircularProgress,
 } from '@mui/material';
 import { styled, keyframes } from '@mui/system';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
@@ -119,6 +120,128 @@ const AnimatedShapes = () => {
   );
 };
 
+// Add loading animation keyframes
+const pulseAnimation = keyframes`
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+`;
+
+const spinAnimation = keyframes`
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+`;
+
+// Loading overlay for form area only
+const FormLoadingOverlay = styled(Box)({
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  backdropFilter: 'blur(8px)',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 10,
+  borderRadius: '0 0 4px 4px',
+});
+
+const LoadingSpinner = styled(Box)({
+  position: 'relative',
+  width: '60px',
+  height: '60px',
+  marginBottom: '16px',
+  '& .outer-ring': {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    border: '3px solid rgba(128, 0, 128, 0.2)',
+    borderTop: '3px solid #800080',
+    borderRadius: '50%',
+    animation: `${spinAnimation} 1s linear infinite`,
+  },
+  '& .inner-ring': {
+    position: 'absolute',
+    top: '8px',
+    left: '8px',
+    width: 'calc(100% - 16px)',
+    height: 'calc(100% - 16px)',
+    border: '2px solid rgba(75, 0, 130, 0.3)',
+    borderBottom: '2px solid #4B0082',
+    borderRadius: '50%',
+    animation: `${spinAnimation} 0.8s linear infinite reverse`,
+  },
+  '& .center-dot': {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: '8px',
+    height: '8px',
+    backgroundColor: '#800080',
+    borderRadius: '50%',
+    transform: 'translate(-50%, -50%)',
+    animation: `${pulseAnimation} 1.5s ease-in-out infinite`,
+  }
+});
+
+const LoadingText = styled(Typography)({
+  color: '#800080',
+  fontSize: '16px',
+  fontWeight: 500,
+  textAlign: 'center',
+  animation: `${pulseAnimation} 2s ease-in-out infinite`,
+  marginBottom: '8px',
+});
+
+const LoadingDots = styled(Box)({
+  display: 'flex',
+  gap: '6px',
+  '& .dot': {
+    width: '6px',
+    height: '6px',
+    backgroundColor: '#800080',
+    borderRadius: '50%',
+    animation: `${pulseAnimation} 1s ease-in-out infinite`,
+    '&:nth-of-type(1)': { animationDelay: '0s' },
+    '&:nth-of-type(2)': { animationDelay: '0.2s' },
+    '&:nth-of-type(3)': { animationDelay: '0.4s' },
+  }
+});
+
+const FormLoadingAnimation = () => (
+  <FormLoadingOverlay>
+    <LoadingSpinner>
+      <div className="outer-ring" />
+      <div className="inner-ring" />
+      <div className="center-dot" />
+    </LoadingSpinner>
+    <LoadingText>
+      Signing you in...
+    </LoadingText>
+    <LoadingDots>
+      <div className="dot" />
+      <div className="dot" />
+      <div className="dot" />
+    </LoadingDots>
+  </FormLoadingOverlay>
+);
+
 const SignIn = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -126,6 +249,7 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [openErrorModal, setOpenErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -138,153 +262,144 @@ const SignIn = () => {
     });
   };
 
-
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setIsLoading(true);
     try {
       const response = await loginAPI(formData);
       console.log('Login response:', response.data);
       login(response.data);
-      const from = location.state?.from?.pathname || '/modules'; // Changed from '/dashboard' to '/modules'
+      const from = location.state?.from?.pathname || '/modules';
       navigate(from, { replace: true });
     } catch (error) {
       console.error('Login failed:', error);
       setErrorMessage('Invalid email or password');
       setOpenErrorModal(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <Container component="main" maxWidth="xs">
-    <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <Paper elevation={6} sx={{ width: '100%', overflow: 'hidden' }}>
-        <Box
-          sx={{
-            background: 'linear-gradient(135deg, #800080 0%, #4B0082 100%)',
-            padding: '32px',
-            position: 'relative',
-            overflow: 'hidden',
-            minHeight: '120px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%',
-            margin: 0
-          }}
-        >
-          <AnimatedShapes />
-          <Typography
-            component="h1"
-            variant="h5"
+      <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Paper elevation={6} sx={{ width: '100%', overflow: 'hidden' }}>
+          <Box
             sx={{
-              color: '#fff',
-              textAlign: 'left',
-              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.2)',
+              background: 'linear-gradient(135deg, #800080 0%, #4B0082 100%)',
+              padding: '32px',
               position: 'relative',
-              zIndex: 1,
-              fontWeight: 'bold',
-              width: '100%'
+              overflow: 'hidden',
+              minHeight: '120px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              margin: 0
             }}
           >
-            Willowglen Services Pte Ltd
-          </Typography>
-        </Box>
-
-        <Box sx={{ padding: 4 }}>
-          <Typography
-            component="h2"
-            variant="h5"
-            sx={{ color: '#800080', marginBottom: 4, textAlign: 'center' }}
-          >
-            Sign In
-          </Typography>
-          <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={formData.email}
-              onChange={handleChange('email')}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              id="password"
-              autoComplete="current-password"
-              value={formData.password}
-              onChange={handleChange('password')}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
+            <AnimatedShapes />
+            <Typography
+              component="h1"
+              variant="h5"
               sx={{
-                mt: 3,
-                mb: 2,
-                background: 'linear-gradient(135deg, #800080 0%, #4B0082 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #4B0082 0%, #800080 100%)'
-                },
-                py: 1.5,
-                boxShadow: '0 4px 12px rgba(75, 0, 130, 0.2)',
-                transition: 'all 0.3s ease-in-out'
+                color: '#fff',
+                textAlign: 'left',
+                textShadow: '2px 2px 4px rgba(0, 0, 0, 0.2)',
+                position: 'relative',
+                zIndex: 1,
+                fontWeight: 'bold',
+                width: '100%'
               }}
             >
-              Sign In
-            </Button>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-              <Link
-                href="#"
-                variant="body2"
-                sx={{
-                  color: '#800080',
-                  textDecoration: 'none',
-                  '&:hover': {
-                    textDecoration: 'underline'
-                  }
-                }}
-                onClick={() => navigate('/forgot-password')}
-              >
-                Forgot password?
-              </Link>
-              <Link
-                href="#"
-                variant="body2"
-                sx={{
-                  color: '#800080',
-                  textDecoration: 'none',
-                  '&:hover': {
-                    textDecoration: 'underline'
-                  }
-                }}
-                onClick={() => navigate('/signup')}
-              >
-                Don't have an account? Sign Up
-              </Link>
-            </Box>
+              Willowglen Services Pte Ltd
+            </Typography>
           </Box>
+
+          <Box sx={{ padding: 4, position: 'relative' }}>
+            <Typography
+              component="h2"
+              variant="h5"
+              sx={{ color: '#800080', marginBottom: 4, textAlign: 'center' }}
+            >
+              Sign In
+            </Typography>
+            <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="email"
+                label="Email Address"
+                name="email"
+                autoComplete="email"
+                autoFocus
+                value={formData.email}
+                onChange={handleChange('email')}
+                disabled={isLoading}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="password"
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                autoComplete="current-password"
+                value={formData.password}
+                onChange={handleChange('password')}
+                disabled={isLoading}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                        disabled={isLoading}
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
+              />
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                disabled={isLoading}
+                sx={{
+                  mt: 3,
+                  mb: 2,
+                  background: isLoading 
+                    ? 'linear-gradient(135deg, #cccccc 0%, #999999 100%)' 
+                    : 'linear-gradient(135deg, #800080 0%, #4B0082 100%)',
+                  '&:hover': {
+                    background: isLoading 
+                      ? 'linear-gradient(135deg, #cccccc 0%, #999999 100%)'
+                      : 'linear-gradient(135deg, #4B0082 0%, #800080 100%)',
+                  },
+                  py: 1.5,
+                  boxShadow: '0 4px 12px rgba(75, 0, 130, 0.2)',
+                  transition: 'all 0.3s ease-in-out',
+                  cursor: isLoading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {isLoading ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CircularProgress size={20} sx={{ color: '#fff' }} />
+                    <span>Signing In...</span>
+                  </Box>
+                ) : (
+                  'Sign In'
+                )}
+              </Button>
+            </Box>
+            
+            {/* Form Loading Overlay - only covers the form area */}
+            {isLoading && <FormLoadingAnimation />}
           </Box>
         </Paper>
       </Box>

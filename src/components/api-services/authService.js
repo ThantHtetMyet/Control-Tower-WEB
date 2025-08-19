@@ -2,7 +2,8 @@ import axios from 'axios';
 import { API_URL } from '../../config/apiConfig';
 
 export const login = async (credentials) => {
-  return await axios.post(`${API_URL}/auth/signin`, credentials);
+  return axios.post(`${API_URL}/auth/signin`, credentials, { withCredentials: true });
+  //return await axios.post(`${API_URL}/auth/signin`, credentials);
 };
 
 export const signup = async (userData) => {

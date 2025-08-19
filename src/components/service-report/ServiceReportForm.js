@@ -267,10 +267,11 @@ const ServiceReportForm = () => {
             customer: formData.customer,
             contactNo: formData.contactNo,
             jobNumber: formData.jobNumber,
-            projectNoID: formData.projectNo.id,  // Changed from projectNo to projectNoID
-            systemID: formData.system.id,        // Changed from system to systemID
-            locationID: formData.location.id,    // Changed from location to locationID
-            followupActionID: formData.followUpAction.id, // Changed from followUpAction to followupActionID
+            // Convert empty strings to null for GUID fields
+            projectNoID: formData.projectNo.id || null,
+            systemID: formData.system.id || null,
+            locationID: formData.location.id || null,
+            followupActionID: formData.followUpAction.id || null,
             failureDetectedDate: formData.failureDetectedTime?.toISOString(),
             responseDate: formData.responseTime?.toISOString(),
             arrivalDate: formData.arrivalTime?.toISOString(),
@@ -712,6 +713,7 @@ const ServiceReportForm = () => {
                         value={formData.serviceTypeRemark}
                         onChange={handleChange('serviceTypeRemark')}
                         size="small"
+                        label="Remark"
                         sx={{ ...textFieldStyles, marginLeft: '16px' }}
                       />
                   </Box>
@@ -754,6 +756,7 @@ const ServiceReportForm = () => {
                         value={formData.issueReportedRemark}
                         onChange={handleChange('issueReportedRemark')}
                         size="small"
+                        label="Remark"
                         sx={{ ...textFieldStyles, marginLeft: '16px' }}
                       />
                     </Box>
@@ -776,6 +779,7 @@ const ServiceReportForm = () => {
                           value={formData.issueFoundRemark}
                           onChange={handleChange('issueFoundRemark')}
                           size="small"
+                          label="Remark"
                           sx={{ ...textFieldStyles, marginLeft: '16px' }}
                         />
                       </Box>
@@ -806,6 +810,7 @@ const ServiceReportForm = () => {
                     value={formData.actionTakenRemark}
                     onChange={handleChange('actionTakenRemark')}
                     size="small"
+                    label="Remark"
                     sx={{ ...textFieldStyles, marginLeft: '16px' }}
                   />
                   </Box>
@@ -940,6 +945,7 @@ const ServiceReportForm = () => {
                         value={formData.furtherActionRemark}
                         onChange={handleChange('furtherActionRemark')}
                         size="small"
+                        label="Remark"
                         sx={{ ...textFieldStyles, marginLeft: '16px' }}
                       />
                     </Box>
@@ -1009,6 +1015,7 @@ const ServiceReportForm = () => {
                       value={formData.formStatusRemark}
                       onChange={handleChange('formStatusRemark')}
                       size="small"
+                      label="Remark"
                       sx={{ ...textFieldStyles, marginLeft: '16px' }}
                     />
                   </Box>

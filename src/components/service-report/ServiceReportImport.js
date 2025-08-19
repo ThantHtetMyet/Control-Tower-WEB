@@ -153,7 +153,7 @@ const ServiceReportImport = () => {
     try {
       console.log('Connecting to MQTT...');
       // Change from mqtt:// to ws:// for WebSocket connection
-      const client = mqtt.connect('ws://localhost:9001');
+      const client = mqtt.connect('ws://192.3.71.120:9001');
       
       client.on('connect', () => {
         console.log('Connected to MQTT broker');
