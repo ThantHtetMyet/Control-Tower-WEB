@@ -17,6 +17,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { login as loginAPI } from '../api-services/authService';
 import CustomModal from '../common/CustomModal';
+import backgroundImage from '../resources/willowglen_login_background_image.jpg';
 
 
 const bubbleAnimation = keyframes`
@@ -152,14 +153,16 @@ const FormLoadingOverlay = styled(Box)({
   left: 0,
   right: 0,
   bottom: 0,
-  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-  backdropFilter: 'blur(8px)',
+  backgroundColor: 'rgba(128, 0, 128, 0.15)', // More transparent purple tint
+  backdropFilter: 'blur(20px) saturate(180%)', // Enhanced blur effect
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
   zIndex: 10,
-  borderRadius: '0 0 4px 4px',
+  borderRadius: '20px', // Match Paper border radius
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+  boxShadow: 'inset 0 0 50px rgba(128, 0, 128, 0.1)'
 });
 
 const LoadingSpinner = styled(Box)({
@@ -171,10 +174,11 @@ const LoadingSpinner = styled(Box)({
     position: 'absolute',
     width: '100%',
     height: '100%',
-    border: '3px solid rgba(128, 0, 128, 0.2)',
-    borderTop: '3px solid #800080',
+    border: '3px solid rgba(255, 255, 255, 0.2)', // More transparent
+    borderTop: '3px solid rgba(255, 255, 255, 0.8)', // Brighter top
     borderRadius: '50%',
     animation: `${spinAnimation} 1s linear infinite`,
+    filter: 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.3))'
   },
   '& .inner-ring': {
     position: 'absolute',
@@ -182,10 +186,11 @@ const LoadingSpinner = styled(Box)({
     left: '8px',
     width: 'calc(100% - 16px)',
     height: 'calc(100% - 16px)',
-    border: '2px solid rgba(75, 0, 130, 0.3)',
-    borderBottom: '2px solid #4B0082',
+    border: '2px solid rgba(128, 0, 128, 0.3)',
+    borderBottom: '2px solid rgba(128, 0, 128, 0.8)',
     borderRadius: '50%',
     animation: `${spinAnimation} 0.8s linear infinite reverse`,
+    filter: 'drop-shadow(0 0 8px rgba(128, 0, 128, 0.4))'
   },
   '& .center-dot': {
     position: 'absolute',
@@ -193,20 +198,22 @@ const LoadingSpinner = styled(Box)({
     left: '50%',
     width: '8px',
     height: '8px',
-    backgroundColor: '#800080',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: '50%',
     transform: 'translate(-50%, -50%)',
     animation: `${pulseAnimation} 1.5s ease-in-out infinite`,
+    boxShadow: '0 0 15px rgba(255, 255, 255, 0.6)'
   }
 });
 
 const LoadingText = styled(Typography)({
-  color: '#800080',
+  color: 'rgba(255, 255, 255, 0.9)', // White text instead of purple
   fontSize: '16px',
   fontWeight: 500,
   textAlign: 'center',
   animation: `${pulseAnimation} 2s ease-in-out infinite`,
   marginBottom: '8px',
+  textShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
 });
 
 const LoadingDots = styled(Box)({
@@ -215,12 +222,13 @@ const LoadingDots = styled(Box)({
   '& .dot': {
     width: '6px',
     height: '6px',
-    backgroundColor: '#800080',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     borderRadius: '50%',
     animation: `${pulseAnimation} 1s ease-in-out infinite`,
+    boxShadow: '0 0 8px rgba(255, 255, 255, 0.4)',
     '&:nth-of-type(1)': { animationDelay: '0s' },
     '&:nth-of-type(2)': { animationDelay: '0.2s' },
-    '&:nth-of-type(3)': { animationDelay: '0.4s' },
+    '&:nth-of-type(3)': { animationDelay: '0.4s' }
   }
 });
 
@@ -281,135 +289,357 @@ const SignIn = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Paper elevation={6} sx={{ width: '100%', overflow: 'hidden' }}>
-          <Box
-            sx={{
-              background: 'linear-gradient(135deg, #800080 0%, #4B0082 100%)',
-              padding: '32px',
-              position: 'relative',
+    <Box
+      sx={{
+        height: '100vh', // Changed from minHeight to height
+        width: '100vw', // Ensure full width
+        overflow: 'hidden', // Prevent scrolling
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        position: 'relative',
+        padding: { xs: 1, sm: 2, md: 3 }, // Reduced padding
+        boxSizing: 'border-box', // Include padding in height calculation
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(128, 0, 128, 0.2) 100%)',
+          zIndex: 1
+        }
+      }}
+    >
+      <Container 
+        component="main" 
+        maxWidth={false}
+        sx={{ 
+          position: 'relative', 
+          zIndex: 2,
+          display: 'flex',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          height: '100%', // Changed from minHeight to height
+          maxWidth: '1400px',
+          padding: 0,
+          margin: 0 // Remove default margin
+        }}
+      >
+        <Box sx={{ 
+          width: { xs: '100%', sm: '420px', md: '450px' },
+          marginRight: { xs: 0, sm: 2, md: 4, lg: 6 }, // Reduced margin
+          marginLeft: { xs: 0, sm: 'auto' },
+          maxHeight: '90vh', // Limit maximum height
+          overflow: 'auto' // Allow internal scrolling if needed
+        }}>
+          <Paper 
+            elevation={24}
+            sx={{ 
+              width: '100%', 
               overflow: 'hidden',
-              minHeight: '120px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '100%',
-              margin: 0
+              backgroundColor: 'rgba(255, 255, 255, 0.08)', // More transparent
+              backdropFilter: 'blur(20px) saturate(180%)', // Enhanced glass effect
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '20px', // More rounded corners
+              boxShadow: {
+                xs: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                sm: '0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(128, 0, 128, 0.2)'
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 25px 70px rgba(0, 0, 0, 0.5), 0 10px 40px rgba(128, 0, 128, 0.3)'
+              }
             }}
           >
-            <AnimatedShapes />
-            <Typography
-              component="h1"
-              variant="h5"
+            {/* Header Section with Enhanced Gradient */}
+            <Box
               sx={{
-                color: '#fff',
-                textAlign: 'left',
-                textShadow: '2px 2px 4px rgba(0, 0, 0, 0.2)',
+                background: 'linear-gradient(135deg, rgba(128, 0, 128, 0.9) 0%, rgba(75, 0, 130, 0.95) 50%, rgba(138, 43, 226, 0.9) 100%)',
+                padding: { xs: '24px', sm: '32px' },
                 position: 'relative',
-                zIndex: 1,
-                fontWeight: 'bold',
-                width: '100%'
+                overflow: 'hidden',
+                minHeight: '100px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%, rgba(255, 255, 255, 0.05) 100%)',
+                  zIndex: 1
+                }
               }}
             >
-              Willowglen Services Pte Ltd
-            </Typography>
-          </Box>
-
-          <Box sx={{ padding: 4, position: 'relative' }}>
-            <Typography
-              component="h2"
-              variant="h5"
-              sx={{ color: '#800080', marginBottom: 4, textAlign: 'center' }}
-            >
-              Sign In
-            </Typography>
-            <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="Email Address"
-                name="email"
-                autoComplete="email"
-                autoFocus
-                value={formData.email}
-                onChange={handleChange('email')}
-                disabled={isLoading}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                autoComplete="current-password"
-                value={formData.password}
-                onChange={handleChange('password')}
-                disabled={isLoading}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                        disabled={isLoading}
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
-              />
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                disabled={isLoading}
+              <AnimatedShapes />
+              <Typography
+                component="h1"
+                variant="h5"
                 sx={{
-                  mt: 3,
-                  mb: 2,
-                  background: isLoading 
-                    ? 'linear-gradient(135deg, #cccccc 0%, #999999 100%)' 
-                    : 'linear-gradient(135deg, #800080 0%, #4B0082 100%)',
-                  '&:hover': {
-                    background: isLoading 
-                      ? 'linear-gradient(135deg, #cccccc 0%, #999999 100%)'
-                      : 'linear-gradient(135deg, #4B0082 0%, #800080 100%)',
-                  },
-                  py: 1.5,
-                  boxShadow: '0 4px 12px rgba(75, 0, 130, 0.2)',
-                  transition: 'all 0.3s ease-in-out',
-                  cursor: isLoading ? 'not-allowed' : 'pointer'
+                  color: '#fff',
+                  textAlign: 'center',
+                  textShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
+                  position: 'relative',
+                  zIndex: 2,
+                  fontWeight: 600,
+                  fontSize: { xs: '1.3rem', sm: '1.5rem' },
+                  letterSpacing: '0.5px'
                 }}
               >
-                {isLoading ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CircularProgress size={20} sx={{ color: '#fff' }} />
-                    <span>Signing In...</span>
-                  </Box>
-                ) : (
-                  'Sign In'
-                )}
-              </Button>
+                Willowglen Services Pte Ltd
+              </Typography>
             </Box>
-            
-            {/* Form Loading Overlay - only covers the form area */}
-            {isLoading && <FormLoadingAnimation />}
-          </Box>
-        </Paper>
-      </Box>
+
+            {/* Form Section with Enhanced Styling */}
+            <Box sx={{ 
+              padding: { xs: 3, sm: 4, md: 5 }, 
+              position: 'relative',
+              background: 'rgba(255, 255, 255, 0.02)'
+            }}>
+              <Typography
+                component="h2"
+                variant="h4"
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.95)',
+                  marginBottom: 4, 
+                  textAlign: 'center',
+                  fontWeight: 300,
+                  fontSize: { xs: '1.8rem', sm: '2rem' },
+                  textShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                }}
+              >
+                Sign In
+              </Typography>
+              
+              <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+                <TextField
+                    margin="normal"
+                    required
+                    fullWidth
+                    id="email"
+                    label="Email Address"
+                    name="email"
+                    autoComplete="email"
+                    autoFocus
+                    value={formData.email}
+                    onChange={handleChange('email')}
+                    disabled={isLoading}
+                    sx={{
+                      mb: 3,
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: formData.email ? 'rgba(128, 0, 128, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                        backdropFilter: 'blur(15px) saturate(150%)',
+                        borderRadius: '12px',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        border: formData.email ? '1px solid rgba(128, 0, 128, 0.3)' : '1px solid rgba(255, 255, 255, 0.2)',
+                        boxShadow: formData.email ? '0 4px 20px rgba(128, 0, 128, 0.2)' : 'none',
+                        '& fieldset': {
+                          borderColor: formData.email ? 'rgba(128, 0, 128, 0.4)' : 'rgba(255, 255, 255, 0.2)',
+                          borderWidth: '1px'
+                        },
+                        '&:hover': {
+                          backgroundColor: formData.email ? 'rgba(128, 0, 128, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                          transform: 'translateY(-1px)',
+                          boxShadow: formData.email ? '0 6px 25px rgba(128, 0, 128, 0.3)' : '0 4px 15px rgba(255, 255, 255, 0.1)'
+                        },
+                        '&:hover fieldset': {
+                          borderColor: formData.email ? 'rgba(128, 0, 128, 0.6)' : 'rgba(255, 255, 255, 0.4)'
+                        },
+                        '&.Mui-focused': {
+                          backgroundColor: 'rgba(128, 0, 128, 0.25)',
+                          boxShadow: '0 8px 30px rgba(128, 0, 128, 0.4), 0 0 0 3px rgba(128, 0, 128, 0.1)'
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: 'rgba(128, 0, 128, 0.8)',
+                          borderWidth: '2px'
+                        }
+                      },
+                      '& .MuiOutlinedInput-input': {
+                        color: 'rgba(255, 255, 255, 0.95)',
+                        fontWeight: 500,
+                        '&::placeholder': {
+                          color: 'rgba(255, 255, 255, 0.4)'
+                        },
+                        // Autofill transparent fix
+                        '&:-webkit-autofill': {
+                          WebkitBoxShadow: '0 0 0 1000px transparent inset !important',
+                          WebkitTextFillColor: 'rgba(255, 255, 255, 0.95) !important',
+                          transition: 'background-color 5000s ease-in-out 0s !important',
+                          backgroundColor: 'transparent !important',
+                          borderRadius: '12px !important'
+                        },
+                        '&:-webkit-autofill:hover': {
+                          WebkitBoxShadow: '0 0 0 1000px transparent inset !important',
+                          backgroundColor: 'transparent !important'
+                        },
+                        '&:-webkit-autofill:focus': {
+                          WebkitBoxShadow: '0 0 0 1000px transparent inset !important',
+                          backgroundColor: 'transparent !important'
+                        }
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: formData.email ? 'rgba(128, 0, 128, 0.9)' : 'rgba(255, 255, 255, 0.7)',
+                        fontWeight: formData.email ? 500 : 400,
+                        transition: 'all 0.3s ease'
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': {
+                        color: 'rgba(128, 0, 128, 1)'
+                      },
+                    }}
+                  />
+
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="password"
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  autoComplete="current-password"
+                  value={formData.password}
+                  onChange={handleChange('password')}
+                  disabled={isLoading}
+                  sx={{
+                    mb: 4,
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: formData.password ? 'rgba(128, 0, 128, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      backdropFilter: 'blur(15px) saturate(150%)',
+                      borderRadius: '12px',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      border: formData.password ? '1px solid rgba(128, 0, 128, 0.3)' : '1px solid rgba(255, 255, 255, 0.2)',
+                      boxShadow: formData.password ? '0 4px 20px rgba(128, 0, 128, 0.2)' : 'none',
+                      '& fieldset': {
+                        borderColor: formData.password ? 'rgba(128, 0, 128, 0.4)' : 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: '1px'
+                      },
+                      '&:hover': {
+                        backgroundColor: formData.password ? 'rgba(128, 0, 128, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: formData.password ? '0 6px 25px rgba(128, 0, 128, 0.3)' : '0 4px 15px rgba(255, 255, 255, 0.1)'
+                      },
+                      '&:hover fieldset': {
+                        borderColor: formData.password ? 'rgba(128, 0, 128, 0.6)' : 'rgba(255, 255, 255, 0.4)'
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: 'rgba(128, 0, 128, 0.25)',
+                        boxShadow: '0 8px 30px rgba(128, 0, 128, 0.4), 0 0 0 3px rgba(128, 0, 128, 0.1)'
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: 'rgba(128, 0, 128, 0.8)',
+                        borderWidth: '2px'
+                      }
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: formData.password ? 'rgba(128, 0, 128, 0.9)' : 'rgba(255, 255, 255, 0.7)',
+                      fontWeight: formData.password ? 500 : 400,
+                      transition: 'all 0.3s ease'
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: 'rgba(128, 0, 128, 1)'
+                    },
+                    '& .MuiOutlinedInput-input': {
+                      color: 'rgba(255, 255, 255, 0.95)',
+                      fontWeight: 500
+                    }
+                  }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          disabled={isLoading}
+                          sx={{ 
+                            color: formData.password ? 'rgba(128, 0, 128, 0.8)' : 'rgba(255, 255, 255, 0.7)',
+                            transition: 'all 0.3s ease',
+                            '&:hover': {
+                              color: 'rgba(128, 0, 128, 1)',
+                              backgroundColor: 'rgba(128, 0, 128, 0.1)'
+                            }
+                          }}
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }}
+                />
+                
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  disabled={isLoading}
+                  sx={{
+                    mt: 2,
+                    mb: 3,
+                    py: 1.8,
+                    borderRadius: '12px',
+                    fontSize: '1.1rem',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    background: isLoading 
+                      ? 'linear-gradient(135deg, rgba(200, 200, 200, 0.3) 0%, rgba(150, 150, 150, 0.3) 100%)' 
+                      : 'linear-gradient(135deg, rgba(128, 0, 128, 0.9) 0%, rgba(75, 0, 130, 0.95) 50%, rgba(138, 43, 226, 0.9) 100%)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: isLoading 
+                      ? 'none'
+                      : '0 8px 25px rgba(128, 0, 128, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    '&:hover': {
+                      background: isLoading 
+                        ? 'linear-gradient(135deg, rgba(200, 200, 200, 0.3) 0%, rgba(150, 150, 150, 0.3) 100%)'
+                        : 'linear-gradient(135deg, rgba(138, 43, 226, 0.95) 0%, rgba(128, 0, 128, 0.9) 50%, rgba(75, 0, 130, 0.95) 100%)',
+                      transform: isLoading ? 'none' : 'translateY(-2px)',
+                      boxShadow: isLoading 
+                        ? 'none'
+                        : '0 12px 35px rgba(128, 0, 128, 0.5), 0 6px 16px rgba(0, 0, 0, 0.4)'
+                    },
+                    '&:active': {
+                      transform: isLoading ? 'none' : 'translateY(0px)'
+                    }
+                  }}
+                >
+                  {isLoading ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <CircularProgress size={22} sx={{ color: 'rgba(255, 255, 255, 0.8)' }} />
+                      <span>Signing In...</span>
+                    </Box>
+                  ) : (
+                    'Sign In'
+                  )}
+                </Button>
+              </Box>
+              
+              {/* Enhanced Loading Overlay */}
+              {isLoading && <FormLoadingAnimation />}
+            </Box>
+          </Paper>
+        </Box>
+      </Container>
+      
       <CustomModal
         open={openErrorModal}
         onClose={() => setOpenErrorModal(false)}
         title="Login Failed"
         message={errorMessage}
       />
-    </Container>
+    </Box>
   );
 };
 

@@ -25,7 +25,8 @@ import {
   Assessment,
   Security,
   Search,
-  Clear
+  Clear,
+  Article // Add this import for news icon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
@@ -60,6 +61,15 @@ const ModuleSelection = () => {
       return (
         <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Assignment sx={{ fontSize: 48, color: 'rgb(255, 255, 255)' }} />
+          
+        </Box>
+      );
+    }
+    // Add news portal system icon mapping
+    if (name.includes('news') || name.includes('portal') || name.includes('article') || name.includes('media')) {
+      return (
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Article sx={{ fontSize: 48, color: 'rgb(255, 255, 255)' }} />
           
         </Box>
       );
@@ -295,6 +305,8 @@ const ModuleSelection = () => {
       navigate('/service-report-system');
     } else if (module.id === 'user-management-system') {
       navigate('/employee-management');
+    } else if (module.id === 'news-portal-system') {
+      navigate('/news-portal-system');
     } else {
       alert(`${module.title} is coming soon!`);
     }

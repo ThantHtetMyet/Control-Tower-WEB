@@ -37,6 +37,17 @@ import OccupationForm from './components/ems/OccupationForm';
 import OccupationEdit from './components/ems/OccupationEdit';
 import ApplicationForm from './components/ems/ApplicationForm';
 
+// Add NewsPortalSystem imports
+import NewsList from './components/news-portal-system/NewsList';
+import NewsForm from './components/news-portal-system/NewsForm';
+import NewsCategoryList from './components/news-portal-system/NewsCategoryList';
+import NewsCategoryForm from './components/news-portal-system/NewsCategoryForm';
+import NewsNavBar from './components/news-portal-system/NewsNavBar';
+// Add import
+import NewsPortalLayout from './components/news-portal-system/NewsPortalLayout';
+// Add this import
+import NewsDisplay from './components/news-portal-system/NewsDisplay';
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
@@ -254,6 +265,24 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+                
+                {/* News Portal System Routes - Updated Structure */}
+                <Route
+                  path="/news-portal-system"
+                  element={
+                    <ProtectedRoute>
+                      <NewsPortalLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<NewsDisplay />} />
+                  <Route path="news" element={<NewsList />} />
+                  <Route path="news/new" element={<NewsForm />} />
+                  <Route path="news/edit/:id" element={<NewsForm />} />
+                  <Route path="categories" element={<NewsCategoryList />} />
+                  <Route path="categories/new" element={<NewsCategoryForm />} />
+                  <Route path="categories/edit/:id" element={<NewsCategoryForm />} />
+                </Route>
               </Routes>
             </Box>
           </Router>
