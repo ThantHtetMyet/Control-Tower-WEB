@@ -32,9 +32,11 @@ const EmployeeEdit = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [departments, setDepartments] = useState([]);
   const [occupations, setOccupations] = useState([]);
+  const [companies, setCompanies] = useState([]);
   
   const [formData, setFormData] = useState({
     id: '',
+    companyID: '',
     departmentID: '',
     occupationID: '',
     staffCardID: '',
@@ -56,9 +58,22 @@ const EmployeeEdit = () => {
 
   useEffect(() => {
     fetchEmployee();
+    fetchCompanies();
     fetchDepartments();
     fetchOccupations();
   }, [id]);
+
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/Company`);
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data);
+      }
+    } catch (err) {
+      console.error('Error fetching companies:', err);
+    }
+  };
 
   const fetchEmployee = async () => {
     try {
@@ -70,6 +85,7 @@ const EmployeeEdit = () => {
       const data = await response.json();
       setFormData({
         id: data.id,
+        companyID: data.companyID,
         departmentID: data.departmentID,
         occupationID: data.occupationID,
         staffCardID: data.staffCardID,
@@ -286,6 +302,24 @@ const EmployeeEdit = () => {
               </Typography>
               
               <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="Company"
+                    name="companyID"
+                    value={formData.companyID}
+                    onChange={handleInputChange}
+                    required
+                    variant="outlined"
+                  >
+                    {companies.map((company) => (
+                      <MenuItem key={company.id} value={company.id}>
+                        {company.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth

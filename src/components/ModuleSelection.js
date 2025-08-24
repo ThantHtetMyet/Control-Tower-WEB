@@ -121,7 +121,7 @@ const ModuleSelection = () => {
             fontSize: 20, 
             color: '#FF2D92', 
             position: 'absolute',
-            filter: 'drop-shadow(0 2px 8px rgba(255, 45, 146, 0.4))'
+            filter: 'drop-shadow(0 2px 8px rgba(55, 65, 81, 0.4))'
           }} />
         </Box>
       );
@@ -356,7 +356,7 @@ const ModuleSelection = () => {
   return (
     <Box sx={{ 
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, rgba(55, 65, 81, 0.9) 0%, rgba(31, 41, 55, 0.95) 50%, rgba(17, 24, 39, 0.9) 100%)',
       py: 4,
       position: 'relative'
     }}>

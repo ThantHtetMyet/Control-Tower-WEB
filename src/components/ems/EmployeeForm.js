@@ -42,12 +42,14 @@ const EmployeeForm = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [departments, setDepartments] = useState([]);
   const [occupations, setOccupations] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const [applications, setApplications] = useState([]);
   const [accessLevels, setAccessLevels] = useState([]);
   const [selectedApplications, setSelectedApplications] = useState([]);
   const [applicationAccessLevels, setApplicationAccessLevels] = useState({});
   
   const [formData, setFormData] = useState({
+    companyID: '',
     departmentID: '',
     occupationID: '',
     staffCardID: '',
@@ -72,11 +74,24 @@ const EmployeeForm = () => {
   });
 
   useEffect(() => {
+    fetchCompanies();
     fetchDepartments();
     fetchOccupations();
     fetchApplications();
     fetchAccessLevels();
   }, []);
+
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/Company`);
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data);
+      }
+    } catch (err) {
+      console.error('Error fetching companies:', err);
+    }
+  };
 
   const fetchDepartments = async () => {
     try {
@@ -377,6 +392,22 @@ const EmployeeForm = () => {
               </Typography>
               
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Company"
+                  name="companyID"
+                  value={formData.companyID}
+                  onChange={handleInputChange}
+                  required
+                  variant="outlined"
+                >
+                  {companies.map((company) => (
+                    <MenuItem key={company.id} value={company.id}>
+                      {company.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
                 <TextField
                   fullWidth
                   select

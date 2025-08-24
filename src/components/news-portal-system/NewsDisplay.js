@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Grid, Card, CardContent, CardMedia, Chip, Button,
-  Container, Divider, Avatar, IconButton, Paper
+  Container, Divider, Avatar, IconButton, Paper, CardActionArea
 } from '@mui/material';
-import { AccessTime, Visibility, Share, BookmarkBorder } from '@mui/icons-material';
+import { AccessTime, Visibility, Share, BookmarkBorder, CalendarToday } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getNews, getCategories } from '../api-services/newsPortalService';
 import { newsPortalTheme } from './newsPortalTheme';
@@ -14,6 +14,20 @@ const NewsDisplay = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Color palette for compact cards
+  const cardColors = [
+    { bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', text: '#fff' },
+    { bg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', text: '#fff' },
+    { bg: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', text: '#fff' },
+    { bg: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', text: '#fff' },
+    { bg: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', text: '#fff' },
+    { bg: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', text: '#333' },
+    { bg: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', text: '#333' },
+    { bg: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', text: '#333' },
+    { bg: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', text: '#fff' },
+    { bg: 'linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)', text: '#333' }
+  ];
 
   useEffect(() => {
     fetchNewsData();
@@ -26,10 +40,10 @@ const NewsDisplay = () => {
       const response = await getNews(1, 20, '', null, true); // Only published news
       const newsItems = response.items || [];
       
-      // Get featured news (first 4 items)
-      setFeaturedNews(newsItems.slice(0, 4));
-      // Get latest news (remaining items)
-      setLatestNews(newsItems.slice(4));
+      // Get featured news (first 2 items for hero section)
+      setFeaturedNews(newsItems.slice(0, 2));
+      // Get latest news (remaining items for compact cards)
+      setLatestNews(newsItems.slice(2));
     } catch (err) {
       console.error('Error fetching news:', err);
     } finally {
@@ -48,170 +62,199 @@ const NewsDisplay = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-    
-    if (diffHours < 24) {
-      return `${diffHours}h ago`;
-    } else {
-      return date.toLocaleDateString('en-GB', { 
-        day: 'numeric', 
-        month: 'short' 
-      });
-    }
+    return date.toLocaleDateString('en-GB', { 
+      day: 'numeric', 
+      month: 'short',
+      year: 'numeric'
+    });
   };
 
-  const FeaturedArticle = ({ article, isMain = false }) => (
+  const formatMonth = (dateString) => {
+    const date = new Date(dateString);
+    return {
+      month: date.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(),
+      year: date.getFullYear(),
+      day: date.getDate().toString().padStart(2, '0')
+    };
+  };
+
+  // Hero Featured Article Component
+  const HeroArticle = ({ article }) => (
     <Card 
       sx={{ 
-        height: '100%', 
+        height: 400,
         cursor: 'pointer',
-        transition: 'transform 0.2s ease-in-out',
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'transform 0.3s ease-in-out',
         '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: 3
+          transform: 'scale(1.02)',
         }
       }}
-      onClick={() => navigate(`/news/${article.id}`)}
+      onClick={() => navigate(`/news-portal-system/news/${article.id}`)}
     >
       <CardMedia
         component="img"
-        height={isMain ? 300 : 200}
-        image={article.imageUrl || '/api/placeholder/400/300'}
+        height="400"
+        image={article.featuredImageUrl || '/api/placeholder/600/400'}
         alt={article.title}
+        sx={{ objectFit: 'cover' }}
       />
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <Chip 
-            label={article.categoryName} 
-            size="small" 
-            color="primary" 
-            sx={{ mr: 1 }}
-          />
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
-            <AccessTime sx={{ fontSize: 14, mr: 0.5 }} />
-            {formatDate(article.createdDate)}
-          </Typography>
-        </Box>
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+          color: 'white',
+          p: 3
+        }}
+      >
+        <Chip 
+          label="NEWS" 
+          size="small" 
+          sx={{ 
+            backgroundColor: 'rgba(255,255,255,0.2)',
+            color: 'white',
+            mb: 1,
+            fontWeight: 'bold'
+          }}
+        />
         <Typography 
-          variant={isMain ? "h5" : "h6"} 
+          variant="h5" 
           component="h2" 
           sx={{ 
             fontWeight: 'bold',
             mb: 1,
-            lineHeight: 1.3,
-            display: '-webkit-box',
-            WebkitLineClamp: isMain ? 3 : 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden'
+            lineHeight: 1.2
           }}
         >
           {article.title}
         </Typography>
         <Typography 
           variant="body2" 
-          color="text.secondary"
-          sx={{
+          sx={{ 
+            opacity: 0.9,
             display: '-webkit-box',
-            WebkitLineClamp: isMain ? 3 : 2,
+            WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            mb: 2
+            overflow: 'hidden'
           }}
         >
           {article.excerpt}
         </Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Visibility sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
-            <Typography variant="caption" color="text.secondary">
-              {article.viewCount} views
-            </Typography>
-          </Box>
-          <Box>
-            <IconButton size="small">
-              <Share sx={{ fontSize: 16 }} />
-            </IconButton>
-            <IconButton size="small">
-              <BookmarkBorder sx={{ fontSize: 16 }} />
-            </IconButton>
-          </Box>
-        </Box>
-      </CardContent>
+      </Box>
     </Card>
   );
 
-  const NewsListItem = ({ article }) => (
-    <Paper 
-      sx={{ 
-        p: 2, 
-        mb: 2, 
-        cursor: 'pointer',
-        transition: 'all 0.2s ease-in-out',
-        '&:hover': {
-          backgroundColor: 'grey.50',
-          boxShadow: 1
-        }
-      }}
-      onClick={() => navigate(`/news/${article.id}`)}
-    >
-      <Grid container spacing={2}>
-        <Grid item xs={4}>
-          <CardMedia
-            component="img"
-            height={100}
-            image={article.imageUrl || '/api/placeholder/200/100'}
-            alt={article.title}
-            sx={{ borderRadius: 1 }}
-          />
-        </Grid>
-        <Grid item xs={8}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Chip 
-              label={article.categoryName} 
-              size="small" 
-              variant="outlined"
-              sx={{ mr: 1 }}
-            />
-            <Typography variant="caption" color="text.secondary">
-              {formatDate(article.createdDate)}
-            </Typography>
-          </Box>
-          <Typography 
-            variant="subtitle1" 
-            component="h3" 
-            sx={{ 
-              fontWeight: 'bold',
-              mb: 1,
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden'
-            }}
-          >
-            {article.title}
-          </Typography>
-          <Typography 
-            variant="body2" 
-            color="text.secondary"
-            sx={{
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden'
-            }}
-          >
-            {article.excerpt}
-          </Typography>
-        </Grid>
-      </Grid>
-    </Paper>
-  );
+  // Compact Card Component (similar to sample screenshots)
+  const CompactCard = ({ article, index }) => {
+    const colorScheme = cardColors[index % cardColors.length];
+    const dateInfo = formatMonth(article.createdDate || article.publishDate);
+    
+    return (
+      <Card 
+        sx={{ 
+          height: 280,
+          cursor: 'pointer',
+          background: colorScheme.bg,
+          color: colorScheme.text,
+          transition: 'all 0.3s ease-in-out',
+          position: 'relative',
+          overflow: 'hidden',
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
+          }
+        }}
+        onClick={() => navigate(`/news-portal-system/news/${article.id}`)}
+      >
+        <CardActionArea sx={{ height: '100%', p: 0 }}>
+          <CardContent sx={{ 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            p: 3
+          }}>
+            {/* Date Badge */}
+            <Box sx={{ 
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              borderRadius: 2,
+              p: 1,
+              textAlign: 'center',
+              minWidth: 60
+            }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', lineHeight: 1 }}>
+                {dateInfo.day}
+              </Typography>
+              <Typography variant="caption" sx={{ lineHeight: 1 }}>
+                {dateInfo.month}
+              </Typography>
+              <Typography variant="caption" sx={{ lineHeight: 1, display: 'block' }}>
+                {dateInfo.year}
+              </Typography>
+            </Box>
+
+            {/* Content */}
+            <Box>
+              <Chip 
+                label={article.categoryName || 'NEWS'} 
+                size="small" 
+                sx={{ 
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  color: 'inherit',
+                  mb: 2,
+                  fontWeight: 'bold'
+                }}
+              />
+              <Typography 
+                variant="h6" 
+                component="h3" 
+                sx={{ 
+                  fontWeight: 'bold',
+                  mb: 2,
+                  lineHeight: 1.3,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden'
+                }}
+              >
+                {article.title}
+              </Typography>
+            </Box>
+
+            {/* Footer */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              mt: 'auto'
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', opacity: 0.8 }}>
+                <Visibility sx={{ fontSize: 16, mr: 0.5 }} />
+                <Typography variant="caption">
+                  {article.viewCount || 0}
+                </Typography>
+              </Box>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                {article.createdByUserName || 'Admin'}
+              </Typography>
+            </Box>
+          </CardContent>
+        </CardActionArea>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
         <Typography variant="h6" sx={{ textAlign: 'center' }}>
           Loading news...
         </Typography>
@@ -220,137 +263,76 @@ const NewsDisplay = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 4, textAlign: 'center' }}>
         <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', mb: 1 }}>
-          Latest News
+          Today's Top Highlights
         </Typography>
         <Typography variant="subtitle1" color="text.secondary">
-          Stay updated with the latest news and updates
+          Catch up on the most important headlines and trending news, all in one place.
         </Typography>
       </Box>
 
-      {/* Featured News Section */}
+      {/* Hero Featured News Section */}
       {featuredNews.length > 0 && (
         <Box sx={{ mb: 6 }}>
-          <Typography variant="h4" component="h2" sx={{ fontWeight: 'bold', mb: 3 }}>
-            Featured Stories
-          </Typography>
           <Grid container spacing={3}>
-            {/* Main featured article */}
-            <Grid item xs={12} md={8}>
-              <FeaturedArticle article={featuredNews[0]} isMain={true} />
-            </Grid>
-            {/* Side featured articles */}
-            <Grid item xs={12} md={4}>
-              <Grid container spacing={2}>
-                {featuredNews.slice(1, 3).map((article) => (
-                  <Grid item xs={12} key={article.id}>
-                    <FeaturedArticle article={article} />
-                  </Grid>
-                ))}
+            {featuredNews.map((article) => (
+              <Grid item xs={12} md={6} key={article.id}>
+                <HeroArticle article={article} />
               </Grid>
-            </Grid>
+            ))}
           </Grid>
         </Box>
       )}
 
-      <Divider sx={{ my: 4 }} />
-
-      {/* Latest News Section */}
-      <Grid container spacing={4}>
-        <Grid item xs={12} md={8}>
-          <Typography variant="h4" component="h2" sx={{ fontWeight: 'bold', mb: 3 }}>
+      {/* Compact Cards Grid */}
+      {latestNews.length > 0 && (
+        <Box>
+          <Typography variant="h4" component="h2" sx={{ fontWeight: 'bold', mb: 3, textAlign: 'center' }}>
             Latest Updates
           </Typography>
-          {latestNews.map((article) => (
-            <NewsListItem key={article.id} article={article} />
-          ))}
-        </Grid>
+          <Grid container spacing={3}>
+            {latestNews.map((article, index) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={article.id}>
+                <CompactCard article={article} index={index} />
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      )}
 
-        {/* Sidebar */}
-        <Grid item xs={12} md={4}>
-          {/* Categories */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', mb: 2 }}>
-              Categories
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {categories.map((category) => (
-                <Chip
-                  key={category.id}
-                  label={category.name}
-                  variant="outlined"
-                  clickable
-                  onClick={() => navigate(`/news/category/${category.id}`)}
-                  sx={{ 
-                    mb: 1,
-                    borderColor: newsPortalTheme.redPrimary,
-                    color: newsPortalTheme.redPrimary,
-                    '&:hover': {
-                      backgroundColor: 'rgba(220, 20, 60, 0.04)',
-                      borderColor: newsPortalTheme.redSecondary
-                    }
-                  }}
-                />
-              ))}
-            </Box>
-          </Paper>
-
-          {/* Trending */}
-          {featuredNews.length > 3 && (
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', mb: 2 }}>
-                Trending Now
-              </Typography>
-              {featuredNews.slice(3, 6).map((article, index) => (
-                <Box 
-                  key={article.id}
-                  sx={{ 
-                    display: 'flex', 
-                    mb: 2, 
-                    cursor: 'pointer',
-                    '&:hover': { backgroundColor: 'grey.50' },
-                    p: 1,
-                    borderRadius: 1
-                  }}
-                  onClick={() => navigate(`/news/${article.id}`)}
-                >
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      color: 'primary.main', 
-                      fontWeight: 'bold', 
-                      mr: 2,
-                      minWidth: 24
-                    }}
-                  >
-                    {index + 1}
-                  </Typography>
-                  <Box>
-                    <Typography 
-                      variant="subtitle2" 
-                      sx={{ 
-                        fontWeight: 'bold',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
-                      }}
-                    >
-                      {article.title}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {formatDate(article.createdDate)}
-                    </Typography>
-                  </Box>
-                </Box>
-              ))}
-            </Paper>
-          )}
-        </Grid>
-      </Grid>
+      {/* Categories Section */}
+      {categories.length > 0 && (
+        <Box sx={{ mt: 6, textAlign: 'center' }}>
+          <Typography variant="h5" component="h3" sx={{ fontWeight: 'bold', mb: 3 }}>
+            Browse by Category
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center' }}>
+            {categories.map((category) => (
+              <Chip
+                key={category.id}
+                label={category.name}
+                variant="outlined"
+                clickable
+                onClick={() => navigate(`/news-portal-system/category/${category.id}`)}
+                sx={{ 
+                  px: 2,
+                  py: 1,
+                  fontSize: '0.9rem',
+                  borderColor: newsPortalTheme.redPrimary,
+                  color: newsPortalTheme.redPrimary,
+                  '&:hover': {
+                    backgroundColor: 'rgba(220, 20, 60, 0.04)',
+                    borderColor: newsPortalTheme.redSecondary
+                  }
+                }}
+              />
+            ))}
+          </Box>
+        </Box>
+      )}
     </Container>
   );
 };

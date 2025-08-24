@@ -36,6 +36,10 @@ import OccupationList from './components/ems/OccupationList';
 import OccupationForm from './components/ems/OccupationForm';
 import OccupationEdit from './components/ems/OccupationEdit';
 import ApplicationForm from './components/ems/ApplicationForm';
+import CompanyList from './components/ems/CompanyList';
+import CompanyForm from './components/ems/CompanyForm';
+import CompanyEdit from './components/ems/CompanyEdit';
+import CompanyDetails from './components/ems/CompanyDetails';
 
 // Add NewsPortalSystem imports
 import NewsList from './components/news-portal-system/NewsList';
@@ -47,6 +51,8 @@ import NewsNavBar from './components/news-portal-system/NewsNavBar';
 import NewsPortalLayout from './components/news-portal-system/NewsPortalLayout';
 // Add this import
 import NewsDisplay from './components/news-portal-system/NewsDisplay';
+// Add NewsDetail import
+import NewsDetail from './components/news-portal-system/NewsDetail';
 
 function App() {
   return (
@@ -198,6 +204,40 @@ function App() {
                   }
                 />
 
+                {/* Company Routes */}
+                <Route
+                  path="/employee-management/companies"
+                  element={
+                    <ProtectedRoute>
+                      <CompanyList />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/employee-management/companies/new"
+                  element={
+                    <ProtectedRoute>
+                      <CompanyForm />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/employee-management/companies/details/:id"
+                  element={
+                    <ProtectedRoute>
+                      <CompanyDetails />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/employee-management/companies/edit/:id"
+                  element={
+                    <ProtectedRoute>
+                      <CompanyEdit />
+                    </ProtectedRoute>
+                  }
+                />
+
                 {/* Service Report System Routes */}
                 <Route
                   path="/service-report-system/dashboard"
@@ -279,6 +319,8 @@ function App() {
                   <Route path="news" element={<NewsList />} />
                   <Route path="news/new" element={<NewsForm />} />
                   <Route path="news/edit/:id" element={<NewsForm />} />
+                  {/* Add ID-based route for news details */}
+                  <Route path="news/:id" element={<NewsDetail />} />
                   <Route path="categories" element={<NewsCategoryList />} />
                   <Route path="categories/new" element={<NewsCategoryForm />} />
                   <Route path="categories/edit/:id" element={<NewsCategoryForm />} />

@@ -5,14 +5,16 @@ import {
   Card, CardContent, Divider, Grid, IconButton, ImageList, ImageListItem,
   ImageListItemBar, Chip
 } from '@mui/material';
-import { Save, Cancel, CloudUpload, Delete, Image } from '@mui/icons-material';
+import { Save, Cancel, CloudUpload, Delete, Image, PhotoCamera, Wallpaper } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   createNews, 
   updateNews, 
   getNewsById, 
-  getCategories 
+  getCategories,
+  uploadThumbnailImage,
+  uploadHeaderImage
 } from '../api-services/newsPortalService';
 import { getRedButtonStyle } from './newsPortalTheme';
 
@@ -26,8 +28,12 @@ const NewsForm = () => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [categories, setCategories] = useState([]);
-  const [selectedImages, setSelectedImages] = useState([]);
-  const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
+  
+  // Separate state for thumbnail and header images
+  const [thumbnailImage, setThumbnailImage] = useState(null);
+  const [headerImage, setHeaderImage] = useState(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState(null);
+  const [headerPreview, setHeaderPreview] = useState(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -49,9 +55,8 @@ const NewsForm = () => {
 
   const fetchCategories = async () => {
     try {
-      // Option 1: Call without pagination to get all categories
       const response = await getCategories();
-      setCategories(response.items || response || []); // Handle both paginated and non-paginated responses
+      setCategories(response.items || response || []);
     } catch (err) {
       setError('Error fetching categories: ' + err.message);
     }
@@ -71,6 +76,20 @@ const NewsForm = () => {
         isPublished: response.isPublished || false,
         publishDate: response.publishDate ? response.publishDate.split('T')[0] : ''
       });
+      
+      // Process existing images
+      if (response.images && response.images.length > 0) {
+        const thumbnailImage = response.images.find(img => img.imageType === 'thumbnail');
+        const headerImage = response.images.find(img => img.imageType === 'header');
+        
+        if (thumbnailImage) {
+          setThumbnailPreview(thumbnailImage.imageUrl);
+        }
+        
+        if (headerImage) {
+          setHeaderPreview(headerImage.imageUrl);
+        }
+      }
     } catch (err) {
       setError('Error fetching news: ' + err.message);
     } finally {
@@ -103,38 +122,74 @@ const NewsForm = () => {
     }
   };
 
-  // Image handling functions
-  const handleImageUpload = (event) => {
-    const files = Array.from(event.target.files);
-    
-    // Validate file types
+  // Thumbnail image handling
+  const handleThumbnailUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    const validFiles = files.filter(file => validTypes.includes(file.type));
-    
-    if (validFiles.length !== files.length) {
-      setError('Some files were skipped. Only JPEG, PNG, GIF, and WebP images are allowed.');
+    if (!validTypes.includes(file.type)) {
+      setError('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+      return;
     }
-    
-    // Add new images to existing ones
-    setSelectedImages(prev => [...prev, ...validFiles]);
-    
-    // Create preview URLs
-    const newPreviewUrls = validFiles.map(file => ({
-      file,
-      url: URL.createObjectURL(file),
-      name: file.name
-    }));
-    
-    setImagePreviewUrls(prev => [...prev, ...newPreviewUrls]);
+
+    // Clean up previous preview
+    if (thumbnailPreview) {
+      URL.revokeObjectURL(thumbnailPreview);
+    }
+
+    setThumbnailImage(file);
+    setThumbnailPreview(URL.createObjectURL(file));
   };
 
-  const handleRemoveImage = (index) => {
-    // Revoke the object URL to free memory
-    URL.revokeObjectURL(imagePreviewUrls[index].url);
+  // Header image handling
+  const handleHeaderUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setError('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+      return;
+    }
+
+    // Clean up previous preview
+    if (headerPreview) {
+      URL.revokeObjectURL(headerPreview);
+    }
+
+    setHeaderImage(file);
+    setHeaderPreview(URL.createObjectURL(file));
+  };
+
+  const handleRemoveThumbnail = () => {
+    if (thumbnailPreview) {
+      URL.revokeObjectURL(thumbnailPreview);
+    }
+    setThumbnailImage(null);
+    setThumbnailPreview(null);
     
-    // Remove from both arrays
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
-    setImagePreviewUrls(prev => prev.filter((_, i) => i !== index));
+    // Reset the file input
+    const fileInput = document.getElementById('thumbnail-upload');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
+  const handleRemoveHeader = () => {
+    if (headerPreview) {
+      URL.revokeObjectURL(headerPreview);
+    }
+    setHeaderImage(null);
+    setHeaderPreview(null);
+    
+    // Reset the file input
+    const fileInput = document.getElementById('header-upload');
+    if (fileInput) {
+      fileInput.value = '';
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -148,7 +203,7 @@ const NewsForm = () => {
     try {
       setLoading(true);
       
-      // Create FormData for file upload
+      // Create FormData for news creation (without images)
       const submitData = new FormData();
       
       // Add form fields
@@ -166,20 +221,24 @@ const NewsForm = () => {
       if (user?.id) {
         submitData.append('createdBy', user.id);
       }
-      
-      // Add images
-      selectedImages.forEach((image) => {
-        submitData.append('images', image);
-      });
   
-      if (isEdit) {
-        await updateNews(id, submitData);
-        setSuccessMessage('News updated successfully');
-      } else {
+      // First, create the news
+      const newsResponse = isEdit ? 
+        await updateNews(id, submitData) : 
         await createNews(submitData);
-        setSuccessMessage('News created successfully');
+      
+      const newsId = isEdit ? id : newsResponse.id;
+  
+      // Then upload images separately
+      if (thumbnailImage && user?.id) {
+        await uploadThumbnailImage(newsId, thumbnailImage, user.id);
       }
       
+      if (headerImage && user?.id) {
+        await uploadHeaderImage(newsId, headerImage, user.id);
+      }
+  
+      setSuccessMessage(isEdit ? 'News updated successfully' : 'News created successfully');
       setTimeout(() => navigate('/news-portal-system/news'), 2000);
     } catch (err) {
       setError('Error saving news: ' + err.message);
@@ -191,9 +250,8 @@ const NewsForm = () => {
   // Cleanup URLs on component unmount
   useEffect(() => {
     return () => {
-      imagePreviewUrls.forEach(preview => {
-        URL.revokeObjectURL(preview.url);
-      });
+      if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+      if (headerPreview) URL.revokeObjectURL(headerPreview);
     };
   }, []);
 
@@ -270,84 +328,182 @@ const NewsForm = () => {
                   </CardContent>
                 </Card>
 
-                {/* Image Upload Section */}
+                {/* Thumbnail Image Upload Section */}
                 <Card sx={{ mt: 3 }}>
                   <CardContent>
                     <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                      <Image sx={{ mr: 1 }} />
-                      Images
+                      <PhotoCamera sx={{ mr: 1 }} />
+                      Thumbnail Image
                     </Typography>
                     
-                    {/* Upload Button */}
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Upload a thumbnail image that will be displayed in news listings and previews.
+                    </Typography>
+                    
+                    {/* Thumbnail Upload Button */}
                     <Box sx={{ mb: 2 }}>
                       <input
                         accept="image/*"
                         style={{ display: 'none' }}
-                        id="image-upload"
-                        multiple
+                        id="thumbnail-upload"
                         type="file"
-                        onChange={handleImageUpload}
+                        onChange={handleThumbnailUpload}
                       />
-                      <label htmlFor="image-upload">
+                      <label htmlFor="thumbnail-upload">
                         <Button
                           variant="outlined"
                           component="span"
                           startIcon={<CloudUpload />}
                           sx={getRedButtonStyle('outlined')}
+                          disabled={!!thumbnailImage}
                         >
-                          Upload Images
+                          {thumbnailImage ? 'Thumbnail Selected' : 'Upload Thumbnail'}
                         </Button>
                       </label>
                       <Typography variant="caption" sx={{ ml: 2, color: 'text.secondary' }}>
-                        Supported formats: JPEG, PNG, GIF, WebP
+                        Recommended: 400x300px, JPEG/PNG
                       </Typography>
                     </Box>
 
-                    {/* Image Previews */}
-                    {imagePreviewUrls.length > 0 && (
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                          Selected Images ({imagePreviewUrls.length})
-                        </Typography>
-                        <ImageList sx={{ width: '100%', height: 200 }} cols={4} rowHeight={120}>
-                          {imagePreviewUrls.map((preview, index) => (
-                            <ImageListItem key={index}>
-                              <img
-                                src={preview.url}
-                                alt={preview.name}
-                                loading="lazy"
-                                style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                              />
-                              <ImageListItemBar
-                                title={preview.name}
-                                actionIcon={
-                                  <IconButton
-                                    sx={{ color: 'rgba(255, 255, 255, 0.54)' }}
-                                    onClick={() => handleRemoveImage(index)}
-                                  >
-                                    <Delete />
-                                  </IconButton>
-                                }
-                              />
-                            </ImageListItem>
-                          ))}
-                        </ImageList>
+                    {/* Thumbnail Preview */}
+                    {thumbnailPreview ? (
+                      <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                        <img
+                          src={thumbnailPreview}
+                          alt="Thumbnail preview"
+                          style={{
+                            width: '200px',
+                            height: '150px',
+                            objectFit: 'cover',
+                            borderRadius: '8px',
+                            border: '2px solid #e0e0e0'
+                          }}
+                        />
+                        <IconButton
+                          onClick={handleRemoveThumbnail}
+                          sx={{
+                            position: 'absolute',
+                            top: -8,
+                            right: -8,
+                            backgroundColor: 'error.main',
+                            color: 'white',
+                            '&:hover': { backgroundColor: 'error.dark' }
+                          }}
+                          size="small"
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
                       </Box>
-                    )}
-
-                    {imagePreviewUrls.length === 0 && (
+                    ) : (
                       <Box 
                         sx={{ 
                           border: '2px dashed #ccc', 
                           borderRadius: 1, 
                           p: 3, 
                           textAlign: 'center',
-                          backgroundColor: 'grey.50'
+                          backgroundColor: 'grey.50',
+                          width: '200px',
+                          height: '150px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          alignItems: 'center'
                         }}
                       >
-                        <Image sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
-                        <Typography variant="body2" color="text.secondary">
-                          No images selected. Click "Upload Images" to add images to your news article.
+                        <PhotoCamera sx={{ fontSize: 32, color: 'grey.400', mb: 1 }} />
+                        <Typography variant="caption" color="text.secondary">
+                          No thumbnail selected
+                        </Typography>
+                      </Box>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Header Image Upload Section */}
+                <Card sx={{ mt: 3 }}>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                      <Wallpaper sx={{ mr: 1 }} />
+                      Header Image
+                    </Typography>
+                    
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Upload a header image that will be displayed at the top of the news article.
+                    </Typography>
+                    
+                    {/* Header Upload Button */}
+                    <Box sx={{ mb: 2 }}>
+                      <input
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        id="header-upload"
+                        type="file"
+                        onChange={handleHeaderUpload}
+                      />
+                      <label htmlFor="header-upload">
+                        <Button
+                          variant="outlined"
+                          component="span"
+                          startIcon={<CloudUpload />}
+                          sx={getRedButtonStyle('outlined')}
+                          disabled={!!headerImage}
+                        >
+                          {headerImage ? 'Header Selected' : 'Upload Header'}
+                        </Button>
+                      </label>
+                      <Typography variant="caption" sx={{ ml: 2, color: 'text.secondary' }}>
+                        Recommended: 1200x400px, JPEG/PNG
+                      </Typography>
+                    </Box>
+
+                    {/* Header Preview */}
+                    {headerPreview ? (
+                      <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                        <img
+                          src={headerPreview}
+                          alt="Header preview"
+                          style={{
+                            width: '400px',
+                            height: '150px',
+                            objectFit: 'cover',
+                            borderRadius: '8px',
+                            border: '2px solid #e0e0e0'
+                          }}
+                        />
+                        <IconButton
+                          onClick={handleRemoveHeader}
+                          sx={{
+                            position: 'absolute',
+                            top: -8,
+                            right: -8,
+                            backgroundColor: 'error.main',
+                            color: 'white',
+                            '&:hover': { backgroundColor: 'error.dark' }
+                          }}
+                          size="small"
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    ) : (
+                      <Box 
+                        sx={{ 
+                          border: '2px dashed #ccc', 
+                          borderRadius: 1, 
+                          p: 3, 
+                          textAlign: 'center',
+                          backgroundColor: 'grey.50',
+                          width: '400px',
+                          height: '150px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <Wallpaper sx={{ fontSize: 32, color: 'grey.400', mb: 1 }} />
+                        <Typography variant="caption" color="text.secondary">
+                          No header image selected
                         </Typography>
                       </Box>
                     )}
@@ -400,21 +556,43 @@ const NewsForm = () => {
                     />
 
                     {/* Image Summary */}
-                    {selectedImages.length > 0 && (
-                      <Box sx={{ mt: 2 }}>
-                        <Divider sx={{ mb: 2 }} />
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>Media Summary</Typography>
+                    <Box sx={{ mt: 2 }}>
+                      <Divider sx={{ mb: 2 }} />
+                      <Typography variant="subtitle2" sx={{ mb: 1 }}>Media Summary</Typography>
+                      
+                      {thumbnailImage && (
                         <Chip 
-                          icon={<Image />} 
-                          label={`${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''} selected`}
+                          icon={<PhotoCamera />} 
+                          label="Thumbnail selected"
                           size="small"
                           sx={{ 
-                            backgroundColor: 'rgba(220, 20, 60, 0.1)',
-                            color: '#DC143C'
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            color: '#4CAF50',
+                            mb: 1,
+                            mr: 1
                           }}
                         />
-                      </Box>
-                    )}
+                      )}
+                      
+                      {headerImage && (
+                        <Chip 
+                          icon={<Wallpaper />} 
+                          label="Header selected"
+                          size="small"
+                          sx={{ 
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            color: '#2196F3',
+                            mb: 1
+                          }}
+                        />
+                      )}
+                      
+                      {!thumbnailImage && !headerImage && (
+                        <Typography variant="caption" color="text.secondary">
+                          No images selected
+                        </Typography>
+                      )}
+                    </Box>
                   </CardContent>
                 </Card>
 

@@ -153,7 +153,7 @@ const FormLoadingOverlay = styled(Box)({
   left: 0,
   right: 0,
   bottom: 0,
-  backgroundColor: 'rgba(128, 0, 128, 0.15)', // More transparent purple tint
+  backgroundColor: 'rgba(55, 65, 81, 0.15)', // More transparent purple tint
   backdropFilter: 'blur(20px) saturate(180%)', // Enhanced blur effect
   display: 'flex',
   flexDirection: 'column',
@@ -162,7 +162,7 @@ const FormLoadingOverlay = styled(Box)({
   zIndex: 10,
   borderRadius: '20px', // Match Paper border radius
   border: '1px solid rgba(255, 255, 255, 0.1)',
-  boxShadow: 'inset 0 0 50px rgba(128, 0, 128, 0.1)'
+  boxShadow: 'inset 0 0 50px rgba(55, 65, 81, 0.1)'
 });
 
 const LoadingSpinner = styled(Box)({
@@ -186,11 +186,11 @@ const LoadingSpinner = styled(Box)({
     left: '8px',
     width: 'calc(100% - 16px)',
     height: 'calc(100% - 16px)',
-    border: '2px solid rgba(128, 0, 128, 0.3)',
-    borderBottom: '2px solid rgba(128, 0, 128, 0.8)',
+    border: '2px solid rgba(55, 65, 81, 0.3)',
+    borderBottom: '2px solid rgba(55, 65, 81, 0.8)',
     borderRadius: '50%',
     animation: `${spinAnimation} 0.8s linear infinite reverse`,
-    filter: 'drop-shadow(0 0 8px rgba(128, 0, 128, 0.4))'
+    filter: 'drop-shadow(0 0 8px rgba(55, 65, 81, 0.4))'
   },
   '& .center-dot': {
     position: 'absolute',
@@ -311,7 +311,7 @@ const SignIn = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(128, 0, 128, 0.2) 100%)',
+          background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(55, 65, 81, 0.2) 100%)',
           zIndex: 1
         }
       }}
@@ -343,26 +343,26 @@ const SignIn = () => {
             sx={{ 
               width: '100%', 
               overflow: 'hidden',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)', // More transparent
+              backgroundColor: 'rgba(55, 65, 81, 0.15)', // Changed from white to dark theme
               backdropFilter: 'blur(20px) saturate(180%)', // Enhanced glass effect
-              border: '1px solid rgba(255, 255, 255, 0.15)',
+              border: '1px solid rgba(255, 255, 255, 0.1)', // Keep the subtle white border
               borderRadius: '20px', // More rounded corners
               boxShadow: {
                 xs: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                sm: '0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(128, 0, 128, 0.2)'
+                sm: '0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(55, 65, 81, 0.2)' // Updated shadow color
               },
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                backgroundColor: 'rgba(55, 65, 81, 0.25)', // Darker on hover to match theme
                 transform: 'translateY(-2px)',
-                boxShadow: '0 25px 70px rgba(0, 0, 0, 0.5), 0 10px 40px rgba(128, 0, 128, 0.3)'
+                boxShadow: '0 25px 70px rgba(0, 0, 0, 0.5), 0 10px 40px rgba(55, 65, 81, 0.3)' // Updated shadow
               }
             }}
           >
             {/* Header Section with Enhanced Gradient */}
             <Box
               sx={{
-                background: 'linear-gradient(135deg, rgba(128, 0, 128, 0.9) 0%, rgba(75, 0, 130, 0.95) 50%, rgba(138, 43, 226, 0.9) 100%)',
+                background: 'linear-gradient(135deg, rgba(55, 65, 81, 0.9) 0%, rgba(31, 41, 55, 0.95) 50%, rgba(17, 24, 39, 0.9) 100%)',
                 padding: { xs: '24px', sm: '32px' },
                 position: 'relative',
                 overflow: 'hidden',
@@ -397,7 +397,7 @@ const SignIn = () => {
                   letterSpacing: '0.5px'
                 }}
               >
-                Willowglen Services Pte Ltd
+                Control Tower
               </Typography>
             </Box>
 
@@ -423,160 +423,159 @@ const SignIn = () => {
               </Typography>
               
               <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+                 <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="email"
+                  label="Email Address"
+                  name="email"
+                  autoComplete="email"
+                  autoFocus
+                  value={formData.email}
+                  onChange={handleChange('email')}
+                  disabled={isLoading}
+                  sx={{
+                    mb: 3,
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: formData.email ? 'rgba(55, 65, 81, 0.25)' : 'rgba(55, 65, 81, 0.08)', // Dark theme colors
+                      backdropFilter: 'blur(15px) saturate(150%)',
+                      borderRadius: '12px',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      border: formData.email ? '1px solid rgba(55, 65, 81, 0.4)' : '1px solid rgba(255, 255, 255, 0.2)',
+                      boxShadow: formData.email ? '0 4px 20px rgba(55, 65, 81, 0.3)' : 'none',
+                      '& fieldset': {
+                        borderColor: formData.email ? 'rgba(55, 65, 81, 0.5)' : 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: '1px'
+                      },
+                      '&:hover': {
+                        backgroundColor: formData.email ? 'rgba(55, 65, 81, 0.35)' : 'rgba(55, 65, 81, 0.15)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: formData.email ? '0 6px 25px rgba(55, 65, 81, 0.4)' : '0 4px 15px rgba(55, 65, 81, 0.2)'
+                      },
+                      '&:hover fieldset': {
+                        borderColor: formData.email ? 'rgba(55, 65, 81, 0.7)' : 'rgba(255, 255, 255, 0.4)'
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: 'rgba(55, 65, 81, 0.4)',
+                        boxShadow: '0 8px 30px rgba(55, 65, 81, 0.5), 0 0 0 3px rgba(55, 65, 81, 0.2)'
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: 'rgba(55, 65, 81, 0.8)',
+                        borderWidth: '2px'
+                      }
+                    },
+                    '& .MuiOutlinedInput-input': {
+                      color: 'rgba(255, 255, 255, 0.95)',
+                      fontWeight: 500,
+                      '&::placeholder': {
+                        color: 'rgba(255, 255, 255, 0.4)'
+                      },
+                      // Autofill transparent fix
+                      '&:-webkit-autofill': {
+                        WebkitBoxShadow: '0 0 0 1000px transparent inset !important',
+                        WebkitTextFillColor: 'rgba(255, 255, 255, 0.95) !important',
+                        transition: 'background-color 5000s ease-in-out 0s !important',
+                        backgroundColor: 'transparent !important',
+                        borderRadius: '12px !important'
+                      },
+                      '&:-webkit-autofill:hover': {
+                        WebkitBoxShadow: '0 0 0 1000px transparent inset !important',
+                        backgroundColor: 'transparent !important'
+                      },
+                      '&:-webkit-autofill:focus': {
+                        WebkitBoxShadow: '0 0 0 1000px transparent inset !important',
+                        backgroundColor: 'transparent !important'
+                      }
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: formData.email ? 'rgba(55, 65, 81, 0.9)' : 'rgba(255, 255, 255, 0.7)',
+                      fontWeight: formData.email ? 500 : 400,
+                      transition: 'all 0.3s ease'
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: 'rgba(55, 65, 81, 1)'
+                    },
+                  }}
+                />
                 <TextField
                     margin="normal"
                     required
                     fullWidth
-                    id="email"
-                    label="Email Address"
-                    name="email"
-                    autoComplete="email"
-                    autoFocus
-                    value={formData.email}
-                    onChange={handleChange('email')}
+                    name="password"
+                    label="Password"
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    autoComplete="current-password"
+                    value={formData.password}
+                    onChange={handleChange('password')}
                     disabled={isLoading}
                     sx={{
-                      mb: 3,
+                      mb: 4,
                       '& .MuiOutlinedInput-root': {
-                        backgroundColor: formData.email ? 'rgba(128, 0, 128, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                        backgroundColor: formData.password ? 'rgba(55, 65, 81, 0.25)' : 'rgba(55, 65, 81, 0.08)', // Dark theme colors
                         backdropFilter: 'blur(15px) saturate(150%)',
                         borderRadius: '12px',
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        border: formData.email ? '1px solid rgba(128, 0, 128, 0.3)' : '1px solid rgba(255, 255, 255, 0.2)',
-                        boxShadow: formData.email ? '0 4px 20px rgba(128, 0, 128, 0.2)' : 'none',
+                        border: formData.password ? '1px solid rgba(55, 65, 81, 0.4)' : '1px solid rgba(255, 255, 255, 0.2)',
+                        boxShadow: formData.password ? '0 4px 20px rgba(55, 65, 81, 0.3)' : 'none',
                         '& fieldset': {
-                          borderColor: formData.email ? 'rgba(128, 0, 128, 0.4)' : 'rgba(255, 255, 255, 0.2)',
+                          borderColor: formData.password ? 'rgba(55, 65, 81, 0.5)' : 'rgba(255, 255, 255, 0.2)',
                           borderWidth: '1px'
                         },
                         '&:hover': {
-                          backgroundColor: formData.email ? 'rgba(128, 0, 128, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                          backgroundColor: formData.password ? 'rgba(55, 65, 81, 0.35)' : 'rgba(55, 65, 81, 0.15)',
                           transform: 'translateY(-1px)',
-                          boxShadow: formData.email ? '0 6px 25px rgba(128, 0, 128, 0.3)' : '0 4px 15px rgba(255, 255, 255, 0.1)'
+                          boxShadow: formData.password ? '0 6px 25px rgba(55, 65, 81, 0.4)' : '0 4px 15px rgba(55, 65, 81, 0.2)'
                         },
                         '&:hover fieldset': {
-                          borderColor: formData.email ? 'rgba(128, 0, 128, 0.6)' : 'rgba(255, 255, 255, 0.4)'
+                          borderColor: formData.password ? 'rgba(55, 65, 81, 0.7)' : 'rgba(255, 255, 255, 0.4)'
                         },
                         '&.Mui-focused': {
-                          backgroundColor: 'rgba(128, 0, 128, 0.25)',
-                          boxShadow: '0 8px 30px rgba(128, 0, 128, 0.4), 0 0 0 3px rgba(128, 0, 128, 0.1)'
+                          backgroundColor: 'rgba(55, 65, 81, 0.4)',
+                          boxShadow: '0 8px 30px rgba(55, 65, 81, 0.5), 0 0 0 3px rgba(55, 65, 81, 0.2)'
                         },
                         '&.Mui-focused fieldset': {
-                          borderColor: 'rgba(128, 0, 128, 0.8)',
+                          borderColor: 'rgba(55, 65, 81, 0.8)',
                           borderWidth: '2px'
                         }
                       },
-                      '& .MuiOutlinedInput-input': {
-                        color: 'rgba(255, 255, 255, 0.95)',
-                        fontWeight: 500,
-                        '&::placeholder': {
-                          color: 'rgba(255, 255, 255, 0.4)'
-                        },
-                        // Autofill transparent fix
-                        '&:-webkit-autofill': {
-                          WebkitBoxShadow: '0 0 0 1000px transparent inset !important',
-                          WebkitTextFillColor: 'rgba(255, 255, 255, 0.95) !important',
-                          transition: 'background-color 5000s ease-in-out 0s !important',
-                          backgroundColor: 'transparent !important',
-                          borderRadius: '12px !important'
-                        },
-                        '&:-webkit-autofill:hover': {
-                          WebkitBoxShadow: '0 0 0 1000px transparent inset !important',
-                          backgroundColor: 'transparent !important'
-                        },
-                        '&:-webkit-autofill:focus': {
-                          WebkitBoxShadow: '0 0 0 1000px transparent inset !important',
-                          backgroundColor: 'transparent !important'
-                        }
-                      },
                       '& .MuiInputLabel-root': {
-                        color: formData.email ? 'rgba(128, 0, 128, 0.9)' : 'rgba(255, 255, 255, 0.7)',
-                        fontWeight: formData.email ? 500 : 400,
+                        color: formData.password ? 'rgba(55, 65, 81, 0.9)' : 'rgba(255, 255, 255, 0.7)',
+                        fontWeight: formData.password ? 500 : 400,
                         transition: 'all 0.3s ease'
                       },
                       '& .MuiInputLabel-root.Mui-focused': {
-                        color: 'rgba(128, 0, 128, 1)'
+                        color: 'rgba(55, 65, 81, 1)'
                       },
+                      '& .MuiOutlinedInput-input': {
+                        color: 'rgba(255, 255, 255, 0.95)',
+                        fontWeight: 500
+                      }
+                    }}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle password visibility"
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                            disabled={isLoading}
+                            sx={{ 
+                              color: formData.password ? 'rgba(55, 65, 81, 0.8)' : 'rgba(255, 255, 255, 0.7)', // Updated icon color
+                              transition: 'all 0.3s ease',
+                              '&:hover': {
+                                color: 'rgba(55, 65, 81, 1)',
+                                backgroundColor: 'rgba(55, 65, 81, 0.1)'
+                              }
+                            }}
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      )
                     }}
                   />
-
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  name="password"
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  autoComplete="current-password"
-                  value={formData.password}
-                  onChange={handleChange('password')}
-                  disabled={isLoading}
-                  sx={{
-                    mb: 4,
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: formData.password ? 'rgba(128, 0, 128, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                      backdropFilter: 'blur(15px) saturate(150%)',
-                      borderRadius: '12px',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      border: formData.password ? '1px solid rgba(128, 0, 128, 0.3)' : '1px solid rgba(255, 255, 255, 0.2)',
-                      boxShadow: formData.password ? '0 4px 20px rgba(128, 0, 128, 0.2)' : 'none',
-                      '& fieldset': {
-                        borderColor: formData.password ? 'rgba(128, 0, 128, 0.4)' : 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: '1px'
-                      },
-                      '&:hover': {
-                        backgroundColor: formData.password ? 'rgba(128, 0, 128, 0.2)' : 'rgba(255, 255, 255, 0.08)',
-                        transform: 'translateY(-1px)',
-                        boxShadow: formData.password ? '0 6px 25px rgba(128, 0, 128, 0.3)' : '0 4px 15px rgba(255, 255, 255, 0.1)'
-                      },
-                      '&:hover fieldset': {
-                        borderColor: formData.password ? 'rgba(128, 0, 128, 0.6)' : 'rgba(255, 255, 255, 0.4)'
-                      },
-                      '&.Mui-focused': {
-                        backgroundColor: 'rgba(128, 0, 128, 0.25)',
-                        boxShadow: '0 8px 30px rgba(128, 0, 128, 0.4), 0 0 0 3px rgba(128, 0, 128, 0.1)'
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: 'rgba(128, 0, 128, 0.8)',
-                        borderWidth: '2px'
-                      }
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: formData.password ? 'rgba(128, 0, 128, 0.9)' : 'rgba(255, 255, 255, 0.7)',
-                      fontWeight: formData.password ? 500 : 400,
-                      transition: 'all 0.3s ease'
-                    },
-                    '& .MuiInputLabel-root.Mui-focused': {
-                      color: 'rgba(128, 0, 128, 1)'
-                    },
-                    '& .MuiOutlinedInput-input': {
-                      color: 'rgba(255, 255, 255, 0.95)',
-                      fontWeight: 500
-                    }
-                  }}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          aria-label="toggle password visibility"
-                          onClick={() => setShowPassword(!showPassword)}
-                          edge="end"
-                          disabled={isLoading}
-                          sx={{ 
-                            color: formData.password ? 'rgba(128, 0, 128, 0.8)' : 'rgba(255, 255, 255, 0.7)',
-                            transition: 'all 0.3s ease',
-                            '&:hover': {
-                              color: 'rgba(128, 0, 128, 1)',
-                              backgroundColor: 'rgba(128, 0, 128, 0.1)'
-                            }
-                          }}
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    )
-                  }}
-                />
                 
                 <Button
                   type="submit"
@@ -592,23 +591,23 @@ const SignIn = () => {
                     fontWeight: 600,
                     textTransform: 'none',
                     background: isLoading 
-                      ? 'linear-gradient(135deg, rgba(200, 200, 200, 0.3) 0%, rgba(150, 150, 150, 0.3) 100%)' 
-                      : 'linear-gradient(135deg, rgba(128, 0, 128, 0.9) 0%, rgba(75, 0, 130, 0.95) 50%, rgba(138, 43, 226, 0.9) 100%)',
+                    ? 'linear-gradient(135deg, rgba(200, 200, 200, 0.3) 0%, rgba(150, 150, 150, 0.3) 100%)' 
+                    : 'linear-gradient(135deg, rgba(55, 65, 81, 0.9) 0%, rgba(31, 41, 55, 0.95) 50%, rgba(17, 24, 39, 0.9) 100%)',
                     backdropFilter: 'blur(10px)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     boxShadow: isLoading 
                       ? 'none'
-                      : '0 8px 25px rgba(128, 0, 128, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3)',
+                      : '0 8px 25px rgba(55, 65, 81, 0.4), 0 4px 12px rgba(55, 65, 81, 0.3)',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     cursor: isLoading ? 'not-allowed' : 'pointer',
                     '&:hover': {
-                      background: isLoading 
-                        ? 'linear-gradient(135deg, rgba(200, 200, 200, 0.3) 0%, rgba(150, 150, 150, 0.3) 100%)'
-                        : 'linear-gradient(135deg, rgba(138, 43, 226, 0.95) 0%, rgba(128, 0, 128, 0.9) 50%, rgba(75, 0, 130, 0.95) 100%)',
-                      transform: isLoading ? 'none' : 'translateY(-2px)',
+                    background: isLoading 
+                      ? 'linear-gradient(135deg, rgba(200, 200, 200, 0.3) 0%, rgba(150, 150, 150, 0.3) 100%)'
+                      : 'linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(55, 65, 81, 0.9) 50%, rgba(31, 41, 55, 0.95) 100%)',
+                    transform: isLoading ? 'none' : 'translateY(-2px)',
                       boxShadow: isLoading 
                         ? 'none'
-                        : '0 12px 35px rgba(128, 0, 128, 0.5), 0 6px 16px rgba(0, 0, 0, 0.4)'
+                        : '0 12px 35px rgba(55, 65, 81, 0.35), 0 6px 15px rgba(55, 65, 81, 0.15)'
                     },
                     '&:active': {
                       transform: isLoading ? 'none' : 'translateY(0px)'

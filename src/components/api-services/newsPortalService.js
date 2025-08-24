@@ -160,8 +160,36 @@ export const uploadNewsImage = async (newsId, imageData) => {
   formData.append('altText', imageData.altText || '');
   formData.append('caption', imageData.caption || '');
   formData.append('isFeatured', imageData.isFeatured || false);
+  formData.append('imageType', imageData.imageType || 'general'); // Add ImageType parameter
   
   const response = await api.post(`/news/${newsId}/images`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+  return response.data;
+};
+
+// Add new functions for specific image types
+export const uploadThumbnailImage = async (newsId, imageFile, uploadedBy) => {
+  const formData = new FormData();
+  formData.append('thumbnailImage', imageFile);
+  formData.append('uploadedBy', uploadedBy);
+  
+  const response = await api.post(`/news/${newsId}/thumbnail`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+  return response.data;
+};
+
+export const uploadHeaderImage = async (newsId, imageFile, uploadedBy) => {
+  const formData = new FormData();
+  formData.append('headerImage', imageFile);
+  formData.append('uploadedBy', uploadedBy);
+  
+  const response = await api.post(`/news/${newsId}/header`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }

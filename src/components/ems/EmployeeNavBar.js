@@ -76,6 +76,12 @@ const EmployeeNavBar = () => {
             Dashboard
           </Button>
           <Button 
+            onClick={() => navigate('/employee-management/companies')}
+            sx={getButtonStyle('/employee-management/companies')}
+          >
+            Companies
+          </Button>
+          <Button 
             onClick={() => navigate('/employee-management/departments')}
             sx={getButtonStyle('/employee-management/departments')}
           >
