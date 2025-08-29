@@ -2,9 +2,25 @@ import { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
+// Utility function to decode JWT token
+const parseJwt = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error parsing JWT token:', error);
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
+  const [newsPortalAccessLevel, setNewsPortalAccessLevel] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -14,6 +30,12 @@ export const AuthProvider = ({ children }) => {
     if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
       setToken(storedToken);
+      
+      // Extract access level from JWT token
+      const tokenPayload = parseJwt(storedToken);
+      if (tokenPayload && tokenPayload.NewsPortalAccessLevel) {
+        setNewsPortalAccessLevel(tokenPayload.NewsPortalAccessLevel);
+      }
     }
     setLoading(false);
   }, []);
@@ -29,6 +51,12 @@ export const AuthProvider = ({ children }) => {
     
     setUser(userData);
     setToken(authToken);
+    
+    // Extract access level from JWT token
+    const tokenPayload = parseJwt(authToken);
+    if (tokenPayload && tokenPayload.NewsPortalAccessLevel) {
+      setNewsPortalAccessLevel(tokenPayload.NewsPortalAccessLevel);
+    }
   };
 
   const logout = () => {
@@ -36,10 +64,24 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setUser(null);
     setToken(null);
+    setNewsPortalAccessLevel(null);
+  };
+
+  // Helper function to check if user has admin access to News Portal
+  const hasNewsPortalAdminAccess = () => {
+    return newsPortalAccessLevel === 'Admin';
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      newsPortalAccessLevel,
+      hasNewsPortalAdminAccess,
+      login, 
+      logout, 
+      loading 
+    }}>
       {!loading && children}
     </AuthContext.Provider>
   );

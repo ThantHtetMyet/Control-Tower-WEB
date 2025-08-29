@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { AppBar, Toolbar, Typography, Button, Box, IconButton, Menu, MenuItem } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Article, Category, Comment, Image, AccountCircle } from '@mui/icons-material';
+import { useCategories } from '../contexts/CategoryContext'; // Add this import
+import { Article, Category, AccountCircle } from '@mui/icons-material';
 
 const NewsNavBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, hasNewsPortalAdminAccess } = useAuth();
+  const { refreshCategories } = useCategories(); // Add this line
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleMenu = (event) => {
@@ -53,6 +55,9 @@ const NewsNavBar = () => {
     }
   });
 
+  // Check if user has admin access to News Portal
+  const isAdmin = hasNewsPortalAdminAccess();
+
   return (
     <AppBar position="static" sx={{
       background: 'linear-gradient(270deg, #DC143C 0%, #B22222 100%)', // Red gradient for News Portal
@@ -70,34 +75,30 @@ const NewsNavBar = () => {
           >
             Home
           </Button>
-          <Button 
-            startIcon={<Article />}
-            onClick={() => navigate('/news-portal-system/news')}
-            sx={getButtonStyle('/news-portal-system/news')}
-          >
-            News
-          </Button>
-          <Button 
-            startIcon={<Category />}
-            onClick={() => navigate('/news-portal-system/categories')}
-            sx={getButtonStyle('/news-portal-system/categories')}
-          >
-            Categories
-          </Button>
-          <Button 
-            startIcon={<Comment />}
-            onClick={() => navigate('/news-portal-system/comments')}
-            sx={getButtonStyle('/news-portal-system/comments')}
-          >
-            Comments
-          </Button>
-          <Button 
-            startIcon={<Image />}
-            onClick={() => navigate('/news-portal-system/images')}
-            sx={getButtonStyle('/news-portal-system/images')}
-          >
-            Images
-          </Button>
+          
+          {/* Only show admin navigation items for users with Admin access */}
+          {isAdmin && (
+            <>
+              <Button 
+                startIcon={<Article />}
+                onClick={() => navigate('/news-portal-system/news')}
+                sx={getButtonStyle('/news-portal-system/news')}
+              >
+                News
+              </Button>
+              <Button 
+                startIcon={<Category />}
+                onClick={() => {
+                  refreshCategories(); // 👈 force API call
+                  navigate('/news-portal-system/categories');
+                }}
+                sx={getButtonStyle('/news-portal-system/categories')}
+              >
+                Categories
+              </Button>
+              
+            </>
+          )}
         </Box>
 
         {user && (

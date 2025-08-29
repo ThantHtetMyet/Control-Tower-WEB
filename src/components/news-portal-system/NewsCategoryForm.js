@@ -1,68 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box, TextField, Button, Typography, Paper, Alert, Snackbar,
   MenuItem, FormControl, InputLabel, Select
 } from '@mui/material';
-import { Save, Cancel } from '@mui/icons-material'; // Fixed: was '@mui/icons-icon'
-import { useNavigate, useParams } from 'react-router-dom';
-// Remove: import NewsNavBar from './NewsNavBar';
+import { Save, Cancel } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { 
-  createCategory, 
-  updateCategory, 
-  getCategoryById, 
-  getCategories 
+  createCategory
 } from '../api-services/newsPortalService';
 import { getRedButtonStyle } from './newsPortalTheme';
+import { useCategories } from '../contexts/CategoryContext';
 
 const NewsCategoryForm = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
-  const isEdit = !!id;
+  const { user } = useAuth();
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [categories, setCategories] = useState([]);
+  
+  const { categories, refreshCategories } = useCategories();
   
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
     description: '',
-    parentCategoryID: ''
+    parentCategoryID: null
   });
-
-  useEffect(() => {
-    fetchCategories();
-    if (isEdit) {
-      fetchCategory();
-    }
-  }, [id]);
-
-  const fetchCategories = async () => {
-    try {
-      const response = await getCategories(1, 100);
-      setCategories(response.items || []);
-    } catch (err) {
-      setError('Error fetching categories: ' + err.message);
-    }
-  };
-
-  const fetchCategory = async () => {
-    try {
-      setLoading(true);
-      const response = await getCategoryById(id);
-      setFormData({
-        name: response.name || '',
-        slug: response.slug || '',
-        description: response.description || '',
-        parentCategoryID: response.parentCategoryID || ''
-      });
-    } catch (err) {
-      setError('Error fetching category: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const generateSlug = (name) => {
     return name
@@ -81,7 +46,7 @@ const NewsCategoryForm = () => {
     }));
 
     // Auto-generate slug from name
-    if (name === 'name' && !isEdit) {
+    if (name === 'name') {
       setFormData(prev => ({
         ...prev,
         slug: generateSlug(value)
@@ -96,39 +61,38 @@ const NewsCategoryForm = () => {
       setError('Name is required');
       return;
     }
-
+  
     try {
       setLoading(true);
+      setError(''); // Clear previous errors
+      
       const submitData = {
         ...formData,
-        parentCategoryID: formData.parentCategoryID || null
+        parentCategoryID: formData.parentCategoryID || null,
+        createdBy: user?.id || '00000000-0000-0000-0000-000000000000'
       };
-
-      if (isEdit) {
-        await updateCategory(id, submitData);
-        setSuccessMessage('Category updated successfully');
-      } else {
-        await createCategory(submitData);
-        setSuccessMessage('Category created successfully');
-      }
+  
+      console.log('Submitting data:', submitData);
+  
+      const result = await createCategory(submitData);
+      console.log('Create result:', result);
+      setSuccessMessage('Category created successfully');
+      await refreshCategories();
       
-      setTimeout(() => navigate('/news/categories'), 2000);
+      setTimeout(() => navigate('/news-portal-system/categories'), 2000);
     } catch (err) {
+      console.error('Submit error:', err);
       setError('Error saving category: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter out current category and its descendants to prevent circular references
-  const availableParentCategories = categories.filter(cat => cat.id !== id);
-
   return (
     <Box>
-      {/* Remove <NewsNavBar /> from here */}
       <Box sx={{ p: 3 }}>
         <Typography variant="h4" component="h1" sx={{ mb: 3 }}>
-          {isEdit ? 'Edit Category' : 'Create Category'}
+          Create Category
         </Typography>
 
         <Paper sx={{ p: 3, maxWidth: 600 }}>
@@ -172,9 +136,10 @@ const NewsCategoryForm = () => {
                 value={formData.parentCategoryID}
                 label="Parent Category"
                 onChange={handleInputChange}
+                displayEmpty
               >
                 <MenuItem value="">None (Root Category)</MenuItem>
-                {availableParentCategories.map((category) => (
+                {categories.map((category) => (
                   <MenuItem key={category.id} value={category.id}>
                     {category.name}
                   </MenuItem>
@@ -190,12 +155,13 @@ const NewsCategoryForm = () => {
                 disabled={loading}
                 sx={getRedButtonStyle('contained')}
               >
-                {loading ? 'Saving...' : (isEdit ? 'Update' : 'Create')}
+                {loading ? 'Creating...' : 'Create'}
               </Button>
+              
               <Button
                 variant="outlined"
                 startIcon={<Cancel />}
-                onClick={() => navigate('/news/categories')}
+                onClick={() => navigate('/news-portal-system/categories')}
                 sx={getRedButtonStyle('outlined')}
               >
                 Cancel

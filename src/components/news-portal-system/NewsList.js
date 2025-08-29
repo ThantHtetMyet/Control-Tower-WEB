@@ -3,31 +3,35 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Button, IconButton, Typography, Box, Chip, Tooltip, LinearProgress,
   Alert, Snackbar, TextField, MenuItem, FormControl, InputLabel, Select,
-  Pagination, Card, CardContent, CardMedia
+  Pagination, Card, CardContent, Grid, Container
 } from '@mui/material';
-import { Edit, Delete, Add, Visibility, Publish, UnpublishedOutlined } from '@mui/icons-material';
+import { Edit, Delete, Add, Visibility, Publish, UnpublishedOutlined, Search } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { getNews, deleteNews, publishNews, unpublishNews, getCategories } from '../api-services/newsPortalService';
-import { getRedButtonStyle } from './newsPortalTheme';
+import { getNews, deleteNews, publishNews, unpublishNews } from '../api-services/newsPortalService';
+import { getRedButtonStyle, newsPortalTheme } from './newsPortalTheme';
+import { useAuth } from '../contexts/AuthContext';
+import { useCategories } from '../contexts/CategoryContext';
 
 const NewsList = () => {
   const [news, setNews] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // Separate input state
   const [selectedCategory, setSelectedCategory] = useState('');
   const [publishFilter, setPublishFilter] = useState('');
+  
   const navigate = useNavigate();
-
+  const { hasNewsPortalAdminAccess } = useAuth();
+  const { categories } = useCategories();
+  
   useEffect(() => {
     fetchNews();
-    fetchCategories();
   }, [page, search, selectedCategory, publishFilter]);
-
+  
   const fetchNews = async () => {
     try {
       setLoading(true);
@@ -47,12 +51,16 @@ const NewsList = () => {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const response = await getCategories();
-      setCategories(response.items || []);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
+  // New search handler
+  const handleSearch = () => {
+    setSearch(searchInput);
+    setPage(1); // Reset to first page when searching
+  };
+
+  // Handle Enter key press in search input
+  const handleSearchKeyPress = (event) => {
+    if (event.key === 'Enter') {
+      handleSearch();
     }
   };
 
@@ -87,26 +95,42 @@ const NewsList = () => {
     setPage(newPage);
   };
 
+  // Calculate stats
+  const totalNews = news.length;
+  const publishedNews = news.filter(item => item.isPublished).length;
+  const draftNews = totalNews - publishedNews;
+
   if (loading) {
     return (
-      <Box>
-        <LinearProgress />
-        <Typography variant="h6" sx={{ textAlign: 'center', mt: 2 }}>
-          Loading news...
-        </Typography>
-      </Box>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Box sx={{ textAlign: "center" }}>
+          <LinearProgress
+            sx={{
+              mb: 3,
+              height: 6,
+              borderRadius: 3,
+              bgcolor: "grey.200",
+              "& .MuiLinearProgress-bar": {
+                bgcolor: newsPortalTheme.redGradient,
+              },
+            }}
+          />
+          <Typography variant="h6" color="text.secondary">
+            Loading news...
+          </Typography>
+        </Box>
+      </Container>
     );
   }
 
   return (
-    <Box>
-      {/* Remove <NewsNavBar /> from here */}
-      <Box sx={{ p: 3 }}>
-        {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1">
-            News Management
-          </Typography>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          News Management
+        </Typography>
+        {hasNewsPortalAdminAccess() && (
           <Button
             variant="contained"
             startIcon={<Add />}
@@ -115,158 +139,221 @@ const NewsList = () => {
           >
             Add News
           </Button>
+        )}
+      </Box>
+        
+      {/* Filters */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2, color: newsPortalTheme.redPrimary }}>
+          Search & Filters
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <TextField
+            label="Search News"
+            variant="outlined"
+            size="small"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyPress={handleSearchKeyPress}
+            sx={{ minWidth: 250 }}
+          />
+          <FormControl size="small" sx={{ minWidth: 150 }}>            <InputLabel>Category</InputLabel>
+            <Select
+              value={selectedCategory}
+              label="Category"
+              onChange={(e) => setSelectedCategory(e.target.value)}
+            >
+              <MenuItem value="">All Categories</MenuItem>
+              {categories.map((category) => (
+                <MenuItem key={category.id} value={category.id}>
+                  {category.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 150 }}>            <InputLabel>Status</InputLabel>
+            <Select
+              value={publishFilter}
+              label="Status"
+              onChange={(e) => setPublishFilter(e.target.value)}
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="true">Published</MenuItem>
+              <MenuItem value="false">Draft</MenuItem>
+            </Select>
+          </FormControl>
+          
+          <Button
+            variant="contained"
+            startIcon={<Search />}
+            onClick={handleSearch}
+            sx={getRedButtonStyle('contained')}
+          >
+            Search
+          </Button>
         </Box>
+      </Paper>
 
-        {/* Filters */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <TextField
-                label="Search"
-                variant="outlined"
-                size="small"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                sx={{ minWidth: 200 }}
-              />
-              <FormControl size="small" sx={{ minWidth: 150 }}>
-                <InputLabel>Category</InputLabel>
-                <Select
-                  value={selectedCategory}
-                  label="Category"
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                >
-                  <MenuItem value="">All Categories</MenuItem>
-                  {categories.map((category) => (
-                    <MenuItem key={category.id} value={category.id}>
-                      {category.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl size="small" sx={{ minWidth: 150 }}>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={publishFilter}
-                  label="Status"
-                  onChange={(e) => setPublishFilter(e.target.value)}
-                >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="true">Published</MenuItem>
-                  <MenuItem value="false">Draft</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-          </CardContent>
-        </Card>
-
-        {/* News Table */}
-        <TableContainer component={Paper}>
+      {/* News Table */}
+      <Paper sx={{ borderRadius: 3 }}>
+        <TableContainer>
           <Table>
             <TableHead>
-              <TableRow>
-                <TableCell>Title</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Views</TableCell>
-                <TableCell>Created Date</TableCell>
-                <TableCell>Actions</TableCell>
+              <TableRow sx={{ bgcolor: 'grey.50' }}>
+                <TableCell sx={{ fontWeight: 'bold' }}>Title</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Category</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Views</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Created Date</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {news.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="subtitle2">{item.title}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {item.excerpt}
+              {news.length > 0 ? (
+                news.map((item) => (
+                  <TableRow key={item.id} hover>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                          {item.title}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {item.excerpt}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={item.categoryName} 
+                        size="small"
+                        sx={{
+                          bgcolor: newsPortalTheme.redPrimary + "15",
+                          color: newsPortalTheme.redPrimary,
+                          fontWeight: 500,
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={item.isPublished ? 'Published' : 'Draft'}
+                        color={item.isPublished ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {item.viewCount}
                       </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip label={item.categoryName} size="small" />
-                  </TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={item.isPublished ? 'Published' : 'Draft'}
-                      color={item.isPublished ? 'success' : 'default'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>{item.viewCount}</TableCell>
-                  <TableCell>
-                    {new Date(item.createdDate).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Tooltip title="View">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => navigate(`/news/${item.id}`)}
-                        >
-                          <Visibility />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Edit">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => navigate(`/news/edit/${item.id}`)}
-                        >
-                          <Edit />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={item.isPublished ? 'Unpublish' : 'Publish'}>
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handlePublishToggle(item.id, item.isPublished)}
-                        >
-                          {item.isPublished ? <UnpublishedOutlined /> : <Publish />}
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton 
-                          size="small" 
-                          color="error"
-                          onClick={() => handleDelete(item.id, item.title)}
-                        >
-                          <Delete />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {new Date(item.createdDate).toLocaleDateString()}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Tooltip title="View" arrow>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => navigate(`/news-portal-system/news/${item.id}`)}
+                            sx={{
+                              color: "info.main",
+                              "&:hover": {
+                                bgcolor: "info.light",
+                                color: "white",
+                              },
+                            }}
+                          >
+                            <Visibility fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit" arrow>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => navigate(`/news-portal-system/news/edit/${item.id}`)}
+                            sx={{
+                              color: "primary.main",
+                              "&:hover": {
+                                bgcolor: "primary.light",
+                                color: "white",
+                              },
+                            }}
+                          >
+                            <Edit fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        
+                        <Tooltip title="Delete" arrow>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleDelete(item.id, item.title)}
+                            sx={{
+                              color: "error.main",
+                              "&:hover": {
+                                bgcolor: "error.light",
+                                color: "white",
+                              },
+                            }}
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} sx={{ textAlign: 'center', py: 6 }}>
+                    <Typography variant="h6" color="text.secondary">
+                      No news found
+                    </Typography>
+                    {hasNewsPortalAdminAccess() && (
+                      <Button
+                        variant="outlined"
+                        startIcon={<Add />}
+                        onClick={() => navigate('/news-portal-system/news/new')}
+                        sx={{ mt: 2, ...getRedButtonStyle('outlined') }}
+                      >
+                        Create News
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </TableContainer>
 
         {/* Pagination */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-          <Pagination 
-            count={totalPages} 
-            page={page} 
-            onChange={handlePageChange} 
-            sx={{
-              '& .MuiPaginationItem-root': {
-                '&.Mui-selected': {
-                  background: 'linear-gradient(270deg, #DC143C 0%, #B22222 100%)',
-                  color: 'white',
-                  '&:hover': {
-                    background: 'linear-gradient(270deg, #B22222 0%, #8B0000 100%)'
+        {totalPages > 1 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <Pagination 
+              count={totalPages} 
+              page={page} 
+              onChange={handlePageChange}
+              sx={{
+                '& .MuiPaginationItem-root': {
+                  '&.Mui-selected': {
+                    background: newsPortalTheme.redGradient,
+                    color: 'white',
+                    '&:hover': {
+                      background: newsPortalTheme.redGradientHover
+                    }
                   }
                 }
-              }
-            }}
-          />
-        </Box>
-      </Box>
+              }}
+            />
+          </Box>
+        )}
+      </Paper>
 
       {/* Success/Error Messages */}
       <Snackbar
         open={!!successMessage}
         autoHideDuration={6000}
         onClose={() => setSuccessMessage('')}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert severity="success" onClose={() => setSuccessMessage('')}>
           {successMessage}
@@ -277,12 +364,13 @@ const NewsList = () => {
         open={!!error}
         autoHideDuration={6000}
         onClose={() => setError('')}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert severity="error" onClose={() => setError('')}>
           {error}
         </Alert>
       </Snackbar>
-    </Box>
+    </Container>
   );
 };
 

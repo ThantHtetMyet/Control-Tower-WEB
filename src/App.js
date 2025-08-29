@@ -53,6 +53,9 @@ import NewsPortalLayout from './components/news-portal-system/NewsPortalLayout';
 import NewsDisplay from './components/news-portal-system/NewsDisplay';
 // Add NewsDetail import
 import NewsDetail from './components/news-portal-system/NewsDetail';
+// Add import
+import NewsCategoryEdit from './components/news-portal-system/NewsCategoryEdit';
+import NewsEdit from './components/news-portal-system/NewsEdit';
 
 function App() {
   return (
@@ -316,14 +319,52 @@ function App() {
                   }
                 >
                   <Route index element={<NewsDisplay />} />
-                  <Route path="news" element={<NewsList />} />
-                  <Route path="news/new" element={<NewsForm />} />
-                  <Route path="news/edit/:id" element={<NewsForm />} />
-                  {/* Add ID-based route for news details */}
+                  {/* Add this route for individual news details */}
                   <Route path="news/:id" element={<NewsDetail />} />
-                  <Route path="categories" element={<NewsCategoryList />} />
-                  <Route path="categories/new" element={<NewsCategoryForm />} />
-                  <Route path="categories/edit/:id" element={<NewsCategoryForm />} />
+                  {/* Admin-only routes */}
+                  <Route 
+                    path="news" 
+                    element={
+                      <ProtectedRoute requireNewsPortalAdmin={true}>
+                        <NewsList />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="news/new" 
+                    element={
+                      <ProtectedRoute requireNewsPortalAdmin={true}>
+                        <NewsForm />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route path="news/edit/:id" element={<NewsEdit />} />
+                  <Route 
+                    path="categories" 
+                    element={
+                      <ProtectedRoute requireNewsPortalAdmin={true}>
+                        <NewsCategoryList />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="categories/new" 
+                    element={
+                      <ProtectedRoute requireNewsPortalAdmin={true}>
+                        <NewsCategoryForm />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="categories/edit/:id" 
+                    element={
+                      <ProtectedRoute requireNewsPortalAdmin={true}>
+                        <NewsCategoryEdit />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  {/* Add other admin-only routes for comments and images */}
                 </Route>
               </Routes>
             </Box>

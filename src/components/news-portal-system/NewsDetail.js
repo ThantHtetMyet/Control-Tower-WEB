@@ -66,7 +66,7 @@ function NewsDetail() {
     }, [slug, id]);
 
     const handleBack = () => {
-        navigate('/news-portal-system/news');
+        navigate('/news-portal-system');
     };
 
     const formatDate = (dateString) => {
@@ -271,7 +271,7 @@ function NewsDetail() {
                                 mb: 2
                             }
                         }}
-                        dangerouslySetInnerHTML={{ __html: news.content || 'No content available.' }}
+                        dangerouslySetInnerHTML={{ __html: news.description || 'No content available.' }}
                     />
 
                     <Divider sx={{ mb: 3 }} />
@@ -284,17 +284,7 @@ function NewsDetail() {
                         alignItems: 'center',
                         flexWrap: 'wrap'
                     }}>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton color="primary" title="Like">
-                                <ThumbUpIcon />
-                            </IconButton>
-                            <IconButton color="primary" title="Comment">
-                                <CommentIcon />
-                            </IconButton>
-                            <IconButton color="primary" title="Share">
-                                <ShareIcon />
-                            </IconButton>
-                        </Box>
+                        
                         
                         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                             {news.commentsCount > 0 && (

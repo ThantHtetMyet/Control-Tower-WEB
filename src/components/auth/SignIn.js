@@ -494,7 +494,7 @@ const SignIn = () => {
                       transition: 'all 0.3s ease'
                     },
                     '& .MuiInputLabel-root.Mui-focused': {
-                      color: 'rgba(55, 65, 81, 1)'
+                      color: 'rgba(255, 255, 255, 0.95)' // Changed from 'rgba(55, 65, 81, 1)' to white
                     },
                   }}
                 />
@@ -546,7 +546,7 @@ const SignIn = () => {
                         transition: 'all 0.3s ease'
                       },
                       '& .MuiInputLabel-root.Mui-focused': {
-                        color: 'rgba(55, 65, 81, 1)'
+                        color: 'rgba(255, 255, 255, 0.95)'
                       },
                       '& .MuiOutlinedInput-input': {
                         color: 'rgba(255, 255, 255, 0.95)',
