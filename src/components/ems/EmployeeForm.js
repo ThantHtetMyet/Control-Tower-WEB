@@ -20,7 +20,7 @@ import {
   CardContent,
   IconButton
 } from '@mui/material';
-import { Save, Cancel, Delete } from '@mui/icons-material';
+import { Save, Cancel, Delete, PhotoCamera, Close } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -48,29 +48,38 @@ const EmployeeForm = () => {
   const [selectedApplications, setSelectedApplications] = useState([]);
   const [applicationAccessLevels, setApplicationAccessLevels] = useState({});
   
+  // Image upload states
+  const [profileImage, setProfileImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageError, setImageError] = useState('');
+  // Update formData initial state to match backend
   const [formData, setFormData] = useState({
-    companyID: '',
-    departmentID: '',
-    occupationID: '',
-    staffCardID: '',
-    staffIDCardID: '',
-    firstName: '',
-    lastName: '',
-    email: '',
-    mobileNo: '',
-    gender: '',
-    loginPassword: '',
-    remark: '',
-    startWorkingDate: moment(),
-    lastWorkingDate: null,
-    workPermit: '',
-    nationality: '',
-    religion: '',
-    dateOfBirth: moment().subtract(18, 'years'),
-    workPassCardNumber: '',
-    workPassCardIssuedDate: null,
-    workPassCardExpiredDate: null,
-    createdBy: user?.id || '00000000-0000-0000-0000-000000000000'
+      companyID: '',
+      departmentID: '',
+      occupationID: '',
+      staffCardID: '',
+      staffIDCardID: '',
+      firstName: '',
+      lastName: '',
+      email: '',
+      mobileNo: '',
+      gender: '',
+      loginPassword: '',
+      remark: '',
+      startWorkingDate: moment(),
+      lastWorkingDate: null,
+      workPermit: '',
+      nationality: '',
+      religion: '',
+      dateOfBirth: moment().subtract(18, 'years'),
+      workPassCardNumber: '',
+      workPassCardIssuedDate: null,
+      workPassCardExpiredDate: null,
+      emergencyContactName: '',
+      emergencyRelationship: '',
+      emergencyContactNumber: '', // Changed from EmergencyContactNumber
+      emergencyRelationship: '',  // Changed from EmergencyRelationship
+      createdBy: user?.id || '00000000-0000-0000-0000-000000000000'
   });
 
   useEffect(() => {
@@ -192,59 +201,81 @@ const EmployeeForm = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+      e.preventDefault();
+      setLoading(true);
+      setError('');
   
-    try {
-      // Prepare application access data
-      const applicationAccesses = selectedApplications.length > 0 ? 
-        selectedApplications.map(applicationId => ({
-          applicationID: applicationId,
-          accessLevelID: applicationAccessLevels[applicationId],
-          grantedDate: new Date().toISOString(),
-          grantedBy: user?.id || '00000000-0000-0000-0000-000000000000',
-          remark: 'Access granted during employee creation',
-          createdBy: user?.id || '00000000-0000-0000-0000-000000000000'
-        })) : null;
+      try {
+          // Prepare application access data
+          const applicationAccesses = selectedApplications.length > 0 ?
+              selectedApplications.map(applicationId => ({
+                  applicationID: applicationId,
+                  accessLevelID: applicationAccessLevels[applicationId] || ''
+              })) : [];
   
-      const submitData = {
-        ...formData,
-        startWorkingDate: formData.startWorkingDate.toISOString(),
-        lastWorkingDate: formData.lastWorkingDate ? formData.lastWorkingDate.toISOString() : null,
-        dateOfBirth: formData.dateOfBirth.toISOString(),
-        workPassCardIssuedDate: formData.workPassCardIssuedDate ? formData.workPassCardIssuedDate.toISOString() : null,
-        workPassCardExpiredDate: formData.workPassCardExpiredDate ? formData.workPassCardExpiredDate.toISOString() : null,
-        createdBy: user?.id || '00000000-0000-0000-0000-000000000000',
-        // Include application accesses in the employee creation request
-        applicationAccesses: applicationAccesses
-      };
+          // Create FormData for employee creation (without image)
+          const formDataToSend = new FormData();
+          
+          // Add all form fields except profileImage
+          Object.keys(formData).forEach(key => {
+              if (formData[key] !== null && formData[key] !== '') {
+                  if (moment.isMoment(formData[key])) {
+                      formDataToSend.append(key, formData[key].toISOString());
+                  } else {
+                      formDataToSend.append(key, formData[key]);
+                  }
+              }
+          });
+          
+          // Add application accesses as JSON string
+          if (applicationAccesses.length > 0) {
+              formDataToSend.append('applicationAccesses', JSON.stringify(applicationAccesses));
+          }
   
-      // Create employee with application accesses in one request
-      const response = await fetch(`${API_BASE_URL}/Employee`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submitData),
-      });
+          // First, create the employee (without image)
+          const response = await fetch(`${API_BASE_URL}/Employee`, {
+              method: 'POST',
+              body: formDataToSend,
+          });
   
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || 'Failed to create employee');
+          if (response.ok) {
+              const result = await response.json();
+              const employeeId = result.id;
+              
+              // Then upload profile image if selected
+              if (profileImage && user?.id) {
+                  await uploadProfileImage(employeeId, profileImage, user.id);
+              }
+              
+              setSuccessMessage('Employee created successfully!');
+              setTimeout(() => navigate('/ems/employees'), 2000);
+          } else {
+              const errorData = await response.text();
+              throw new Error(errorData || 'Failed to create employee');
+          }
+      } catch (err) {
+          setError('Error creating employee: ' + err.message);
+      } finally {
+          setLoading(false);
       }
+  };
   
-      const createdEmployee = await response.json();
-  
-      setSuccessMessage('Employee created successfully with application access!');
-      setTimeout(() => {
-        navigate('/employee-management/employees');
-      }, 2000);
-    } catch (err) {
-      setError('Error creating employee: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
+  // Add helper function for profile image upload
+  const uploadProfileImage = async (employeeId, imageFile, uploadedBy) => {
+      const formData = new FormData();
+      formData.append('profileImage', imageFile);
+      formData.append('uploadedBy', uploadedBy);
+      
+      const response = await fetch(`${API_BASE_URL}/Employee/${employeeId}/profile-image`, {
+          method: 'POST',
+          body: formData,
+      });
+      
+      if (!response.ok) {
+          throw new Error('Failed to upload profile image');
+      }
+      
+      return response.text();
   };
 
   const genderOptions = [
@@ -267,6 +298,42 @@ const EmployeeForm = () => {
     { value: 'ReadOnly', label: 'Read Only' }
   ];
 
+  // Image handling functions
+  const handleImageChange = (event) => {
+    const file = event.target.files[0];
+    setImageError('');
+    
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        setImageError('Please select a JPEG, JPG, or PNG image file.');
+        return;
+      }
+      
+      // Create image object to check dimensions
+      const img = new Image();
+      img.onload = function() {
+        
+        
+        setProfileImage(file);
+        setImagePreview(URL.createObjectURL(file));
+      };
+      img.src = URL.createObjectURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setProfileImage(null);
+    setImagePreview(null);
+    setImageError('');
+    // Reset file input
+    const fileInput = document.getElementById('profile-image-upload');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+  
   return (
     <Box>
       <EmployeeNavBar />
@@ -278,6 +345,98 @@ const EmployeeForm = () => {
         <Paper elevation={3} sx={{ p: 4, borderRadius: 3, maxWidth: 600, mx: 'auto' }}>
           <Box component="form" onSubmit={handleSubmit}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              
+              {/* Profile Image */}
+              <Typography variant="h6" sx={{ color: '#34C759', fontWeight: 'bold', mb: 1, mt: 3 }}>
+                Profile Image
+              </Typography>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                {imagePreview ? (
+                  <Box sx={{ position: 'relative' }}>
+                    <img 
+                      src={imagePreview} 
+                      alt="Profile Preview" 
+                      style={{ 
+                        width: '150px', 
+                        height: '150px', 
+                        objectFit: 'cover', 
+                        borderRadius: '8px',
+                        border: '2px solid #ddd'
+                      }} 
+                    />
+                    <IconButton
+                      onClick={removeImage}
+                      sx={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        backgroundColor: '#f44336',
+                        color: 'white',
+                        '&:hover': { backgroundColor: '#d32f2f' },
+                        width: 24,
+                        height: 24
+                      }}
+                    >
+                      <Close sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Box>
+                ) : (
+                  <Box 
+                    sx={{ 
+                      width: '150px', 
+                      height: '150px', 
+                      border: '2px dashed #ddd', 
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#fafafa'
+                    }}
+                  >
+                    <PhotoCamera sx={{ fontSize: 40, color: '#999' }} />
+                  </Box>
+                )}
+                
+                <Box>
+                  <input
+                    accept="image/jpeg,image/jpg,image/png"
+                    style={{ display: 'none' }}
+                    id="profile-image-upload"
+                    type="file"
+                    onChange={handleImageChange}
+                  />
+                  <label htmlFor="profile-image-upload">
+                    <Button
+                      variant="outlined"
+                      component="span"
+                      startIcon={<PhotoCamera />}
+                      sx={{ mr: 1, mb: 1 }}
+                    >
+                      {imagePreview ? 'Change Image' : 'Upload Image'}
+                    </Button>
+                  </label>
+                  {imagePreview && (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={removeImage}
+                      sx={{ mb: 1 }}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                  <Typography variant="caption" display="block" sx={{ color: '#666', mt: 1 }}>
+                    Recommended: 350x220px, Max size: 5MB, Format: JPEG/PNG
+                  </Typography>
+                  {imageError && (
+                    <Alert severity="warning" sx={{ mt: 1, maxWidth: 400 }}>
+                      {imageError}
+                    </Alert>
+                  )}
+                </Box>
+              </Box>
+
               {/* Personal Information */}
               <Typography variant="h6" sx={{ color: '#34C759', fontWeight: 'bold', mb: 1 }}>
                 Personal Information
@@ -352,6 +511,46 @@ const EmployeeForm = () => {
                     }
                   }}
                 />
+                
+                
+                <TextField
+                  fullWidth
+                  label="Nationality"
+                  name="nationality"
+                  value={formData.nationality}
+                  onChange={handleInputChange}
+                  variant="outlined"
+                />
+                <TextField
+                  fullWidth
+                  label="Religion"
+                  name="religion"
+                  value={formData.religion}
+                  onChange={handleInputChange}
+                  variant="outlined"
+                />
+                
+              {/* Work Information */}
+              <Typography variant="h6" sx={{ color: '#34C759', fontWeight: 'bold', mb: 1, mt: 3 }}>
+                Work Pass Card Information
+              </Typography>
+
+                <TextField
+                  fullWidth
+                  select
+                  label="Work Permit"
+                  name="workPermit"
+                  value={formData.workPermit}
+                  onChange={handleInputChange}
+                  variant="outlined"
+                >
+                  {workPermitOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+
                 <TextField
                   fullWidth
                   label="Work Pass Card Number"
@@ -604,38 +803,7 @@ const EmployeeForm = () => {
                   required
                   variant="outlined"
                 />
-                <TextField
-                  fullWidth
-                  select
-                  label="Work Permit"
-                  name="workPermit"
-                  value={formData.workPermit}
-                  onChange={handleInputChange}
-                  variant="outlined"
-                >
-                  {workPermitOptions.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
                 
-                <TextField
-                  fullWidth
-                  label="Nationality"
-                  name="nationality"
-                  value={formData.nationality}
-                  onChange={handleInputChange}
-                  variant="outlined"
-                />
-                <TextField
-                  fullWidth
-                  label="Religion"
-                  name="religion"
-                  value={formData.religion}
-                  onChange={handleInputChange}
-                  variant="outlined"
-                />
                 <TextField
                   fullWidth
                   label="Remark"
@@ -644,6 +812,39 @@ const EmployeeForm = () => {
                   onChange={handleInputChange}
                   multiline
                   rows={3}
+                  variant="outlined"
+                />
+              </Box>
+              
+              {/* Emergency Contact Information */}
+              <Typography variant="h6" sx={{ color: '#34C759', fontWeight: 'bold', mb: 1, mt: 3 }}>
+                Emergency Contact Information
+              </Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Emergency Contact Name"
+                  name="emergencyContactName"
+                  value={formData.emergencyContactName}
+                  onChange={handleInputChange}
+                  variant="outlined"
+                />
+                <TextField
+                  fullWidth
+                  label="Relationship"
+                  name="emergencyRelationship"
+                  value={formData.emergencyRelationship}
+                  onChange={handleInputChange}
+                  variant="outlined"
+                  placeholder="e.g., Spouse, Parent, Sibling"
+                />
+                <TextField
+                  fullWidth
+                  label="Emergency Contact Phone"
+                  name="emergencyContactNumber"
+                  value={formData.emergencyContactNumber}
+                  onChange={handleInputChange}
                   variant="outlined"
                 />
               </Box>

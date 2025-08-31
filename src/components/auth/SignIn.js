@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import {
   Box,
   Paper,
@@ -20,106 +20,167 @@ import CustomModal from '../common/CustomModal';
 import backgroundImage from '../resources/willowglen_login_background_image.jpg';
 
 
+// Enhanced bubble animation with smoother transitions
+// Linear bubble animation with consistent speed
 const bubbleAnimation = keyframes`
   0% {
-    transform: translateY(200px) scale(0.8) rotate(0deg);
+    transform: translateY(120px) scale(0.6) rotate(0deg);
     opacity: 0;
   }
   10% {
-    opacity: 0.7;
-  }
-  50% {
-    transform: translateY(0px) scale(1) rotate(180deg);
-    opacity: 0.9;
+    opacity: 0.8;
   }
   90% {
-    opacity: 0.5;
+    opacity: 0.8;
   }
   100% {
-    transform: translateY(-200px) scale(0.6) rotate(360deg);
+    transform: translateY(-140px) scale(0.6) rotate(360deg);
     opacity: 0;
   }
 `;
 
-const Shape = styled('div')(({ type, size, left, delay }) => ({
+// Enhanced floating animation for variety
+const floatAnimation = keyframes`
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-15px) rotate(5deg);
+  }
+  50% {
+    transform: translateY(-25px) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-10px) rotate(-5deg);
+  }
+`;
+
+// Glow pulse animation
+const glowPulse = keyframes`
+  0%, 100% {
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.6));
+  }
+`;
+
+const Shape = styled('div')(({ type, size, left, delay, variant }) => ({
   position: 'absolute',
   width: size,
   height: type === 'square' ? size : type === 'circle' ? size : size * 0.8,
   left: `${left}%`,
-  bottom: '-50px',
-  backgroundColor: type === 'cross' ? 'transparent' : 'rgba(255, 255, 255, 0.4)',
-  borderRadius: type === 'circle' ? '50%' : type === 'square' ? '4px' : '0',
-  animation: `${bubbleAnimation} ${8 + Math.random() * 4}s ease-in-out infinite`,
+  bottom: '-40px',
+  backgroundColor: type === 'cross' ? 'transparent' : 
+    variant === 'glow' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.25)',
+  borderRadius: type === 'circle' ? '50%' : type === 'square' ? '6px' : '0',
+  animation: variant === 'float' ? 
+    `${floatAnimation} 3s ease-in-out infinite, ${glowPulse} 2s ease-in-out infinite` :
+    `${bubbleAnimation} ${3.5 + Math.random() * 2}s linear infinite`, // Changed to linear timing
   animationDelay: `${delay}s`,
-  boxShadow: type !== 'cross' ? '0 2px 8px rgba(255, 255, 255, 0.2)' : 'none',
+  animationFillMode: 'both',
+  boxShadow: type !== 'cross' ? 
+    variant === 'glow' ? '0 4px 20px rgba(255, 255, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.6)' :
+    '0 2px 12px rgba(255, 255, 255, 0.3)' : 'none',
   transformOrigin: 'center center',
+  pointerEvents: 'none',
+  willChange: 'transform, opacity, filter',
+  backfaceVisibility: 'hidden',
+  perspective: 1000,
+  border: variant === 'glow' ? '1px solid rgba(255, 255, 255, 0.3)' : 'none',
   '&::before': type === 'cross' ? {
     content: '""',
     position: 'absolute',
     width: '100%',
-    height: '2px',
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    height: '3px',
+    backgroundColor: variant === 'glow' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.35)',
     top: '50%',
     left: '0',
     transform: 'rotate(45deg)',
-    boxShadow: '0 1px 4px rgba(255, 255, 255, 0.2)'
+    borderRadius: '2px',
+    boxShadow: variant === 'glow' ? '0 0 10px rgba(255, 255, 255, 0.4)' : '0 1px 6px rgba(255, 255, 255, 0.2)'
   } : {},
   '&::after': type === 'cross' ? {
     content: '""',
     position: 'absolute',
     width: '100%',
-    height: '2px',
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    height: '3px',
+    backgroundColor: variant === 'glow' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.35)',
     top: '50%',
     left: '0',
     transform: 'rotate(-45deg)',
-    boxShadow: '0 1px 4px rgba(255, 255, 255, 0.2)'
+    borderRadius: '2px',
+    boxShadow: variant === 'glow' ? '0 0 10px rgba(255, 255, 255, 0.4)' : '0 1px 6px rgba(255, 255, 255, 0.2)'
   } : {}
 }));
 
-const AnimatedShapes = () => {
+const AnimatedShapes = memo(() => {
   const shapes = [
-    // First wave
-    { type: 'circle', size: 15, left: 10, delay: 0 },
-    { type: 'square', size: 12, left: 25, delay: 0.8 },
-    { type: 'cross', size: 18, left: 40, delay: 1.6 },
-    { type: 'circle', size: 20, left: 60, delay: 2.4 },
-    { type: 'square', size: 15, left: 75, delay: 3.2 },
-    { type: 'cross', size: 14, left: 90, delay: 4.0 },
+    // Main bubble animation shapes
+    { type: 'circle', size: 18, left: 8, delay: 0, variant: 'glow' },
+    { type: 'square', size: 15, left: 22, delay: 0.8, variant: 'normal' },
+    { type: 'cross', size: 20, left: 38, delay: 1.6, variant: 'glow' },
+    { type: 'circle', size: 22, left: 55, delay: 2.4, variant: 'normal' },
+    { type: 'square', size: 16, left: 72, delay: 3.2, variant: 'glow' },
+    { type: 'cross', size: 18, left: 88, delay: 4.0, variant: 'normal' },
     
-    // Second wave (overlapping)
-    { type: 'circle', size: 16, left: 15, delay: 4.8 },
-    { type: 'square', size: 13, left: 35, delay: 5.6 },
-    { type: 'cross', size: 17, left: 55, delay: 6.4 },
-    { type: 'circle', size: 18, left: 80, delay: 7.2 },
-    { type: 'square', size: 14, left: 5, delay: 8.0 },
-    { type: 'cross', size: 16, left: 70, delay: 8.8 },
+    // Floating shapes for variety
+    { type: 'circle', size: 12, left: 15, delay: 0.5, variant: 'float' },
+    { type: 'square', size: 10, left: 45, delay: 1.2, variant: 'float' },
+    { type: 'cross', size: 14, left: 75, delay: 2.8, variant: 'float' },
     
-    // Third wave (continuous overlap)
-    { type: 'circle', size: 17, left: 20, delay: 9.6 },
-    { type: 'square', size: 15, left: 45, delay: 10.4 },
-    { type: 'cross', size: 19, left: 65, delay: 11.2 },
-    { type: 'circle', size: 14, left: 85, delay: 12.0 },
-    { type: 'square', size: 16, left: 12, delay: 12.8 },
-    { type: 'cross', size: 15, left: 30, delay: 13.6 },
+    // Second wave with different timing
+    { type: 'circle', size: 20, left: 12, delay: 5.0, variant: 'normal' },
+    { type: 'square', size: 17, left: 32, delay: 5.8, variant: 'glow' },
+    { type: 'cross', size: 19, left: 58, delay: 6.6, variant: 'normal' },
+    { type: 'circle', size: 16, left: 82, delay: 7.4, variant: 'glow' },
     
-    // Fourth wave (seamless continuation)
-    { type: 'circle', size: 19, left: 50, delay: 14.4 },
-    { type: 'square', size: 13, left: 72, delay: 15.2 },
-    { type: 'cross', size: 18, left: 8, delay: 16.0 },
-    { type: 'circle', size: 16, left: 38, delay: 16.8 },
-    { type: 'square', size: 17, left: 58, delay: 17.6 },
-    { type: 'cross', size: 14, left: 82, delay: 18.4 }
+    // Continuous flow
+    { type: 'square', size: 13, left: 5, delay: 8.2, variant: 'normal' },
+    { type: 'cross', size: 21, left: 65, delay: 9.0, variant: 'glow' }
   ];
 
   return (
-    <Box sx={{ position: 'absolute', width: '100%', height: '100%', overflow: 'hidden', pointerEvents: 'none' }}>
+    <Box
+      sx={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        zIndex: 0,
+        isolation: 'isolate',
+        // Add subtle background animation
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(circle at 30% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 50%)',
+          animation: `${floatAnimation} 8s ease-in-out infinite`,
+          animationDelay: '2s'
+        }
+      }}
+    >
       {shapes.map((shape, index) => (
-        <Shape key={index} {...shape} />
+        <Shape
+          key={`shape-${index}`}
+          type={shape.type}
+          size={shape.size}
+          left={shape.left}
+          delay={shape.delay}
+          variant={shape.variant}
+        />
       ))}
     </Box>
   );
-};
+});
+
+AnimatedShapes.displayName = 'AnimatedShapes';
 
 // Add loading animation keyframes
 const pulseAnimation = keyframes`
@@ -370,6 +431,7 @@ const SignIn = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                isolation: 'isolate', // Create new stacking context
                 '&::before': {
                   content: '""',
                   position: 'absolute',
@@ -391,7 +453,7 @@ const SignIn = () => {
                   textAlign: 'center',
                   textShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
                   position: 'relative',
-                  zIndex: 2,
+                  zIndex: 3, // Higher than shapes and background
                   fontWeight: 600,
                   fontSize: { xs: '1.3rem', sm: '1.5rem' },
                   letterSpacing: '0.5px'

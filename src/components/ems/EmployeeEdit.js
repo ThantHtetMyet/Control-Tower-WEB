@@ -9,18 +9,47 @@ import {
   Snackbar,
   MenuItem,
   Grid,
-  CircularProgress
+  FormControl,
+  InputLabel,
+  Select,
+  Chip,
+  OutlinedInput,
+  Checkbox,
+  ListItemText,
+  Card,
+  CardContent,
+  IconButton,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
-import { Save, Cancel } from '@mui/icons-material';
+import { Save, Cancel, Delete } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import moment from 'moment';
 import EmployeeNavBar from './EmployeeNavBar';
+import applicationService from '../api-services/applicationService';
+import accessLevelService from '../api-services/accessLevelService';
+import employeeApplicationAccessService from '../api-services/employeeApplicationAccessService';
+// Add similar image upload functionality to EmployeeEdit.js
+// Add these imports
+import { CloudUpload, PhotoCamera } from '@mui/icons-material';
+import { Avatar, Stack } from '@mui/material';
+
+  // Add this import at the top
+  import { 
+    updateEmployeeApplicationAccess, 
+    softDeleteEmployeeApplicationAccess, 
+    createEmployeeApplicationAccess 
+  } from '../api-services/employeeService';
 
 import { API_URL } from '../../config/apiConfig';
 
 const API_BASE_URL = API_URL;
+
 
 const EmployeeEdit = () => {
   const navigate = useNavigate();
@@ -33,6 +62,11 @@ const EmployeeEdit = () => {
   const [departments, setDepartments] = useState([]);
   const [occupations, setOccupations] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [accessLevels, setAccessLevels] = useState([]);
+  const [selectedApplications, setSelectedApplications] = useState([]);
+  const [applicationAccessLevels, setApplicationAccessLevels] = useState({});
+  const [existingApplicationAccess, setExistingApplicationAccess] = useState([]);
   
   const [formData, setFormData] = useState({
     id: '',
@@ -53,6 +87,12 @@ const EmployeeEdit = () => {
     nationality: '',
     religion: '',
     dateOfBirth: moment(),
+    workPassCardNumber: '',
+    workPassCardIssuedDate: null,
+    workPassCardExpiredDate: null,
+    emergencyContactName: '',
+    emergencyContactNumber: '',
+    emergencyRelationship: '',
     updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
   });
 
@@ -61,19 +101,9 @@ const EmployeeEdit = () => {
     fetchCompanies();
     fetchDepartments();
     fetchOccupations();
+    fetchApplications();
+    fetchAccessLevels();
   }, [id]);
-
-  const fetchCompanies = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/Company`);
-      if (response.ok) {
-        const data = await response.json();
-        setCompanies(data);
-      }
-    } catch (err) {
-      console.error('Error fetching companies:', err);
-    }
-  };
 
   const fetchEmployee = async () => {
     try {
@@ -83,6 +113,7 @@ const EmployeeEdit = () => {
         throw new Error('Employee not found');
       }
       const data = await response.json();
+      
       setFormData({
         id: data.id,
         companyID: data.companyID,
@@ -102,12 +133,52 @@ const EmployeeEdit = () => {
         nationality: data.nationality || '',
         religion: data.religion || '',
         dateOfBirth: moment(data.dateOfBirth),
+        workPassCardNumber: data.workPassCardNumber || '',
+        workPassCardIssuedDate: data.workPassCardIssuedDate ? moment(data.workPassCardIssuedDate) : null,
+        workPassCardExpiredDate: data.workPassCardExpiredDate ? moment(data.workPassCardExpiredDate) : null,
+        emergencyContactName: data.emergencyContactName || '',
+        emergencyContactNumber: data.emergencyContactNumber || '',
+        emergencyRelationship: data.emergencyRelationship || '',
         updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
       });
+      
+      // Fetch existing application access
+      await fetchEmployeeApplicationAccess(data.id);
     } catch (err) {
       setError('Error fetching employee: ' + err.message);
     } finally {
       setFetchLoading(false);
+    }
+  };
+
+  const fetchEmployeeApplicationAccess = async (employeeId) => {
+    try {
+      const existingAccess = await employeeApplicationAccessService.getEmployeeApplicationAccessesByEmployee(employeeId);
+      
+      setExistingApplicationAccess(existingAccess);
+      
+      const appIds = existingAccess.map(access => access.applicationID);
+      const accessLevels = {};
+      existingAccess.forEach(access => {
+        accessLevels[access.applicationID] = access.accessLevelID;
+      });
+      
+      setSelectedApplications(appIds);
+      setApplicationAccessLevels(accessLevels);
+    } catch (err) {
+      console.error('Error fetching employee application access:', err);
+    }
+  };
+
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/Company`);
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data);
+      }
+    } catch (err) {
+      console.error('Error fetching companies:', err);
     }
   };
 
@@ -135,6 +206,24 @@ const EmployeeEdit = () => {
     }
   };
 
+  const fetchApplications = async () => {
+    try {
+      const data = await applicationService.getApplications();
+      setApplications(data);
+    } catch (err) {
+      console.error('Error fetching applications:', err);
+    }
+  };
+
+  const fetchAccessLevels = async () => {
+    try {
+      const data = await accessLevelService.getAccessLevels();
+      setAccessLevels(data);
+    } catch (err) {
+      console.error('Error fetching access levels:', err);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -150,20 +239,47 @@ const EmployeeEdit = () => {
     }));
   };
 
+  const handleApplicationChange = (event) => {
+    const value = event.target.value;
+    setSelectedApplications(typeof value === 'string' ? value.split(',') : value);
+  };
+
+  const handleAccessLevelChange = (appId, accessLevelId) => {
+    setApplicationAccessLevels(prev => ({
+      ...prev,
+      [appId]: accessLevelId
+    }));
+  };
+
+  const removeApplication = (appId) => {
+    setSelectedApplications(prev => prev.filter(id => id !== appId));
+    setApplicationAccessLevels(prev => {
+      const newLevels = { ...prev };
+      delete newLevels[appId];
+      return newLevels;
+    });
+  };
+
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showErrorSnackbar, setShowErrorSnackbar] = useState(false);
+  
+  // Update the handleSubmit function
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
+  
     try {
       const submitData = {
         ...formData,
         startWorkingDate: formData.startWorkingDate.toISOString(),
         lastWorkingDate: formData.lastWorkingDate ? formData.lastWorkingDate.toISOString() : null,
         dateOfBirth: formData.dateOfBirth.toISOString(),
+        workPassCardIssuedDate: formData.workPassCardIssuedDate ? formData.workPassCardIssuedDate.toISOString() : null,
+        workPassCardExpiredDate: formData.workPassCardExpiredDate ? formData.workPassCardExpiredDate.toISOString() : null,
         updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
       };
-
+  
       const response = await fetch(`${API_BASE_URL}/Employee/${id}`, {
         method: 'PUT',
         headers: {
@@ -171,12 +287,17 @@ const EmployeeEdit = () => {
         },
         body: JSON.stringify(submitData),
       });
-
+  
       if (!response.ok) {
         const errorData = await response.text();
         throw new Error(errorData || 'Failed to update employee');
       }
-
+  
+      // In the handleSubmit function, around line 297
+      // Update application access
+      await updateApplicationAccess();
+  
+      // Show success toast message instead of modal
       setSuccessMessage('Employee updated successfully!');
       setTimeout(() => {
         navigate('/employee-management/employees');
@@ -187,6 +308,106 @@ const EmployeeEdit = () => {
       setLoading(false);
     }
   };
+  
+  // Add function to handle modal close and navigation
+  // Remove these lines (around lines 305-309):
+  // const handleSuccessModalClose = () => {
+  //   setShowSuccessModal(false);
+  //   navigate('/employee-management/employees');
+  // };
+  
+  // Remove the entire Dialog component (lines 903-946):
+  // {/* Success Modal */}
+  // <Dialog
+  //   open={showSuccessModal}
+  //   onClose={handleSuccessModalClose}
+  //   ...
+  // </Dialog>
+
+  const updateApplicationAccess = async () => {
+    try {
+      // Refresh the current state from database to avoid stale data
+      await fetchEmployeeApplicationAccess(id); // Add the 'id' parameter
+      
+      // Create maps for easier comparison using the refreshed data
+      const existingAccessMap = new Map();
+      existingApplicationAccess.forEach(access => {
+        existingAccessMap.set(access.applicationID, {
+          id: access.id,
+          accessLevelID: access.accessLevelID
+        });
+      });
+  
+      const currentAccessMap = new Map();
+      selectedApplications.forEach(appId => {
+        const accessLevelId = applicationAccessLevels[appId];
+        if (accessLevelId) {
+          currentAccessMap.set(appId, accessLevelId);
+        }
+      });
+  
+      // Identify operations needed
+      const toSoftDelete = [];
+      const toUpdate = [];
+      const toCreate = [];
+  
+      // Check what needs to be soft deleted or updated
+      for (const [appId, accessInfo] of existingAccessMap) {
+        if (!currentAccessMap.has(appId)) {
+          // Application removed - mark for soft deletion
+          toSoftDelete.push({ appId, accessInfo });
+        } else {
+          // Application exists - check if access level changed
+          const currentAccessLevelId = currentAccessMap.get(appId);
+          if (accessInfo.accessLevelID !== currentAccessLevelId) {
+            toUpdate.push({ appId, accessInfo, newAccessLevelId: currentAccessLevelId });
+          }
+        }
+      }
+  
+      // Check what needs to be created
+      for (const [appId, accessLevelId] of currentAccessMap) {
+        if (!existingAccessMap.has(appId)) {
+          toCreate.push({ appId, accessLevelId });
+        }
+      }
+  
+      // Execute soft deletions first
+      for (const { accessInfo } of toSoftDelete) {
+        await softDeleteEmployeeApplicationAccess(id, accessInfo.id, {
+          isDeleted: true,
+          updatedBy: user?.id
+        });
+      }
+  
+      // Execute updates
+      for (const { accessInfo, newAccessLevelId } of toUpdate) {
+        await updateEmployeeApplicationAccess(id, accessInfo.id, {
+          accessLevelID: newAccessLevelId,
+          updatedBy: user?.id
+        });
+      }
+  
+      // Execute creations
+      for (const { appId, accessLevelId } of toCreate) {
+        await createEmployeeApplicationAccess(id, {
+          userID: id,
+          applicationID: appId,
+          accessLevelID: accessLevelId,
+          grantedBy: user?.id,
+          createdBy: user?.id
+        });
+      }
+  
+      // Refresh the state after all operations
+      await fetchEmployeeApplicationAccess(id); // Add the 'id' parameter
+      
+    } catch (error) {
+      console.error('Error updating application access:', error);
+      setErrorMessage('Failed to update application access. Please try again.');
+      setShowErrorSnackbar(true);
+    }
+  };
 
   const genderOptions = [
     { value: 'Male', label: 'Male' },
@@ -194,11 +415,19 @@ const EmployeeEdit = () => {
     { value: 'Other', label: 'Other' }
   ];
 
+  const workPermitOptions = [
+    { value: 'SPass', label: 'SPass' },
+    { value: 'EPass', label: 'EPass' },
+    { value: 'WPass', label: 'WPass' },
+    { value: 'Singaporean', label: 'Singaporean' },
+    { value: 'Permanent Resident', label: 'Permanent Resident' }
+  ];
+
   if (fetchLoading) {
     return (
       <Box>
         <EmployeeNavBar />
-        <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <CircularProgress sx={{ color: '#34C759' }} />
         </Box>
       </Box>
@@ -213,238 +442,421 @@ const EmployeeEdit = () => {
           Edit Employee
         </Typography>
         
-        <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
+        <Paper elevation={3} sx={{ p: 4, borderRadius: 3, maxWidth: 600, mx: 'auto' }}>
           <Box component="form" onSubmit={handleSubmit}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {/* Personal Information */}
               <Typography variant="h6" sx={{ color: '#34C759', fontWeight: 'bold', mb: 1 }}>
                 Personal Information
               </Typography>
               
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="First Name"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Last Name"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Mobile Number"
-                    name="mobileNo"
-                    value={formData.mobileNo}
-                    onChange={handleInputChange}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    select
-                    label="Gender"
-                    name="gender"
-                    value={formData.gender}
-                    onChange={handleInputChange}
-                    required
-                    variant="outlined"
-                  >
-                    {genderOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <DatePicker
-                    label="Date of Birth"
-                    value={formData.dateOfBirth}
-                    onChange={(value) => handleDateChange('dateOfBirth', value)}
-                    renderInput={(params) => <TextField {...params} fullWidth required />}
-                    maxDate={moment().subtract(16, 'years')}
-                  />
-                </Grid>
-              </Grid>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="First Name"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  required
+                  variant="outlined"
+                />
+                <TextField
+                  fullWidth
+                  label="Last Name"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  required
+                  variant="outlined"
+                />
+                <TextField
+                  fullWidth
+                  label="Email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                  variant="outlined"
+                />
+                <TextField
+                  fullWidth
+                  label="Mobile Number"
+                  name="mobileNo"
+                  value={formData.mobileNo}
+                  onChange={handleInputChange}
+                  required
+                  variant="outlined"
+                  inputProps={{
+                    inputMode: 'numeric',
+                    pattern: '[0-9]*',
+                    maxLength: 15,
+                    onInput: (e) => {
+                      e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                    }
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  select
+                  label="Gender"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  required
+                  variant="outlined"
+                >
+                  {genderOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <DatePicker
+                  label="Date of Birth"
+                  value={formData.dateOfBirth}
+                  onChange={(value) => handleDateChange('dateOfBirth', value)}
+                  maxDate={moment().subtract(16, 'years')}
+                  views={['year', 'month', 'day']}
+                  openTo="year"
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      required: true,
+                      variant: 'outlined'
+                    }
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  select
+                  label="Work Permit"
+                  name="workPermit"
+                  value={formData.workPermit}
+                  onChange={handleInputChange}
+                  variant="outlined"
+                >
+                  {workPermitOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                
+                <TextField
+                  fullWidth
+                  label="Work Pass Card Number"
+                  name="workPassCardNumber"
+                  value={formData.workPassCardNumber}
+                  onChange={handleInputChange}
+                  variant="outlined"
+                  autoComplete="off"
+                />
+                <DatePicker
+                  label="Work Pass Card Issued Date (Optional)"
+                  value={formData.workPassCardIssuedDate}
+                  onChange={(value) => handleDateChange('workPassCardIssuedDate', value)}
+                  views={['year', 'month', 'day']}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      variant: 'outlined'
+                    }
+                  }}
+                />
+                <DatePicker
+                  label="Work Pass Card Expired Date (Optional)"
+                  value={formData.workPassCardExpiredDate}
+                  onChange={(value) => handleDateChange('workPassCardExpiredDate', value)}
+                  views={['year', 'month', 'day']}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      variant: 'outlined'
+                    }
+                  }}
+                />
+              </Box>
 
               {/* Work Information */}
               <Typography variant="h6" sx={{ color: '#34C759', fontWeight: 'bold', mb: 1, mt: 3 }}>
                 Work Information
               </Typography>
               
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    select
-                    label="Company"
-                    name="companyID"
-                    value={formData.companyID}
-                    onChange={handleInputChange}
-                    required
-                    variant="outlined"
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Company"
+                  name="companyID"
+                  value={formData.companyID}
+                  onChange={handleInputChange}
+                  required
+                  variant="outlined"
+                >
+                  {companies.map((company) => (
+                    <MenuItem key={company.id} value={company.id}>
+                      {company.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  fullWidth
+                  select
+                  label="Department"
+                  name="departmentID"
+                  value={formData.departmentID}
+                  onChange={handleInputChange}
+                  required
+                  variant="outlined"
+                >
+                  {departments.map((dept) => (
+                    <MenuItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  fullWidth
+                  select
+                  label="Occupation"
+                  name="occupationID"
+                  value={formData.occupationID}
+                  onChange={handleInputChange}
+                  required
+                  variant="outlined"
+                >
+                  {occupations.map((occ) => (
+                    <MenuItem key={occ.id} value={occ.id}>
+                      {occ.occupationName}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  fullWidth
+                  label="Staff Card ID"
+                  name="staffCardID"
+                  value={formData.staffCardID}
+                  onChange={handleInputChange}
+                  required
+                  variant="outlined"
+                />
+                <TextField
+                  fullWidth
+                  label="Staff RFID Card ID"
+                  name="staffIDCardID"
+                  value={formData.staffIDCardID}
+                  onChange={handleInputChange}
+                  required
+                  variant="outlined"
+                />
+                <DatePicker
+                  label="Start Working Date"
+                  value={formData.startWorkingDate}
+                  onChange={(value) => handleDateChange('startWorkingDate', value)}
+                  views={['year', 'month', 'day']}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      required: true,
+                      variant: 'outlined'
+                    }
+                  }}
+                />
+                <DatePicker
+                  label="Last Working Date (Optional)"
+                  value={formData.lastWorkingDate}
+                  onChange={(value) => handleDateChange('lastWorkingDate', value)}
+                  views={['year', 'month', 'day']}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      variant: 'outlined'
+                    }
+                  }}
+                />
+              </Box>
+
+              {/* Application Access */}
+              <Typography variant="h6" sx={{ color: '#34C759', fontWeight: 'bold', mb: 1, mt: 3 }}>
+                Application Access
+              </Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Select Applications</InputLabel>
+                  <Select
+                    multiple
+                    value={selectedApplications}
+                    onChange={handleApplicationChange}
+                    input={<OutlinedInput label="Select Applications" />}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => {
+                          const app = applications.find(app => app.id === value);
+                          return (
+                            <Chip 
+                              key={value} 
+                              label={app?.applicationName || value}
+                              size="small"
+                              sx={{
+                                backgroundColor: '#34C759',
+                                color: 'white',
+                                '& .MuiChip-deleteIcon': {
+                                  color: 'white'
+                                }
+                              }}
+                            />
+                          );
+                        })}
+                      </Box>
+                    )}
                   >
-                    {companies.map((company) => (
-                      <MenuItem key={company.id} value={company.id}>
-                        {company.name}
+                    {applications.map((app) => (
+                      <MenuItem key={app.id} value={app.id}>
+                        <Checkbox 
+                          checked={selectedApplications.indexOf(app.id) > -1}
+                          sx={{
+                            color: '#34C759',
+                            '&.Mui-checked': {
+                              color: '#34C759',
+                            }
+                          }}
+                        />
+                        <ListItemText primary={app.applicationName} secondary={app.description} />
                       </MenuItem>
                     ))}
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    select
-                    label="Department"
-                    name="departmentID"
-                    value={formData.departmentID}
-                    onChange={handleInputChange}
-                    required
-                    variant="outlined"
-                  >
-                    {departments.map((dept) => (
-                      <MenuItem key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    select
-                    label="Occupation"
-                    name="occupationID"
-                    value={formData.occupationID}
-                    onChange={handleInputChange}
-                    required
-                    variant="outlined"
-                  >
-                    {occupations.map((occ) => (
-                      <MenuItem key={occ.id} value={occ.id}>
-                        {occ.occupationName}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Staff Card ID"
-                    name="staffCardID"
-                    value={formData.staffCardID}
-                    onChange={handleInputChange}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Staff ID Card ID"
-                    name="staffIDCardID"
-                    value={formData.staffIDCardID}
-                    onChange={handleInputChange}
-                    required
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <DatePicker
-                    label="Start Working Date"
-                    value={formData.startWorkingDate}
-                    onChange={(value) => handleDateChange('startWorkingDate', value)}
-                    renderInput={(params) => <TextField {...params} fullWidth required />}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <DatePicker
-                    label="Last Working Date (Optional)"
-                    value={formData.lastWorkingDate}
-                    onChange={(value) => handleDateChange('lastWorkingDate', value)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
-                  />
-                </Grid>
-              </Grid>
+                  </Select>
+                </FormControl>
+
+                {/* Selected Applications with Access Level Selection */}
+                {selectedApplications.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
+                      Configure Access Levels
+                    </Typography>
+                    {selectedApplications.map((appId) => {
+                      const app = applications.find(a => a.id === appId);
+                      return (
+                        <Card key={appId} sx={{ mb: 2, border: '1px solid #e0e0e0' }}>
+                          <CardContent sx={{ p: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <Box sx={{ flex: 1 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                  {app?.applicationName}
+                                </Typography>
+                                <FormControl size="small" sx={{ minWidth: 150 }}>
+                                  <InputLabel>Access Level</InputLabel>
+                                  <Select
+                                    value={applicationAccessLevels[appId] || ''}
+                                    onChange={(e) => handleAccessLevelChange(appId, e.target.value)}
+                                    label="Access Level"
+                                  >
+                                    {accessLevels.map((level) => (
+                                      <MenuItem key={level.id} value={level.id}>
+                                        {level.levelName}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              </Box>
+                              <IconButton 
+                                onClick={() => removeApplication(appId)}
+                                color="error"
+                                size="small"
+                              >
+                                <Delete />
+                              </IconButton>
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </Box>
+                )}
+                
+                <Typography variant="body2" color="text.secondary">
+                  Select applications and configure individual access levels for each one.
+                </Typography>
+              </Box>
+              
+              {/* Emergency Contact Information */}
+              <Typography variant="h6" sx={{ color: '#34C759', fontWeight: 'bold', mb: 1, mt: 3 }}>
+                Emergency Contact Information
+              </Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Emergency Contact Name"
+                  name="emergencyContactName"
+                  value={formData.emergencyContactName}
+                  onChange={handleInputChange}
+                  variant="outlined"
+                  placeholder="Enter emergency contact's full name"
+                />
+                <TextField
+                  fullWidth
+                  label="Emergency Contact Number"
+                  name="emergencyContactNumber"
+                  value={formData.emergencyContactNumber}
+                  onChange={handleInputChange}
+                  variant="outlined"
+                  type="tel"
+                  placeholder="Enter emergency contact's phone number"
+                  inputProps={{
+                    inputMode: 'numeric',
+                    pattern: '[0-9]*',
+                    maxLength: 15,
+                    onInput: (e) => {
+                      e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                    }
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  label="Emergency Relationship"
+                  name="emergencyRelationship"
+                  value={formData.emergencyRelationship}
+                  onChange={handleInputChange}
+                  variant="outlined"
+                  placeholder="e.g., Spouse, Parent, Sibling, Friend"
+                />
+              </Box>
 
               {/* Additional Information */}
               <Typography variant="h6" sx={{ color: '#34C759', fontWeight: 'bold', mb: 1, mt: 3 }}>
                 Additional Information
               </Typography>
               
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Work Permit"
-                    name="workPermit"
-                    value={formData.workPermit}
-                    onChange={handleInputChange}
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Nationality"
-                    name="nationality"
-                    value={formData.nationality}
-                    onChange={handleInputChange}
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Religion"
-                    name="religion"
-                    value={formData.religion}
-                    onChange={handleInputChange}
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Remark"
-                    name="remark"
-                    value={formData.remark}
-                    onChange={handleInputChange}
-                    multiline
-                    rows={3}
-                    variant="outlined"
-                  />
-                </Grid>
-              </Grid>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Nationality"
+                  name="nationality"
+                  value={formData.nationality}
+                  onChange={handleInputChange}
+                  variant="outlined"
+                />
+                <TextField
+                  fullWidth
+                  label="Religion"
+                  name="religion"
+                  value={formData.religion}
+                  onChange={handleInputChange}
+                  variant="outlined"
+                />
+                <TextField
+                  fullWidth
+                  label="Remark"
+                  name="remark"
+                  value={formData.remark}
+                  onChange={handleInputChange}
+                  multiline
+                  rows={3}
+                  variant="outlined"
+                />
+              </Box>
 
               {/* Action Buttons */}
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
@@ -483,28 +895,37 @@ const EmployeeEdit = () => {
           </Box>
         </Paper>
 
-        {/* Success/Error Messages */}
-        <Snackbar
-          open={!!successMessage}
-          autoHideDuration={6000}
-          onClose={() => setSuccessMessage('')}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        >
-          <Alert onClose={() => setSuccessMessage('')} severity="success" sx={{ width: '100%' }}>
-            {successMessage}
-          </Alert>
-        </Snackbar>
-
         <Snackbar
           open={!!error}
           autoHideDuration={6000}
           onClose={() => setError('')}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
-          <Alert onClose={() => setError('')} severity="error" sx={{ width: '100%' }}>
+          <Alert onClose={() => setError('')} severity="error">
             {error}
           </Alert>
         </Snackbar>
+
+        <Snackbar
+          open={showErrorSnackbar}
+          autoHideDuration={6000}
+          onClose={() => setShowErrorSnackbar(false)}
+        >
+          <Alert onClose={() => setShowErrorSnackbar(false)} severity="error">
+            {errorMessage}
+          </Alert>
+        </Snackbar>
+
+        {/* Add this success message Snackbar */}
+        <Snackbar
+          open={!!successMessage}
+          autoHideDuration={6000}
+          onClose={() => setSuccessMessage('')}
+        >
+          <Alert onClose={() => setSuccessMessage('')} severity="success">
+            {successMessage}
+          </Alert>
+        </Snackbar>
+
       </Box>
     </Box>
   );

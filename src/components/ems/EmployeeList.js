@@ -65,7 +65,7 @@ const EmployeeList = () => {
   };
 
   const getGenderColor = (gender) => {
-    return gender.toLowerCase() === 'male' ? '#2196F3' : '#E91E63';
+    return gender.toLowerCase() === 'male' ? '#009fe3' : '#e5007e';
   };
 
   const formatDate = (dateString) => {

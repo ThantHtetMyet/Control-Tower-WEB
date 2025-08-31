@@ -71,3 +71,19 @@ export const getDashboardStats = async () => {
     throw error;
   }
 };
+
+// Application Access API calls
+export const updateEmployeeApplicationAccess = async (employeeId, accessId, accessData) => {
+  const response = await api.put(`/employee/${employeeId}/application-access/${accessId}`, accessData);
+  return response.data;
+};
+
+export const softDeleteEmployeeApplicationAccess = async (employeeId, accessId, deleteData) => {
+  const response = await api.patch(`/employee/${employeeId}/application-access/${accessId}`, deleteData);
+  return response.data;
+};
+
+export const createEmployeeApplicationAccess = async (employeeId, accessData) => {
+  const response = await api.post(`/employee/${employeeId}/application-access`, accessData);
+  return response.data;
+};

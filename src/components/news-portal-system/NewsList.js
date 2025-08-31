@@ -20,9 +20,16 @@ const NewsList = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
-  const [searchInput, setSearchInput] = useState(''); // Separate input state
+  const [searchInput, setSearchInput] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [publishFilter, setPublishFilter] = useState('');
+  
+  // Add delete modal state
+  const [deleteModal, setDeleteModal] = useState({
+    open: false,
+    newsId: null,
+    newsTitle: ''
+  });
   
   const navigate = useNavigate();
   const { hasNewsPortalAdminAccess } = useAuth();
@@ -64,16 +71,50 @@ const NewsList = () => {
     }
   };
 
-  const handleDelete = async (id, title) => {
-    if (window.confirm(`Are you sure you want to delete "${title}"?`)) {
-      try {
-        await deleteNews(id);
-        setSuccessMessage('News deleted successfully');
-        fetchNews();
-      } catch (err) {
-        setError('Error deleting news: ' + err.message);
+  // Updated delete handlers
+  const handleDeleteClick = (id, title) => {
+    setDeleteModal({
+      open: true,
+      newsId: id,
+      newsTitle: title
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteNews(deleteModal.newsId);
+      setDeleteModal({ open: false, newsId: null, newsTitle: '' });
+      
+      // Show success message
+      setSuccessMessage(`News "${deleteModal.newsTitle}" has been successfully deleted.`);
+      
+      // Refresh the news list
+      await fetchNews();
+      
+    } catch (error) {
+      console.error('Error deleting news:', error);
+      
+      // Handle specific validation errors
+      let errorMessage = 'Failed to delete news. Please try again.';
+      
+      if (error.response && error.response.status === 400) {
+        const serverMessage = error.response.data;
+        if (typeof serverMessage === 'string') {
+          errorMessage = serverMessage;
+        }
+      } else if (error.response && error.response.status === 403) {
+        errorMessage = 'You do not have permission to delete this news article.';
+      } else if (error.response && error.response.status === 404) {
+        errorMessage = 'News article not found or already deleted.';
       }
+      
+      setError(errorMessage);
+      setDeleteModal({ open: false, newsId: null, newsTitle: '' });
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModal({ open: false, newsId: null, newsTitle: '' });
   };
 
   const handlePublishToggle = async (id, isPublished) => {
@@ -282,11 +323,11 @@ const NewsList = () => {
                             <Edit fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        
-                        <Tooltip title="Delete" arrow>
+                       
+                       <Tooltip title="Delete" arrow>
                           <IconButton 
                             size="small" 
-                            onClick={() => handleDelete(item.id, item.title)}
+                            onClick={() => handleDeleteClick(item.id, item.title)}
                             sx={{
                               color: "error.main",
                               "&:hover": {
@@ -370,7 +411,71 @@ const NewsList = () => {
           {error}
         </Alert>
       </Snackbar>
-    </Container>
+
+      {/* Add Delete Confirmation Modal before closing Container */}
+{deleteModal.open && (
+  <Box sx={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    bgcolor: 'rgba(0,0,0,0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1300
+  }}>
+    <Paper sx={{ 
+      p: 4, 
+      maxWidth: 450, 
+      mx: 2, 
+      borderRadius: 3,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+    }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Delete sx={{ 
+          color: newsPortalTheme.redPrimary, 
+          fontSize: 28, 
+          mr: 1 
+        }} />
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            color: newsPortalTheme.redPrimary, 
+            fontWeight: 'bold' 
+          }}
+        >
+          Delete News
+        </Typography>
+      </Box>
+      
+      <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+        Are you sure you want to delete news <strong>"{deleteModal.newsTitle}"</strong>? 
+        This action will set the news as deleted and cannot be undone.
+      </Typography>
+      
+      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+        <Button 
+          onClick={handleDeleteCancel} 
+          variant="outlined"
+          sx={getRedButtonStyle('outlined')}
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleDeleteConfirm} 
+          variant="contained" 
+          sx={getRedButtonStyle('contained')}
+          startIcon={<Delete />}
+        >
+          Delete
+        </Button>
+      </Box>
+    </Paper>
+  </Box>
+)}
+</Container>
   );
 };
 
