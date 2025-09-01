@@ -10,47 +10,45 @@ import {
   Alert,
   CircularProgress,
   Divider,
+  Chip,
   Container,
   Stack
 } from '@mui/material';
 import {
-  Business,
+  Apps,
   ArrowBack,
   Edit,
   CalendarToday,
   Description,
-  Note
+  Note,
+  Person
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import EmployeeNavBar from './EmployeeNavBar';
 import moment from 'moment';
+// Fix the import path - change from services to api-services
+import applicationService from '../api-services/applicationService';
 
-import { API_URL } from '../../config/apiConfig';
-
-const API_BASE_URL = API_URL;
-
-const CompanyDetails = () => {
+const ApplicationDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [company, setCompany] = useState(null);
+  const [application, setApplication] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchCompany();
+    fetchApplicationDetails();
   }, [id]);
 
-  const fetchCompany = async () => {
+  const fetchApplicationDetails = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/Company/${id}`);
-      if (!response.ok) {
-        throw new Error('Company not found');
-      }
-      const data = await response.json();
-      setCompany(data);
+      const response = await applicationService.getApplication(id);
+      setApplication(response); // Changed from response.data to response
+      setError('');
     } catch (err) {
-      setError('Error fetching company details: ' + err.message);
+      console.error('Error fetching application details:', err);
+      setError('Failed to load application details. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -94,24 +92,31 @@ const CompanyDetails = () => {
               {icon}
             </Box>
           )}
-          <Typography variant="subtitle1" fontWeight="600" color="#475569">
+          <Typography variant="subtitle1" color="#64748b" fontWeight="600">
             {label}
           </Typography>
         </Box>
-        <Typography variant="body1" color="#1e293b" sx={{ flex: 1 }}>
-          {value}
-        </Typography>
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="h6" color="#1e293b" fontWeight="500">
+            {value}
+          </Typography>
+        </Box>
       </Box>
     </Grid>
   );
 
   if (loading) {
     return (
-      <Box sx={{ bgcolor: '#f8fafc', minHeight: '100vh' }}>
+      <Box>
         <EmployeeNavBar />
         <Container maxWidth="xl" sx={{ py: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-            <CircularProgress size={60} sx={{ color: '#34C759' }} />
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+            <Stack alignItems="center" spacing={2}>
+              <CircularProgress size={60} sx={{ color: '#34C759' }} />
+              <Typography variant="h6" color="textSecondary">
+                Loading application details...
+              </Typography>
+            </Stack>
           </Box>
         </Container>
       </Box>
@@ -120,7 +125,7 @@ const CompanyDetails = () => {
 
   if (error) {
     return (
-      <Box sx={{ bgcolor: '#f8fafc', minHeight: '100vh' }}>
+      <Box>
         <EmployeeNavBar />
         <Container maxWidth="xl" sx={{ py: 4 }}>
           <Alert 
@@ -130,7 +135,7 @@ const CompanyDetails = () => {
               boxShadow: '0 4px 12px rgba(244, 67, 54, 0.15)'
             }}
           >
-            <Typography variant="h6">Error Loading Company</Typography>
+            <Typography variant="h6">Error Loading Application</Typography>
             <Typography>{error}</Typography>
           </Alert>
         </Container>
@@ -160,7 +165,7 @@ const CompanyDetails = () => {
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
               <Button
                 startIcon={<ArrowBack />}
-                onClick={() => navigate('/employee-management/companies')}
+                onClick={() => navigate('/employee-management/applications')}
                 sx={{
                   color: 'white',
                   bgcolor: 'rgba(255,255,255,0.2)',
@@ -169,13 +174,13 @@ const CompanyDetails = () => {
                   px: 3
                 }}
               >
-                Back to Companies
+                Back to Applications
               </Button>
               
               <Button
                 startIcon={<Edit />}
                 variant="contained"
-                onClick={() => navigate(`/employee-management/companies/edit/${company.id}`)}
+                onClick={() => navigate(`/employee-management/applications/edit/${application.id}`)}
                 sx={{
                   background: 'rgba(255,255,255,0.2)',
                   color: 'white',
@@ -188,7 +193,7 @@ const CompanyDetails = () => {
                   px: 3
                 }}
               >
-                Edit Company
+                Edit Application
               </Button>
             </Stack>
 
@@ -203,20 +208,20 @@ const CompanyDetails = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  border: '3px solid rgba(255,255,255,0.3)',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+                  border: '3px solid rgba(255,255,255,0.3)'
                 }}
               >
-                <Business sx={{ fontSize: '4rem', color: 'rgba(255,255,255,0.8)' }} />
+                <Apps sx={{ fontSize: 60, color: 'white' }} />
               </Box>
               
-              <Box>
-                <Typography variant="h3" fontWeight="bold" mb={1}>
-                  {company.name}
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h3" fontWeight="bold" gutterBottom>
+                  {application?.applicationName}
                 </Typography>
                 <Stack direction="row" spacing={2} alignItems="center">
-                  <Typography variant="h6" sx={{ opacity: 0.9 }}>
-                    Company Details
+                  
+                  <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                    Created {moment(application?.createdDate).format('MMMM DD, YYYY')}
                   </Typography>
                 </Stack>
               </Box>
@@ -238,7 +243,7 @@ const CompanyDetails = () => {
           />
         </Paper>
 
-        {/* Company Information Section */}
+        {/* Application Information Section */}
         <Card sx={{ 
           mb: 4,
           borderRadius: 3,
@@ -253,10 +258,10 @@ const CompanyDetails = () => {
                 bgcolor: '#34C759', 
                 color: 'white' 
               }}>
-                <Business />
+                <Apps />
               </Box>
               <Typography variant="h5" fontWeight="bold" color="#1e293b">
-                Company Information
+                Application Information
               </Typography>
             </Stack>
             
@@ -264,69 +269,30 @@ const CompanyDetails = () => {
             
             <Grid container spacing={3}>
               <FieldContainer 
+                label="Application Name" 
+                value={application?.applicationName || 'N/A'}
+                icon={<Apps fontSize="small" />}
+              />
+              <FieldContainer 
                 label="Description" 
-                value={company.description || 'No description available'}
+                value={application?.description || 'No description available'}
                 icon={<Description fontSize="small" />}
               />
               <FieldContainer 
                 label="Remark" 
-                value={company.remark || 'No remarks available'}
+                value={application?.remark || 'No remarks available'}
                 icon={<Note fontSize="small" />}
               />
-            </Grid>
-          </CardContent>
-        </Card>
-
-        {/* Company Metadata Section */}
-        <Card sx={{ 
-          borderRadius: 3,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-          border: '1px solid #e2e8f0'
-        }}>
-          <CardContent sx={{ p: 4 }}>
-            <Stack direction="row" alignItems="center" spacing={2} mb={3}>
-              <Box sx={{ 
-                p: 1.5, 
-                borderRadius: 2, 
-                bgcolor: '#3b82f6', 
-                color: 'white' 
-              }}>
-                <CalendarToday />
-              </Box>
-              <Typography variant="h5" fontWeight="bold" color="#1e293b">
-                Metadata
-              </Typography>
-            </Stack>
-            
-            <Divider sx={{ mb: 4, bgcolor: '#e2e8f0' }} />
-            
-            <Grid container spacing={3}>
               <FieldContainer 
                 label="Created Date" 
-                value={moment(company.createdDate).format('MMMM DD, YYYY HH:mm')}
+                value={application?.createdDate ? moment(application.createdDate).format('MMMM DD, YYYY [at] h:mm A') : 'N/A'}
                 icon={<CalendarToday fontSize="small" />}
               />
-              {company.updatedDate && (
-                <FieldContainer 
-                  label="Last Updated" 
-                  value={moment(company.updatedDate).format('MMMM DD, YYYY HH:mm')}
-                  icon={<CalendarToday fontSize="small" />}
-                />
-              )}
-              {company.createdByUserName && (
-                <FieldContainer 
-                  label="Created By" 
-                  value={company.createdByUserName}
-                  icon={<Note fontSize="small" />}
-                />
-              )}
-              {company.updatedByUserName && (
-                <FieldContainer 
-                  label="Updated By" 
-                  value={company.updatedByUserName}
-                  icon={<Note fontSize="small" />}
-                />
-              )}
+              <FieldContainer 
+                label="Created By" 
+                value={application?.createdByUserName || 'N/A'}
+                icon={<Person fontSize="small" />}
+              />
             </Grid>
           </CardContent>
         </Card>
@@ -335,4 +301,4 @@ const CompanyDetails = () => {
   );
 };
 
-export default CompanyDetails;
+export default ApplicationDetails;

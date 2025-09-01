@@ -9,10 +9,14 @@ import {
   Rating,
   Alert,
   Snackbar,
-  CircularProgress
+  CircularProgress,
+  Container,
+  Card,
+  Stack
 } from '@mui/material';
-import { Save, Cancel } from '@mui/icons-material';
+import { Save, Cancel, ArrowBack } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext'; // Add this import
 import EmployeeNavBar from './EmployeeNavBar';
 
 import { API_URL } from '../../config/apiConfig';
@@ -22,6 +26,7 @@ const API_BASE_URL = API_URL;
 const DepartmentEdit = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuth(); // Add this line to get user from auth context
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
@@ -31,13 +36,23 @@ const DepartmentEdit = () => {
     description: '',
     remark: '',
     rating: 3,
-    updatedBy: '00000000-0000-0000-0000-000000000000' // You might want to get this from auth context
+    updatedBy: user?.id || '00000000-0000-0000-0000-000000000000' // Use user.id from session
   });
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     fetchDepartment();
   }, [id]);
+
+  // Update formData when user changes
+  useEffect(() => {
+    if (user?.id) {
+      setFormData(prev => ({
+        ...prev,
+        updatedBy: user.id
+      }));
+    }
+  }, [user]);
 
   const fetchDepartment = async () => {
     try {
@@ -51,7 +66,7 @@ const DepartmentEdit = () => {
           description: data.description || '',
           remark: data.remark || '',
           rating: data.rating || 3,
-          updatedBy: '00000000-0000-0000-0000-000000000000'
+          updatedBy: user?.id || '00000000-0000-0000-0000-000000000000' // Use actual user ID
         });
       } else {
         showNotification('Error fetching department details', 'error');
@@ -150,9 +165,11 @@ const DepartmentEdit = () => {
     return (
       <Box sx={{ flexGrow: 1, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
         <EmployeeNavBar />
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-          <CircularProgress sx={{ color: '#34C759' }} />
-        </Box>
+        <Container maxWidth="xl" sx={{ py: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+            <CircularProgress sx={{ color: '#34C759' }} />
+          </Box>
+        </Container>
       </Box>
     );
   }
@@ -161,21 +178,47 @@ const DepartmentEdit = () => {
     <Box sx={{ flexGrow: 1, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
       <EmployeeNavBar />
       
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h4" sx={{ 
-          fontWeight: 'bold', 
-          color: '#34C759', 
-          mb: 3,
-          borderBottom: '2px solid #34C759',
-          pb: 2
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        {/* Header Section */}
+        <Box sx={{
+          background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
+          borderRadius: 3,
+          p: 4,
+          mb: 4,
+          color: 'white',
+          boxShadow: '0 8px 32px rgba(52, 199, 89, 0.3)'
         }}>
-          Edit Department
-        </Typography>
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <Button
+              onClick={() => navigate('/employee-management/departments')}
+              sx={{
+                color: 'white',
+                minWidth: 'auto',
+                p: 1,
+                borderRadius: 2,
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }}
+            >
+              <ArrowBack />
+            </Button>
+            <Typography variant="h4" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
+              Edit Department
+            </Typography>
+          </Stack>
+        </Box>
 
-        <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
-          <form onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+        {/* Form Section */}
+        <Card sx={{
+          borderRadius: 3,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          overflow: 'hidden'
+        }}>
+          <Box sx={{ p: 4 }}>
+            <form onSubmit={handleSubmit}>
+              <Stack spacing={4}>
+                {/* Department Name */}
                 <TextField
                   fullWidth
                   label="Department Name"
@@ -187,8 +230,10 @@ const DepartmentEdit = () => {
                   variant="outlined"
                   sx={{
                     '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
                       '&.Mui-focused fieldset': {
                         borderColor: '#34C759',
+                        borderWidth: 2
                       },
                     },
                     '& .MuiInputLabel-root': {
@@ -198,32 +243,9 @@ const DepartmentEdit = () => {
                     },
                   }}
                 />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <Box>
-                  <Typography component="legend" sx={{ mb: 1, fontWeight: 'medium' }}>
-                    Rating
-                  </Typography>
-                  <Rating
-                    value={formData.rating}
-                    onChange={(event, newValue) => {
-                      setFormData({ ...formData, rating: newValue || 1 });
-                    }}
-                    size="large"
-                    sx={{
-                      '& .MuiRating-iconFilled': {
-                        color: '#34C759',
-                      },
-                      '& .MuiRating-iconHover': {
-                        color: '#28A745',
-                      },
-                    }}
-                  />
-                </Box>
-              </Grid>
-              
-              <Grid item xs={12}>
+                
+                
+                {/* Description */}
                 <TextField
                   fullWidth
                   label="Description"
@@ -236,8 +258,10 @@ const DepartmentEdit = () => {
                   variant="outlined"
                   sx={{
                     '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
                       '&.Mui-focused fieldset': {
                         borderColor: '#34C759',
+                        borderWidth: 2
                       },
                     },
                     '& .MuiInputLabel-root': {
@@ -247,9 +271,8 @@ const DepartmentEdit = () => {
                     },
                   }}
                 />
-              </Grid>
-              
-              <Grid item xs={12}>
+                
+                {/* Remark */}
                 <TextField
                   fullWidth
                   label="Remark"
@@ -260,8 +283,10 @@ const DepartmentEdit = () => {
                   variant="outlined"
                   sx={{
                     '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
                       '&.Mui-focused fieldset': {
                         borderColor: '#34C759',
+                        borderWidth: 2
                       },
                     },
                     '& .MuiInputLabel-root': {
@@ -271,20 +296,33 @@ const DepartmentEdit = () => {
                     },
                   }}
                 />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+                
+                {/* Buttons */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 3, 
+                  justifyContent: 'flex-end', 
+                  mt: 4,
+                  pt: 3,
+                  borderTop: '1px solid #e2e8f0'
+                }}>
                   <Button
                     variant="outlined"
                     onClick={handleCancel}
                     startIcon={<Cancel />}
                     sx={{
-                      borderColor: '#666',
-                      color: '#666',
+                      borderColor: '#64748b',
+                      color: '#64748b',
+                      borderRadius: 2,
+                      px: 4,
+                      py: 1.5,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: '1rem',
                       '&:hover': {
-                        borderColor: '#333',
-                        color: '#333'
+                        borderColor: '#475569',
+                        color: '#475569',
+                        bgcolor: '#f8fafc'
                       }
                     }}
                   >
@@ -296,22 +334,34 @@ const DepartmentEdit = () => {
                     disabled={loading}
                     startIcon={<Save />}
                     sx={{
-                      bgcolor: '#34C759',
+                      background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
+                      borderRadius: 2,
+                      px: 4,
+                      py: 1.5,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      boxShadow: '0 4px 12px rgba(52, 199, 89, 0.4)',
                       '&:hover': {
-                        bgcolor: '#28A745'
+                        background: 'linear-gradient(135deg, #28A745 0%, #22C55E 100%)',
+                        boxShadow: '0 6px 16px rgba(52, 199, 89, 0.5)',
+                        transform: 'translateY(-1px)'
                       },
                       '&:disabled': {
-                        bgcolor: '#ccc'
-                      }
+                        background: '#e2e8f0',
+                        color: '#94a3b8',
+                        boxShadow: 'none'
+                      },
+                      transition: 'all 0.2s ease'
                     }}
                   >
                     {loading ? 'Updating...' : 'Update Department'}
                   </Button>
                 </Box>
-              </Grid>
-            </Grid>
-          </form>
-        </Paper>
+              </Stack>
+            </form>
+          </Box>
+        </Card>
 
         {/* Notification Snackbar */}
         <Snackbar
@@ -328,7 +378,7 @@ const DepartmentEdit = () => {
             {notification.message}
           </Alert>
         </Snackbar>
-      </Box>
+      </Container>
     </Box>
   );
 };

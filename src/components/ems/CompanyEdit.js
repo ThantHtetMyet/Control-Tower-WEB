@@ -4,13 +4,14 @@ import {
   TextField,
   Button,
   Typography,
-  Paper,
   Alert,
   Snackbar,
-  Grid,
-  CircularProgress
+  CircularProgress,
+  Container,
+  Card,
+  Stack
 } from '@mui/material';
-import { Save, Cancel } from '@mui/icons-material';
+import { Save, Cancel, ArrowBack } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import EmployeeNavBar from './EmployeeNavBar';
@@ -25,8 +26,11 @@ const CompanyEdit = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
   
   const [formData, setFormData] = useState({
     id: '',
@@ -36,9 +40,21 @@ const CompanyEdit = () => {
     updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
   });
 
+  const [errors, setErrors] = useState({});
+
   useEffect(() => {
     fetchCompany();
   }, [id]);
+
+  // Update formData when user changes
+  useEffect(() => {
+    if (user?.id) {
+      setFormData(prev => ({
+        ...prev,
+        updatedBy: user.id
+      }));
+    }
+  }, [user]);
 
   const fetchCompany = async () => {
     try {
@@ -56,31 +72,56 @@ const CompanyEdit = () => {
         updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
       });
     } catch (err) {
-      setError('Error fetching company: ' + err.message);
+      showNotification('Error fetching company: ' + err.message, 'error');
     } finally {
       setFetchLoading(false);
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const handleChange = (field) => (e) => {
+    const value = e.target.value;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [field]: value
     }));
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Company name is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const showNotification = (message, severity = 'success') => {
+    setNotification({
+      open: true,
+      message,
+      severity
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.name.trim()) {
-      setError('Company name is required');
+    if (!validateForm()) {
       return;
     }
 
     try {
       setLoading(true);
-      setError('');
 
       const response = await fetch(`${API_BASE_URL}/Company/${id}`, {
         method: 'PUT',
@@ -95,128 +136,240 @@ const CompanyEdit = () => {
         throw new Error(errorData || 'Failed to update company');
       }
 
-      setSuccessMessage('Company updated successfully!');
+      showNotification('Company updated successfully!');
       setTimeout(() => {
         navigate('/employee-management/companies');
       }, 2000);
     } catch (err) {
-      setError('Error updating company: ' + err.message);
+      showNotification('Error updating company: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleCancel = () => {
+    navigate('/employee-management/companies');
+  };
+
   if (fetchLoading) {
     return (
-      <Box>
+      <Box sx={{ flexGrow: 1, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
         <EmployeeNavBar />
-        <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-          <CircularProgress />
-        </Box>
+        <Container maxWidth="xl" sx={{ py: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+            <CircularProgress sx={{ color: '#34C759' }} />
+          </Box>
+        </Container>
       </Box>
     );
   }
 
   return (
-    <Box>
+    <Box sx={{ flexGrow: 1, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
       <EmployeeNavBar />
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#34C759', mb: 3 }}>
-          Edit Company
-        </Typography>
+      
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        {/* Header Section */}
+        <Box sx={{
+          background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
+          borderRadius: 3,
+          p: 4,
+          mb: 4,
+          color: 'white',
+          boxShadow: '0 8px 32px rgba(52, 199, 89, 0.3)'
+        }}>
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <Button
+              onClick={() => navigate('/employee-management/companies')}
+              sx={{
+                color: 'white',
+                minWidth: 'auto',
+                p: 1,
+                borderRadius: 2,
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }}
+            >
+              <ArrowBack />
+            </Button>
+            <Typography variant="h4" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
+              Edit Company
+            </Typography>
+          </Stack>
+        </Box>
 
-        <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
-          <form onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+        {/* Form Section */}
+        <Card sx={{
+          borderRadius: 3,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          overflow: 'hidden'
+        }}>
+          <Box sx={{ p: 4 }}>
+            <form onSubmit={handleSubmit}>
+              <Stack spacing={4}>
+                {/* Company Name */}
                 <TextField
                   fullWidth
                   label="Company Name"
-                  name="name"
                   value={formData.name}
-                  onChange={handleChange}
+                  onChange={handleChange('name')}
+                  error={!!errors.name}
+                  helperText={errors.name}
                   required
                   variant="outlined"
-                  sx={{ mb: 2 }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#34C759',
+                        borderWidth: 2
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      '&.Mui-focused': {
+                        color: '#34C759',
+                      },
+                    },
+                  }}
                 />
-              </Grid>
-              
-              <Grid item xs={12}>
+                
+                {/* Description */}
                 <TextField
                   fullWidth
                   label="Description"
-                  name="description"
                   value={formData.description}
-                  onChange={handleChange}
+                  onChange={handleChange('description')}
+                  error={!!errors.description}
+                  helperText={errors.description}
                   multiline
-                  rows={3}
+                  rows={4}
                   variant="outlined"
-                  sx={{ mb: 2 }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#34C759',
+                        borderWidth: 2
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      '&.Mui-focused': {
+                        color: '#34C759',
+                      },
+                    },
+                  }}
                 />
-              </Grid>
-              
-              <Grid item xs={12}>
+                
+                {/* Remark */}
                 <TextField
                   fullWidth
                   label="Remark"
-                  name="remark"
                   value={formData.remark}
-                  onChange={handleChange}
+                  onChange={handleChange('remark')}
+                  error={!!errors.remark}
+                  helperText={errors.remark}
                   multiline
-                  rows={2}
+                  rows={3}
                   variant="outlined"
-                  sx={{ mb: 3 }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#34C759',
+                        borderWidth: 2
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      '&.Mui-focused': {
+                        color: '#34C759',
+                      },
+                    },
+                  }}
                 />
-              </Grid>
-            </Grid>
 
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-              <Button
-                variant="outlined"
-                startIcon={<Cancel />}
-                onClick={() => navigate('/employee-management/companies')}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="contained"
-                startIcon={<Save />}
-                disabled={loading}
-                sx={{
-                  background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #28A745 0%, #1e7e34 100%)'
-                  }
-                }}
-              >
-                {loading ? 'Updating...' : 'Update Company'}
-              </Button>
-            </Box>
-          </form>
-        </Paper>
+                {/* Buttons */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 3, 
+                  justifyContent: 'flex-end', 
+                  mt: 4,
+                  pt: 3,
+                  borderTop: '1px solid #e2e8f0'
+                }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleCancel}
+                    startIcon={<Cancel />}
+                    sx={{
+                      borderColor: '#64748b',
+                      color: '#64748b',
+                      borderRadius: 2,
+                      px: 4,
+                      py: 1.5,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      '&:hover': {
+                        borderColor: '#475569',
+                        color: '#475569',
+                        bgcolor: '#f8fafc'
+                      }
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={loading}
+                    startIcon={<Save />}
+                    sx={{
+                      background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
+                      borderRadius: 2,
+                      px: 4,
+                      py: 1.5,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      boxShadow: '0 4px 12px rgba(52, 199, 89, 0.4)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #28A745 0%, #22C55E 100%)',
+                        boxShadow: '0 6px 16px rgba(52, 199, 89, 0.5)',
+                        transform: 'translateY(-1px)'
+                      },
+                      '&:disabled': {
+                        background: '#e2e8f0',
+                        color: '#94a3b8',
+                        boxShadow: 'none'
+                      },
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {loading ? 'Updating...' : 'Update Company'}
+                  </Button>
+                </Box>
+              </Stack>
+            </form>
+          </Box>
+        </Card>
 
+        {/* Notification Snackbar */}
         <Snackbar
-          open={!!error}
+          open={notification.open}
           autoHideDuration={6000}
-          onClose={() => setError('')}
+          onClose={() => setNotification({ ...notification, open: false })}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         >
-          <Alert onClose={() => setError('')} severity="error">
-            {error}
+          <Alert 
+            onClose={() => setNotification({ ...notification, open: false })} 
+            severity={notification.severity}
+            sx={{ width: '100%' }}
+          >
+            {notification.message}
           </Alert>
         </Snackbar>
-
-        <Snackbar
-          open={!!successMessage}
-          autoHideDuration={6000}
-          onClose={() => setSuccessMessage('')}
-        >
-          <Alert onClose={() => setSuccessMessage('')} severity="success">
-            {successMessage}
-          </Alert>
-        </Snackbar>
-      </Box>
+      </Container>
     </Box>
   );
 };

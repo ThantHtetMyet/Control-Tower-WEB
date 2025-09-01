@@ -18,9 +18,10 @@ import {
   DialogTitle,
   Chip,
   Alert,
-  LinearProgress
+  LinearProgress,
+  Tooltip
 } from '@mui/material';
-import { Edit, Delete, Add } from '@mui/icons-material';
+import { Edit, Delete, Add, Visibility } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import applicationService from '../api-services/applicationService';
 import EmployeeNavBar from './EmployeeNavBar';
@@ -51,18 +52,6 @@ function ApplicationList() {
     }
   };
 
-  const handleDelete = async () => {
-    try {
-      await applicationService.deleteApplication(applicationToDelete.id);
-      setApplications(applications.filter(app => app.id !== applicationToDelete.id));
-      setDeleteDialogOpen(false);
-      setApplicationToDelete(null);
-    } catch (err) {
-      setError('Failed to delete application');
-      console.error('Error deleting application:', err);
-    }
-  };
-
   const openDeleteDialog = (application) => {
     setApplicationToDelete(application);
     setDeleteDialogOpen(true);
@@ -73,9 +62,31 @@ function ApplicationList() {
     setApplicationToDelete(null);
   };
 
+  const handleDelete = async () => {
+    if (!applicationToDelete) return;
+
+    try {
+      await applicationService.deleteApplication(applicationToDelete.id);
+      setApplications(applications.filter(app => app.id !== applicationToDelete.id));
+      closeDeleteDialog();
+    } catch (err) {
+      setError('Failed to delete application');
+      console.error('Error deleting application:', err);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   if (loading) {
     return (
-      <Box>
+      <Box sx={{ flexGrow: 1, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
         <EmployeeNavBar />
         <Box sx={{ p: 3 }}>
           <LinearProgress sx={{ mb: 2 }} />
@@ -86,11 +97,19 @@ function ApplicationList() {
   }
 
   return (
-    <Box>
+    <Box sx={{ flexGrow: 1, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
       <EmployeeNavBar />
+      
       <Box sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#34C759' }}>
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
+          borderBottom: '2px solid #34C759',
+          pb: 2
+        }}>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#34C759' }}>
             Applications
           </Typography>
           <Button
@@ -98,13 +117,20 @@ function ApplicationList() {
             startIcon={<Add />}
             onClick={() => navigate('/employee-management/applications/new')}
             sx={{
-              background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
+              background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%) !important',
+              color: 'white !important',
               '&:hover': {
-                background: 'linear-gradient(135deg, #28A745 0%, #1e7e34 100%)'
+                background: 'linear-gradient(135deg, #28A745 0%, #1e7e34 100%) !important'
+              },
+              px: 3,
+              boxShadow: '0 2px 4px rgba(52, 199, 89, 0.3)',
+              '&:hover': {
+                boxShadow: '0 4px 8px rgba(52, 199, 89, 0.4)',
+                transform: 'translateY(-1px)'
               }
             }}
           >
-            Add Application
+            New Application
           </Button>
         </Box>
 
@@ -114,89 +140,182 @@ function ApplicationList() {
           </Alert>
         )}
 
-        <Paper elevation={3} sx={{ borderRadius: 3, overflow: 'hidden' }}>
-          <TableContainer>
-            <Table>
-              <TableHead sx={{ backgroundColor: 'background.section' }}>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Application Name</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Remark</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Created Date</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Created By</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+        <TableContainer component={Paper} sx={{
+          boxShadow: 'none',
+          borderRadius: 2,
+          overflow: 'hidden',
+          '&:hover': {
+            boxShadow: '0 8px 25px rgba(52, 199, 89, 0.2)'
+          },
+          transition: 'box-shadow 0.3s ease-in-out'
+        }}>
+          <Table>
+            <TableHead sx={{ 
+              background: 'linear-gradient(135deg, #E8F5E8 0%, #F0F8F0 100%)',
+              '& th': {
+                borderBottom: '2px solid #34C759'
+              }
+            }}>
+              <TableRow>
+                <TableCell sx={{ 
+                  fontWeight: 'bold', 
+                  color: '#2E7D32',
+                  fontSize: '1rem'
+                }}>Application Name</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: '#2E7D32' }}>Description</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: '#2E7D32' }}>Remark</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: '#2E7D32' }}>Created Date</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: '#2E7D32' }}>Created By</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: '#2E7D32' }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {applications.map((application) => (
+                <TableRow 
+                  key={application.id}
+                  onDoubleClick={() => navigate(`/employee-management/applications/details/${application.id}`)}
+                  sx={{
+                    '&:hover': {
+                      bgcolor: '#F8FDF8',
+                      transform: 'scale(1.002)',
+                      transition: 'transform 0.2s ease-in-out',
+                      cursor: 'pointer'
+                    },
+                    '& td': {
+                      fontSize: '0.95rem',
+                      padding: '14px'
+                    }
+                  }}
+                >
+                  <TableCell sx={{ fontWeight: 'medium' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                      {application.applicationName}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ 
+                      maxWidth: 200, 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      color: 'text.secondary'
+                    }}>
+                      {application.description || 'No description'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ 
+                      maxWidth: 150, 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      color: 'text.secondary'
+                    }}>
+                      {application.remark || '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{formatDate(application.createdDate)}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {application.createdByUserName || '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Tooltip title="View Details">
+                      <IconButton 
+                        onClick={() => navigate(`/employee-management/applications/details/${application.id}`)}
+                        sx={{ color: '#34C759' }}
+                      >
+                        <Visibility />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Edit Application">
+                      <IconButton 
+                        onClick={() => navigate(`/employee-management/applications/edit/${application.id}`)}
+                        sx={{ color: '#34C759' }}
+                      >
+                        <Edit />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete Application">
+                      <IconButton 
+                        onClick={() => openDeleteDialog(application)}
+                        sx={{ 
+                          color: '#d32f2f',
+                          '&:hover': {
+                            color: '#b71c1c',
+                            backgroundColor: 'rgba(211, 47, 47, 0.04)'
+                          }
+                        }}
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {applications.map((application) => (
-                  <TableRow key={application.id} hover>
-                    <TableCell>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                        {application.applicationName}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {application.description || '-'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {application.remark || '-'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {new Date(application.createdDate).toLocaleDateString()}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {application.createdByUserName || '-'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => navigate(`/employee-management/applications/edit/${application.id}`)}
-                          sx={{ color: 'primary.main' }}
-                        >
-                          <Edit />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => openDeleteDialog(application)}
-                          sx={{ color: 'error.main' }}
-                        >
-                          <Delete />
-                        </IconButton>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-
-        {/* Delete Confirmation Dialog */}
-        <Dialog open={deleteDialogOpen} onClose={closeDeleteDialog}>
-          <DialogTitle>Delete Application</DialogTitle>
-          <DialogContent>
-            <DialogContentText>
-              Are you sure you want to delete the application "{applicationToDelete?.applicationName}"?
-              This action cannot be undone.
-            </DialogContentText>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={closeDeleteDialog}>Cancel</Button>
-            <Button onClick={handleDelete} color="error" variant="contained">
-              Delete
-            </Button>
-          </DialogActions>
-        </Dialog>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Box>
+
+      {/* Delete Confirmation Dialog - Replace MUI Dialog with custom modal */}
+      {deleteDialogOpen && (
+        <Box sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          bgcolor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1300
+        }}>
+          <Paper sx={{ p: 3, maxWidth: 400, mx: 2, borderRadius: 2 }}>
+            <Typography variant="h6" gutterBottom sx={{ color: '#34C759', fontWeight: 'bold' }}>
+              Delete Application
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 3 }}>
+              Are you sure you want to delete application "{applicationToDelete?.applicationName}"? This action cannot be undone.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+              <Button 
+                onClick={closeDeleteDialog} 
+                variant="outlined"
+                sx={{
+                  borderColor: '#34C759',
+                  color: '#34C759',
+                  '&:hover': {
+                    borderColor: '#28A745',
+                    color: '#28A745',
+                    backgroundColor: 'rgba(52, 199, 89, 0.04)'
+                  }
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleDelete} 
+                variant="contained" 
+                sx={{
+                  background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #28A745 0%, #1e7e34 100%)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(52, 199, 89, 0.3)'
+                  }
+                }}
+              >
+                Delete
+              </Button>
+            </Box>
+          </Paper>
+        </Box>
+      )}
     </Box>
   );
 }

@@ -35,7 +35,11 @@ import EmployeeDetails from './components/ems/EmployeeDetails';
 import OccupationList from './components/ems/OccupationList';
 import OccupationForm from './components/ems/OccupationForm';
 import OccupationEdit from './components/ems/OccupationEdit';
+import OccupationDetails from './components/ems/OccupationDetails';
 import ApplicationForm from './components/ems/ApplicationForm';
+// Add these missing imports
+import ApplicationEdit from './components/ems/ApplicationEdit';
+import ApplicationDetails from './components/ems/ApplicationDetails';
 import CompanyList from './components/ems/CompanyList';
 import CompanyForm from './components/ems/CompanyForm';
 import CompanyEdit from './components/ems/CompanyEdit';
@@ -56,6 +60,8 @@ import NewsDetail from './components/news-portal-system/NewsDetail';
 // Add import
 import NewsCategoryEdit from './components/news-portal-system/NewsCategoryEdit';
 import NewsEdit from './components/news-portal-system/NewsEdit';
+// Add this import at the top with other EMS imports
+import DepartmentDetails from './components/ems/DepartmentDetails';
 
 function App() {
   return (
@@ -173,6 +179,14 @@ function App() {
                   } 
                 />
                 <Route 
+                  path="/employee-management/occupations/details/:id" 
+                  element={
+                    <ProtectedRoute>
+                      <OccupationDetails />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
                   path="/employee-management/occupations/edit/:id" 
                   element={
                     <ProtectedRoute>
@@ -202,7 +216,16 @@ function App() {
                   path="/employee-management/applications/edit/:id"
                   element={
                     <ProtectedRoute>
-                      <ApplicationForm />
+                      <ApplicationEdit />
+                    </ProtectedRoute>
+                  }
+                />
+                {/* Add the missing ApplicationDetails route */}
+                <Route
+                  path="/employee-management/applications/details/:id"
+                  element={
+                    <ProtectedRoute>
+                      <ApplicationDetails />
                     </ProtectedRoute>
                   }
                 />
@@ -366,6 +389,15 @@ function App() {
                   />
                   {/* Add other admin-only routes for comments and images */}
                 </Route>
+                {/* Add this route after the existing department routes */}
+                <Route
+                  path="/employee-management/departments/details/:id"
+                  element={
+                    <ProtectedRoute>
+                      <DepartmentDetails />
+                    </ProtectedRoute>
+                  }
+                />
               </Routes>
             </Box>
           </Router>

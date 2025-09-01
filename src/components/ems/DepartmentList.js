@@ -140,7 +140,12 @@ const DepartmentList = () => {
         }}>
           {loading && <LinearProgress sx={{ bgcolor: '#E8F5E8' }} />}
           <Table>
-            <TableHead>
+             <TableHead sx={{ 
+              background: 'linear-gradient(135deg, #E8F5E8 0%, #F0F8F0 100%)',
+              '& th': {
+                borderBottom: '2px solid #34C759'
+              }
+            }}>
               <TableRow sx={{ bgcolor: '#F0F9F0' }}>
                 <TableCell sx={{ 
                   fontWeight: 'bold',
@@ -263,9 +268,13 @@ const DepartmentList = () => {
                   onClick={handleDeleteConfirm} 
                   variant="contained" 
                   sx={{
-                    bgcolor: '#d32f2f',
+                    background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
+                    color: 'white',
+                    fontWeight: 'bold',
                     '&:hover': {
-                      bgcolor: '#b71c1c'
+                      background: 'linear-gradient(135deg, #28A745 0%, #1e7e34 100%)',
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 12px rgba(52, 199, 89, 0.3)'
                     }
                   }}
                 >

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Typography,
   TextField,
   Button,
+  Typography,
   Paper,
   Alert,
   Snackbar,
+  CircularProgress,
   Container,
   Card,
   Stack
@@ -15,73 +16,107 @@ import { Save, Cancel, ArrowBack } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import applicationService from '../api-services/applicationService';
-import EmployeeNavBar from '../ems/EmployeeNavBar';
+import EmployeeNavBar from './EmployeeNavBar';
 
-function ApplicationForm() {
+const ApplicationEdit = () => {
+  const navigate = useNavigate();
+  const { id } = useParams();
   const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
   const [formData, setFormData] = useState({
+    id: '',
     applicationName: '',
     description: '',
     remark: '',
-    createdBy: user?.id || '00000000-0000-0000-0000-000000000000' // Add this line
+    updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const navigate = useNavigate();
-  const { id } = useParams();
-  const isEdit = Boolean(id);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (isEdit) {
-      fetchApplication();
+    fetchApplication();
+  }, [id]);
+
+  // Update formData when user changes
+  useEffect(() => {
+    if (user?.id) {
+      setFormData(prev => ({
+        ...prev,
+        updatedBy: user.id
+      }));
     }
-  }, [id, isEdit]);
+  }, [user]);
 
   const fetchApplication = async () => {
     try {
-      setLoading(true);
+      setInitialLoading(true);
       const data = await applicationService.getApplication(id);
       setFormData({
-        applicationName: data.applicationName,
+        id: data.id,
+        applicationName: data.applicationName || '',
         description: data.description || '',
-        remark: data.remark || ''
+        remark: data.remark || '',
+        updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
       });
-    } catch (err) {
-      setError('Failed to fetch application data');
-      console.error('Error fetching application:', err);
+    } catch (error) {
+      console.error('Error fetching application:', error);
+      showNotification('Failed to load application data', 'error');
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
+  const handleChange = (field) => (event) => {
+    const value = event.target.value;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [field]: value
     }));
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.applicationName.trim()) {
+      newErrors.applicationName = 'Application name is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const showNotification = (message, severity = 'success') => {
+    setNotification({ open: true, message, severity });
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
 
     try {
-      if (isEdit) {
-        await applicationService.updateApplication(id, formData);
-      } else {
-        await applicationService.createApplication(formData);
-      }
+      setLoading(true);
+      await applicationService.updateApplication(id, formData);
+      showNotification('Application updated successfully!', 'success');
       
-      setSuccessMessage(`Application ${isEdit ? 'updated' : 'created'} successfully!`);
+      // Navigate back after a short delay
       setTimeout(() => {
         navigate('/employee-management/applications');
-      }, 2000);
-    } catch (err) {
-      setError(isEdit ? 'Failed to update application' : 'Failed to create application');
-      console.error('Error submitting application:', err);
+      }, 1500);
+    } catch (error) {
+      console.error('Error updating application:', error);
+      showNotification('Failed to update application. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -90,6 +125,23 @@ function ApplicationForm() {
   const handleCancel = () => {
     navigate('/employee-management/applications');
   };
+
+  const handleCloseNotification = () => {
+    setNotification({ ...notification, open: false });
+  };
+
+  if (initialLoading) {
+    return (
+      <Box sx={{ flexGrow: 1, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+        <EmployeeNavBar />
+        <Container maxWidth="xl" sx={{ py: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+            <CircularProgress size={60} sx={{ color: '#34C759' }} />
+          </Box>
+        </Container>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ flexGrow: 1, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
@@ -121,7 +173,7 @@ function ApplicationForm() {
               <ArrowBack />
             </Button>
             <Typography variant="h4" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
-              {isEdit ? 'Edit Application' : 'Create New Application'}
+              Edit Application
             </Typography>
           </Stack>
         </Box>
@@ -135,15 +187,16 @@ function ApplicationForm() {
           <Box sx={{ p: 4 }}>
             <form onSubmit={handleSubmit}>
               <Stack spacing={4}>
+                {/* Application Name */}
                 <TextField
                   fullWidth
                   label="Application Name"
-                  name="applicationName"
                   value={formData.applicationName}
-                  onChange={handleInputChange}
+                  onChange={handleChange('applicationName')}
+                  error={!!errors.applicationName}
+                  helperText={errors.applicationName}
                   required
                   variant="outlined"
-                  disabled={loading}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       '&.Mui-focused fieldset': {
@@ -158,16 +211,17 @@ function ApplicationForm() {
                   }}
                 />
                 
+                {/* Description */}
                 <TextField
                   fullWidth
                   label="Description"
-                  name="description"
                   value={formData.description}
-                  onChange={handleInputChange}
+                  onChange={handleChange('description')}
+                  error={!!errors.description}
+                  helperText={errors.description}
                   multiline
                   rows={4}
                   variant="outlined"
-                  disabled={loading}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       '&.Mui-focused fieldset': {
@@ -182,16 +236,17 @@ function ApplicationForm() {
                   }}
                 />
                 
+                {/* Remark */}
                 <TextField
                   fullWidth
                   label="Remark"
-                  name="remark"
                   value={formData.remark}
-                  onChange={handleInputChange}
+                  onChange={handleChange('remark')}
+                  error={!!errors.remark}
+                  helperText={errors.remark}
                   multiline
                   rows={3}
                   variant="outlined"
-                  disabled={loading}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       '&.Mui-focused fieldset': {
@@ -206,19 +261,32 @@ function ApplicationForm() {
                   }}
                 />
 
-                {/* Action Buttons */}
-                <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
+                {/* Buttons */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 3, 
+                  justifyContent: 'flex-end', 
+                  mt: 4,
+                  pt: 3,
+                  borderTop: '1px solid #e2e8f0'
+                }}>
                   <Button
                     variant="outlined"
-                    startIcon={<Cancel />}
                     onClick={handleCancel}
-                    disabled={loading}
+                    startIcon={<Cancel />}
                     sx={{
-                      borderColor: '#6c757d',
-                      color: '#6c757d',
+                      borderColor: '#64748b',
+                      color: '#64748b',
+                      borderRadius: 2,
+                      px: 4,
+                      py: 1.5,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: '1rem',
                       '&:hover': {
-                        borderColor: '#5a6268',
-                        backgroundColor: 'rgba(108, 117, 125, 0.04)'
+                        borderColor: '#475569',
+                        color: '#475569',
+                        bgcolor: '#f8fafc'
                       }
                     }}
                   >
@@ -227,19 +295,20 @@ function ApplicationForm() {
                   <Button
                     type="submit"
                     variant="contained"
-                    startIcon={<Save />}
                     disabled={loading}
+                    startIcon={<Save />}
                     sx={{
                       background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
-                      color: 'white',
-                      fontWeight: 'bold',
+                      borderRadius: 2,
                       px: 4,
                       py: 1.5,
-                      borderRadius: 2,
-                      boxShadow: '0 4px 15px rgba(52, 199, 89, 0.3)',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      boxShadow: '0 4px 12px rgba(52, 199, 89, 0.4)',
                       '&:hover': {
-                        background: 'linear-gradient(135deg, #28A745 0%, #20963D 100%)',
-                        boxShadow: '0 6px 20px rgba(52, 199, 89, 0.4)',
+                        background: 'linear-gradient(135deg, #28A745 0%, #22C55E 100%)',
+                        boxShadow: '0 6px 16px rgba(52, 199, 89, 0.5)',
                         transform: 'translateY(-1px)'
                       },
                       '&:disabled': {
@@ -248,48 +317,32 @@ function ApplicationForm() {
                       }
                     }}
                   >
-                    {loading ? 'Saving...' : (isEdit ? 'Update Application' : 'Create Application')}
+                    {loading ? 'Updating...' : 'Update Application'}
                   </Button>
-                </Stack>
+                </Box>
               </Stack>
             </form>
           </Box>
         </Card>
       </Container>
 
-      {/* Success Snackbar */}
+      {/* Notification Snackbar */}
       <Snackbar
-        open={!!successMessage}
+        open={notification.open}
         autoHideDuration={6000}
-        onClose={() => setSuccessMessage('')}
+        onClose={handleCloseNotification}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <Alert
-          onClose={() => setSuccessMessage('')}
-          severity="success"
+          onClose={handleCloseNotification}
+          severity={notification.severity}
           sx={{ width: '100%' }}
         >
-          {successMessage}
-        </Alert>
-      </Snackbar>
-
-      {/* Error Snackbar */}
-      <Snackbar
-        open={!!error}
-        autoHideDuration={6000}
-        onClose={() => setError('')}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setError('')}
-          severity="error"
-          sx={{ width: '100%' }}
-        >
-          {error}
+          {notification.message}
         </Alert>
       </Snackbar>
     </Box>
   );
-}
+};
 
-export default ApplicationForm;
+export default ApplicationEdit;
