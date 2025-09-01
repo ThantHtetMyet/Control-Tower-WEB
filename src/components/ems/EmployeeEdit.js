@@ -25,7 +25,7 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
-import { Save, Cancel, Delete } from '@mui/icons-material';
+import { Save, Cancel, Delete, Close, PhotoCamera } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -34,18 +34,11 @@ import EmployeeNavBar from './EmployeeNavBar';
 import applicationService from '../api-services/applicationService';
 import accessLevelService from '../api-services/accessLevelService';
 import employeeApplicationAccessService from '../api-services/employeeApplicationAccessService';
-// Add similar image upload functionality to EmployeeEdit.js
-// Add these imports
-import { CloudUpload, PhotoCamera } from '@mui/icons-material';
-import { Avatar, Stack } from '@mui/material';
-
-  // Add this import at the top
-  import { 
-    updateEmployeeApplicationAccess, 
-    softDeleteEmployeeApplicationAccess, 
-    createEmployeeApplicationAccess 
-  } from '../api-services/employeeService';
-
+import { 
+  updateEmployeeApplicationAccess, 
+  softDeleteEmployeeApplicationAccess, 
+  createEmployeeApplicationAccess 
+} from '../api-services/employeeService';
 import { API_URL } from '../../config/apiConfig';
 
 const API_BASE_URL = API_URL;
@@ -68,13 +61,18 @@ const EmployeeEdit = () => {
   const [applicationAccessLevels, setApplicationAccessLevels] = useState({});
   const [existingApplicationAccess, setExistingApplicationAccess] = useState([]);
   
+  // Add these image-related state variables
+  const [profileImage, setProfileImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [existingImageUrl, setExistingImageUrl] = useState(null);
+  
   const [formData, setFormData] = useState({
     id: '',
     companyID: '',
     departmentID: '',
     occupationID: '',
     staffCardID: '',
-    staffIDCardID: '',
+    staffRFIDCardID: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -120,7 +118,7 @@ const EmployeeEdit = () => {
         departmentID: data.departmentID,
         occupationID: data.occupationID,
         staffCardID: data.staffCardID,
-        staffIDCardID: data.staffIDCardID,
+        staffRFIDCardID: data.staffRFIDCardID,
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
@@ -141,6 +139,11 @@ const EmployeeEdit = () => {
         emergencyRelationship: data.emergencyRelationship || '',
         updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
       });
+      
+      // Handle existing profile image - use profileImageUrl directly like NewsForm.js
+      if (data.profileImageUrl) {
+        setExistingImageUrl(data.profileImageUrl);
+      }
       
       // Fetch existing application access
       await fetchEmployeeApplicationAccess(data.id);
@@ -268,18 +271,40 @@ const EmployeeEdit = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-  
+
     try {
       const submitData = {
-        ...formData,
-        startWorkingDate: formData.startWorkingDate.toISOString(),
-        lastWorkingDate: formData.lastWorkingDate ? formData.lastWorkingDate.toISOString() : null,
-        dateOfBirth: formData.dateOfBirth.toISOString(),
-        workPassCardIssuedDate: formData.workPassCardIssuedDate ? formData.workPassCardIssuedDate.toISOString() : null,
-        workPassCardExpiredDate: formData.workPassCardExpiredDate ? formData.workPassCardExpiredDate.toISOString() : null,
-        updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
+        // Map camelCase to PascalCase for backend
+        ID: formData.id,
+        CompanyID: formData.companyID,
+        DepartmentID: formData.departmentID,
+        OccupationID: formData.occupationID,
+        StaffCardID: formData.staffCardID,
+        StaffRFIDCardID: formData.staffRFIDCardID,
+        FirstName: formData.firstName,
+        LastName: formData.lastName,
+        Email: formData.email,
+        MobileNo: formData.mobileNo,
+        Gender: formData.gender,
+        Remark: formData.remark,
+        StartWorkingDate: formData.startWorkingDate.toISOString(),
+        LastWorkingDate: formData.lastWorkingDate ? formData.lastWorkingDate.toISOString() : null,
+        DateOfBirth: formData.dateOfBirth.toISOString(),
+        WorkPassCardIssuedDate: formData.workPassCardIssuedDate ? formData.workPassCardIssuedDate.toISOString() : null,
+        WorkPassCardExpiredDate: formData.workPassCardExpiredDate ? formData.workPassCardExpiredDate.toISOString() : null,
+        WorkPermit: formData.workPermit,
+        Nationality: formData.nationality,
+        Religion: formData.religion,
+        WorkPassCardNumber: formData.workPassCardNumber,
+        EmergencyContactName: formData.emergencyContactName,
+        EmergencyContactNumber: formData.emergencyContactNumber,
+        EmergencyRelationship: formData.emergencyRelationship,
+        UpdatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
       };
+
+      console.log('Submit Data being sent:', submitData);
   
+      // 1. Update employee data (without image)
       const response = await fetch(`${API_BASE_URL}/Employee/${id}`, {
         method: 'PUT',
         headers: {
@@ -293,11 +318,17 @@ const EmployeeEdit = () => {
         throw new Error(errorData || 'Failed to update employee');
       }
   
-      // In the handleSubmit function, around line 297
-      // Update application access
+      // 2. Update application access
       await updateApplicationAccess();
+      
+      // 3. Upload profile image if new image selected
+      if (profileImage && user?.id) {
+        await uploadProfileImage(id, profileImage, user.id);
+        // Clear the selected image - no need to refresh data since we're navigating away
+        setProfileImage(null);
+        setImagePreview(null);
+      }
   
-      // Show success toast message instead of modal
       setSuccessMessage('Employee updated successfully!');
       setTimeout(() => {
         navigate('/employee-management/employees');
@@ -326,10 +357,7 @@ const EmployeeEdit = () => {
 
   const updateApplicationAccess = async () => {
     try {
-      // Refresh the current state from database to avoid stale data
-      await fetchEmployeeApplicationAccess(id); // Add the 'id' parameter
-      
-      // Create maps for easier comparison using the refreshed data
+      // Create maps for easier comparison using the existing state
       const existingAccessMap = new Map();
       existingApplicationAccess.forEach(access => {
         existingAccessMap.set(access.applicationID, {
@@ -398,14 +426,74 @@ const EmployeeEdit = () => {
           createdBy: user?.id
         });
       }
-  
-      // Refresh the state after all operations
-      await fetchEmployeeApplicationAccess(id); // Add the 'id' parameter
       
     } catch (error) {
       console.error('Error updating application access:', error);
       setErrorMessage('Failed to update application access. Please try again.');
       setShowErrorSnackbar(true);
+    }
+  };
+  
+  // Add image handling functions
+  const handleImageChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        setError('Please select a valid image file (JPEG, PNG, or GIF)');
+        return;
+      }
+      
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        setError('Image size must be less than 5MB');
+        return;
+      }
+      
+      setProfileImage(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const removeImage = () => {
+    setProfileImage(null);
+    setImagePreview(null);
+    setExistingImageUrl(null); // Also clear existing image
+    // Reset file input
+    const fileInput = document.getElementById('profile-image-upload');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
+  const uploadProfileImage = async (employeeId, imageFile, uploadedBy) => {
+    try {
+      const formData = new FormData();
+      formData.append('ProfileImage', imageFile);
+      formData.append('UploadedBy', uploadedBy);
+      
+      const response = await fetch(`${API_BASE_URL}/Employee/${employeeId}/profile-image`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload profile image');
+      }
+      
+      // Change from response.json() to response.text() since backend returns plain text
+      return await response.text();
+    } catch (error) {
+      console.error('Error uploading profile image:', error);
+      throw error;
     }
   };
 
@@ -445,6 +533,91 @@ const EmployeeEdit = () => {
         <Paper elevation={3} sx={{ p: 4, borderRadius: 3, maxWidth: 600, mx: 'auto' }}>
           <Box component="form" onSubmit={handleSubmit}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Profile Image Upload Section */}
+              <Typography variant="h6" sx={{ color: '#34C759', fontWeight: 'bold', mb: 1 }}>
+                Profile Image
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+                {imagePreview || existingImageUrl ? (
+                  <Box sx={{ position: 'relative' }}>
+                    <img 
+                      src={imagePreview || existingImageUrl} 
+                      alt="Profile Preview" 
+                      style={{ 
+                        width: '150px', 
+                        height: '150px', 
+                        objectFit: 'cover', 
+                        borderRadius: '8px',
+                        border: '2px solid #ddd'
+                      }} 
+                    />
+                    <IconButton
+                      onClick={removeImage}
+                      sx={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        backgroundColor: '#f44336',
+                        color: 'white',
+                        '&:hover': { backgroundColor: '#d32f2f' },
+                        width: 24,
+                        height: 24
+                      }}
+                    >
+                      <Close sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Box>
+                ) : (
+                  <Box 
+                    sx={{ 
+                      width: '150px', 
+                      height: '150px', 
+                      border: '2px dashed #ddd', 
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#fafafa'
+                    }}
+                  >
+                    <PhotoCamera sx={{ fontSize: 40, color: '#999' }} />
+                  </Box>
+                )}
+                
+                <Box>
+                  <input
+                    accept="image/jpeg,image/jpg,image/png"
+                    style={{ display: 'none' }}
+                    id="profile-image-upload"
+                    type="file"
+                    onChange={handleImageChange}
+                  />
+                  <label htmlFor="profile-image-upload">
+                    <Button
+                      variant="outlined"
+                      component="span"
+                      startIcon={<PhotoCamera />}
+                      sx={{ mr: 1, mb: 1 }}
+                    >
+                      {imagePreview || existingImageUrl ? 'Change Image' : 'Upload Image'}
+                    </Button>
+                  </label>
+                  {(imagePreview || existingImageUrl) && (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={removeImage}
+                      sx={{ mb: 1 }}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                  <Typography variant="caption" display="block" sx={{ color: '#666', mt: 1 }}>
+                    Recommended: 350x220px, Max size: 5MB, Format: JPEG/PNG
+                  </Typography>
+                </Box>
+              </Box>
+
               {/* Personal Information */}
               <Typography variant="h6" sx={{ color: '#34C759', fontWeight: 'bold', mb: 1 }}>
                 Personal Information
@@ -644,8 +817,8 @@ const EmployeeEdit = () => {
                 <TextField
                   fullWidth
                   label="Staff RFID Card ID"
-                  name="staffIDCardID"
-                  value={formData.staffIDCardID}
+                  name="staffRFIDCardID"
+                  value={formData.staffRFIDCardID}
                   onChange={handleInputChange}
                   required
                   variant="outlined"

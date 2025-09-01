@@ -308,16 +308,50 @@ const EmployeeDetails = () => {
             </Stack>
 
             <Stack direction="row" spacing={3} alignItems="center">
-              <Avatar 
-                sx={{ 
-                  width: 80, 
-                  height: 80, 
+              {/* Replace the circular Avatar with square profile image */}
+              <Box
+                sx={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: 2, // Square with rounded corners
+                  overflow: 'hidden',
                   bgcolor: 'rgba(255,255,255,0.2)',
-                  fontSize: '2rem'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '3px solid rgba(255,255,255,0.3)',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
                 }}
               >
-                <AccountCircle sx={{ fontSize: '3rem' }} />
-              </Avatar>
+                {employee.profileImageUrl ? (
+                  <img
+                    src={employee.profileImageUrl}
+                    alt={`${employee.firstName} ${employee.lastName}`}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                    onError={(e) => {
+                      // Fallback to default icon if image fails to load
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <Box
+                  sx={{
+                    display: employee.profileImageUrl ? 'none' : 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                    height: '100%',
+                    color: 'rgba(255,255,255,0.8)'
+                  }}
+                >
+                  <AccountCircle sx={{ fontSize: '4rem' }} />
+                </Box>
+              </Box>
               
               <Box>
                 <Typography variant="h3" fontWeight="bold" mb={1}>
@@ -385,7 +419,7 @@ const EmployeeDetails = () => {
               />
               <FieldContainer 
                 label="Staff RFID Card ID" 
-                value={employee.staffIDCardID}
+                value={employee.staffRFIDCardID}
                 icon={<CreditCard fontSize="small" />}
               />
               <FieldContainer 
