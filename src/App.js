@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { AuthProvider } from './components/contexts/AuthContext';
+import HRProtectedRoute from './components/auth/HRProtectedRoute';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import SignIn from './components/auth/SignIn';
 import SignUp from './components/auth/SignUp';
@@ -50,7 +51,6 @@ import NewsList from './components/news-portal-system/NewsList';
 import NewsForm from './components/news-portal-system/NewsForm';
 import NewsCategoryList from './components/news-portal-system/NewsCategoryList';
 import NewsCategoryForm from './components/news-portal-system/NewsCategoryForm';
-import NewsNavBar from './components/news-portal-system/NewsNavBar';
 // Add import
 import NewsPortalLayout from './components/news-portal-system/NewsPortalLayout';
 // Add this import
@@ -62,6 +62,25 @@ import NewsCategoryEdit from './components/news-portal-system/NewsCategoryEdit';
 import NewsEdit from './components/news-portal-system/NewsEdit';
 // Add this import at the top with other EMS imports
 import DepartmentDetails from './components/ems/DepartmentDetails';
+// Room Booking System imports
+import BuildingList from './components/room-booking-system/BuildingList';
+import BuildingForm from './components/room-booking-system/BuildingForm';
+import RoomBookingNavBar from './components/room-booking-system/RoomBookingNavBar';
+// Add these imports
+import BuildingDetails from './components/room-booking-system/BuildingDetails';
+import BuildingEdit from './components/room-booking-system/BuildingEdit';
+
+import RoomList from './components/room-booking-system/RoomList';
+import RoomDetails from './components/room-booking-system/RoomDetails';
+import RoomForm from './components/room-booking-system/RoomForm';
+import RoomEdit from './components/room-booking-system/RoomEdit';
+import RoomBookingList from './components/room-booking-system/RoomBookingList';
+import RoomBookingForm from './components/room-booking-system/RoomBookingForm';
+import RoomBookingDetailsRouter from './components/room-booking-system/RoomBookingDetailsRouter';
+import RoomBookingEdit from './components/room-booking-system/RoomBookingEdit';
+
+// Add import
+import RoomBookingCalendar from './components/room-booking-system/RoomBookingCalendar';
 
 function App() {
   return (
@@ -395,6 +414,163 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <DepartmentDetails />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+
+              {/* Room Booking System Routes */}
+              <Routes>
+                {/* Add this route */}
+                <Route
+                  path="/room-booking-system/calendar"
+                  element={
+                    <ProtectedRoute>
+                      <RoomBookingNavBar />
+                      <Box sx={{ flexGrow: 1 }}>
+                        <RoomBookingCalendar />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                // For the buildings route
+                <Route
+                  path="/room-booking-system/buildings"
+                  element={
+                    <ProtectedRoute>
+                      <RoomBookingNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <HRProtectedRoute>
+                          <BuildingList />
+                        </HRProtectedRoute>
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                
+                // Similar changes for other building-related routes and room routes
+                <Route
+                  path="/room-booking-system/buildings/new"
+                  element={
+                    <ProtectedRoute>
+                      <RoomBookingNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <BuildingForm />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                {/* Add these new routes */}
+                <Route
+                  path="/room-booking-system/buildings/details/:id"
+                  element={
+                    <ProtectedRoute>
+                      <RoomBookingNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <BuildingDetails />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/room-booking-system/buildings/edit/:id"
+                  element={
+                    <ProtectedRoute>
+                      <RoomBookingNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <BuildingEdit />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                {/* Room Routes */}
+                <Route
+                  path="/room-booking-system/rooms"
+                  element={
+                    <ProtectedRoute>
+                      <RoomBookingNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <RoomList />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/room-booking-system/rooms/new"
+                  element={
+                    <ProtectedRoute>
+                      <RoomBookingNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <RoomForm />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/room-booking-system/rooms/details/:id"
+                  element={
+                    <ProtectedRoute>
+                      <RoomBookingNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <RoomDetails />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/room-booking-system/rooms/edit/:id"
+                  element={
+                    <ProtectedRoute>
+                      <RoomBookingNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <RoomEdit />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                
+                {/* Room Booking Routes */}
+                <Route
+                  path="/room-booking-system/bookings"
+                  element={
+                    <ProtectedRoute>
+                      <RoomBookingNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <RoomBookingList />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/room-booking-system/bookings/new"
+                  element={
+                    <ProtectedRoute>
+                      <RoomBookingNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <RoomBookingForm />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/room-booking-system/bookings/details/:id"
+                  element={
+                    <ProtectedRoute>
+                      <RoomBookingNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <RoomBookingDetailsRouter />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/room-booking-system/bookings/edit/:id"
+                  element={
+                    <ProtectedRoute>
+                      <RoomBookingNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <RoomBookingEdit />
+                      </Box>
                     </ProtectedRoute>
                   }
                 />

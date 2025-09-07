@@ -449,6 +449,7 @@ const NewsEdit = () => {
                         id="thumbnail-upload"
                         type="file"
                         onChange={handleThumbnailUpload}
+                        disabled={thumbnailPreview && !thumbnailImage}
                       />
                       <label htmlFor="thumbnail-upload">
                         <Button
@@ -456,6 +457,7 @@ const NewsEdit = () => {
                           component="span"
                           startIcon={<CloudUpload />}
                           sx={getRedButtonStyle('outlined')}
+                          disabled={thumbnailPreview && !thumbnailImage}
                         >
                           {thumbnailImage ? 'Change Thumbnail' : 'Upload New Thumbnail'}
                         </Button>
@@ -539,6 +541,7 @@ const NewsEdit = () => {
                         id="header-upload"
                         type="file"
                         onChange={handleHeaderUpload}
+                        disabled={headerPreview && !headerImage}
                       />
                       <label htmlFor="header-upload">
                         <Button
@@ -546,6 +549,7 @@ const NewsEdit = () => {
                           component="span"
                           startIcon={<CloudUpload />}
                           sx={getRedButtonStyle('outlined')}
+                          disabled={headerPreview && !headerImage}
                         >
                           {headerImage ? 'Change Header' : 'Upload New Header'}
                         </Button>

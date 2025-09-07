@@ -72,12 +72,31 @@ export const AuthProvider = ({ children }) => {
     return newsPortalAccessLevel === 'Admin';
   };
 
+  // Helper function to check if user is from HR department
+  const hasHRAccess = () => {
+    if (!user) return false;
+    // Check if user has department information that indicates they're from HR
+    const isHR = 
+      (user.departmentName && (
+        user.departmentName.toLowerCase().includes('hr') ||
+        user.departmentName.toLowerCase().includes('human resources')
+      )) ||
+      (user.department && (
+        user.department.toLowerCase().includes('hr') ||
+        user.department.toLowerCase().includes('human resources')
+      )) ||
+      (user.role && user.role.toLowerCase().includes('hr'));
+      
+    return isHR;
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       token, 
       newsPortalAccessLevel,
       hasNewsPortalAdminAccess,
+      hasHRAccess, // Add the new function to the context
       login, 
       logout, 
       loading 

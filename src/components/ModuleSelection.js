@@ -26,16 +26,18 @@ import {
   Security,
   Search,
   Clear,
-  Article // Add this import for news icon
+  Article, // Add this import for news icon
+  MeetingRoom // Add this import for room booking icon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+// Change this line
 import { useAuth } from './contexts/AuthContext';
 import applicationService from './api-services/applicationService';
 import employeeApplicationAccessService from './api-services/employeeApplicationAccessService';
 
 const ModuleSelection = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, hasHRAccess } = useAuth();
   const [hoveredModule, setHoveredModule] = useState(null);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [accessibleModules, setAccessibleModules] = useState([]);
@@ -53,7 +55,7 @@ const ModuleSelection = () => {
       return (
         <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <People sx={{ fontSize: 48, color: 'rgb(255, 255, 255)' }} />
-          
+        
         </Box>
       );
     }
@@ -71,6 +73,14 @@ const ModuleSelection = () => {
         <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Article sx={{ fontSize: 48, color: 'rgb(255, 255, 255)' }} />
           
+        </Box>
+      );
+    }
+    // Add room booking system icon mapping
+    if (name.includes('room') || name.includes('booking') || name.includes('reservation')) {
+      return (
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <MeetingRoom sx={{ fontSize: 48, color: 'rgb(255, 255, 255)' }} />
         </Box>
       );
     }
@@ -193,7 +203,9 @@ const ModuleSelection = () => {
     if (name.includes('security') || name.includes('access') || name.includes('permission')) {
       return '#00C7BE'; // Teal for security
     }
-    
+    if (name.includes('room') || name.includes('booking') || name.includes('reservation')) {
+      return '#3f51b5'; // Purple-blue for room booking
+    }
     // Fallback to cycling colors for unknown types
     const fallbackColors = ['#FFD60A', '#8E8E93', '#AF52DE', '#32D74B'];
     return fallbackColors[index % fallbackColors.length];
@@ -299,14 +311,19 @@ const ModuleSelection = () => {
         }
       });
     } else {
-    // Fallback to existing internal routing
-    console.log("User Module ID => " + module.id);
     if (module.id === 'service-report-system') {
       navigate('/service-report-system');
     } else if (module.id === 'user-management-system') {
       navigate('/employee-management');
     } else if (module.id === 'news-portal-system') {
       navigate('/news-portal-system');
+    } else if (module.id === 'room-booking-system') {
+      // Route HR users to buildings page and non-HR users to bookings page
+      if (hasHRAccess()) {
+        navigate('/room-booking-system/buildings');
+      } else {
+        navigate('/room-booking-system/bookings');
+      }
     } else {
       alert(`${module.title} is coming soon!`);
     }
@@ -715,3 +732,5 @@ const ModuleSelection = () => {
 };
 
 export default ModuleSelection;
+
+

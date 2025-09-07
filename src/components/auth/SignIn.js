@@ -459,7 +459,7 @@ const SignIn = () => {
                   letterSpacing: '0.5px'
                 }}
               >
-                Control Tower
+                ControlxTower
               </Typography>
             </Box>
 
