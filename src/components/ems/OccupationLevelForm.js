@@ -1,63 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   TextField,
   Button,
   Typography,
-  Paper,
   Alert,
   Snackbar,
   Container,
   Card,
-  Stack,
-  Rating,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
+  Stack
 } from '@mui/material';
-import { Save, Cancel, ArrowBack, Star } from '@mui/icons-material';
+import { Save, Cancel, ArrowBack } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import EmployeeNavBar from './EmployeeNavBar';
+
 import { API_URL } from '../../config/apiConfig';
 
 const API_BASE_URL = API_URL;
 
-const OccupationForm = () => {
+const OccupationLevelForm = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
-  const [occupationLevels, setOccupationLevels] = useState([]);
   const [formData, setFormData] = useState({
-    occupationName: '',
+    levelName: '',
     description: '',
-    remark: '',
-    rating: 0,
-    occupationLevelId: '',
+    rank: '',
     createdBy: user?.id || '00000000-0000-0000-0000-000000000000'
   });
   const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    fetchOccupationLevels();
-  }, []);
-
-  const fetchOccupationLevels = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/OccupationLevel`);
-      if (response.ok) {
-        const data = await response.json();
-        setOccupationLevels(data);
-      } else {
-        showNotification('Failed to fetch occupation levels', 'error');
-      }
-    } catch (error) {
-      console.error('Error fetching occupation levels:', error);
-      showNotification('Error fetching occupation levels', 'error');
-    }
-  };
 
   const handleChange = (field) => (event) => {
     const value = event.target.value;
@@ -74,28 +47,21 @@ const OccupationForm = () => {
     }
   };
 
-  const handleRatingChange = (event, newValue) => {
-    setFormData({
-      ...formData,
-      rating: newValue || 0
-    });
-  };
-
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.occupationName.trim()) {
-      newErrors.occupationName = 'Occupation name is required';
-    } else if (formData.occupationName.length > 100) {
-      newErrors.occupationName = 'Occupation name must be less than 100 characters';
+    if (!formData.levelName.trim()) {
+      newErrors.levelName = 'Level name is required';
+    } else if (formData.levelName.length > 100) {
+      newErrors.levelName = 'Level name must be less than 100 characters';
     }
     
     if (formData.description && formData.description.length > 500) {
       newErrors.description = 'Description must be less than 500 characters';
     }
     
-    if (formData.remark && formData.remark.length > 200) {
-      newErrors.remark = 'Remark must be less than 200 characters';
+    if (!formData.rank || formData.rank < 1) {
+      newErrors.rank = 'Rank must be a positive number';
     }
     
     setErrors(newErrors);
@@ -116,33 +82,40 @@ const OccupationForm = () => {
     setLoading(true);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/Occupation`, {
+      const submitData = {
+        levelName: formData.levelName,
+        description: formData.description,
+        rank: parseInt(formData.rank),
+        createdBy: user?.id || '00000000-0000-0000-0000-000000000000'
+      };
+
+      const response = await fetch(`${API_BASE_URL}/OccupationLevel`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
-      
+
       if (response.ok) {
-        showNotification('Occupation created successfully!', 'success');
+        showNotification('Occupation level created successfully!', 'success');
         setTimeout(() => {
-          navigate('/employee-management/occupations');
+          navigate('/employee-management/occupation-levels');
         }, 1500);
       } else {
         const errorText = await response.text();
-        showNotification(errorText || 'Error creating occupation', 'error');
+        showNotification(errorText || 'Error creating occupation level', 'error');
       }
     } catch (error) {
-      console.error('Error creating occupation:', error);
-      showNotification('Error creating occupation. Please try again.', 'error');
+      console.error('Error creating occupation level:', error);
+      showNotification('Error creating occupation level. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/occupations');
+    navigate('/employee-management/occupation-levels');
   };
 
   return (
@@ -161,7 +134,7 @@ const OccupationForm = () => {
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Button
-              onClick={() => navigate('/employee-management/occupations')}
+              onClick={() => navigate('/employee-management/occupation-levels')}
               sx={{
                 color: 'white',
                 minWidth: 'auto',
@@ -175,7 +148,7 @@ const OccupationForm = () => {
               <ArrowBack />
             </Button>
             <Typography variant="h4" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
-              Create New Occupation
+              Create New Occupation Level
             </Typography>
           </Stack>
         </Box>
@@ -191,11 +164,11 @@ const OccupationForm = () => {
               <Stack spacing={4}>
                 <TextField
                   fullWidth
-                  label="Occupation Name"
-                  value={formData.occupationName}
-                  onChange={handleChange('occupationName')}
-                  error={!!errors.occupationName}
-                  helperText={errors.occupationName}
+                  label="Level Name"
+                  value={formData.levelName}
+                  onChange={handleChange('levelName')}
+                  error={!!errors.levelName}
+                  helperText={errors.levelName || "Enter the name of the occupation level"}
                   required
                   variant="outlined"
                   sx={{
@@ -211,34 +184,6 @@ const OccupationForm = () => {
                     },
                   }}
                 />
-
-                {/* Occupation Level */}
-                <FormControl fullWidth>
-                  <InputLabel sx={{
-                    '&.Mui-focused': {
-                      color: '#34C759',
-                    },
-                  }}>Occupation Level</InputLabel>
-                  <Select
-                    value={formData.occupationLevelId}
-                    onChange={handleChange('occupationLevelId')}
-                    label="Occupation Level"
-                    sx={{
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#34C759',
-                      },
-                    }}
-                  >
-                    <MenuItem value="">
-                      <em>Select a level (optional)</em>
-                    </MenuItem>
-                    {occupationLevels.map((level) => (
-                      <MenuItem key={level.id} value={level.id}>
-                        {level.levelName} (Rank: {level.rank})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
                 
                 <TextField
                   fullWidth
@@ -246,7 +191,7 @@ const OccupationForm = () => {
                   value={formData.description}
                   onChange={handleChange('description')}
                   error={!!errors.description}
-                  helperText={errors.description}
+                  helperText={errors.description || "Describe the occupation level"}
                   multiline
                   rows={4}
                   variant="outlined"
@@ -266,12 +211,15 @@ const OccupationForm = () => {
                 
                 <TextField
                   fullWidth
-                  label="Remark"
-                  value={formData.remark}
-                  onChange={handleChange('remark')}
-                  error={!!errors.remark}
-                  helperText={errors.remark}
+                  label="Rank"
+                  type="number"
+                  value={formData.rank}
+                  onChange={handleChange('rank')}
+                  error={!!errors.rank}
+                  helperText={errors.rank || "Enter the rank/priority of this level (higher number = higher rank)"}
+                  required
                   variant="outlined"
+                  inputProps={{ min: 1 }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       '&.Mui-focused fieldset': {
@@ -285,7 +233,6 @@ const OccupationForm = () => {
                     },
                   }}
                 />
-
                 
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
                   <Button
@@ -323,7 +270,7 @@ const OccupationForm = () => {
                       }
                     }}
                   >
-                    {loading ? 'Creating...' : 'Create Occupation'}
+                    {loading ? 'Creating...' : 'Create Occupation Level'}
                   </Button>
                 </Box>
               </Stack>
@@ -345,9 +292,23 @@ const OccupationForm = () => {
             {notification.message}
           </Alert>
         </Snackbar>
+
+        {/* Background decoration */}
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(135deg, rgba(52, 199, 89, 0.02) 0%, rgba(40, 167, 69, 0.02) 100%)',
+            zIndex: -1,
+            pointerEvents: 'none'
+          }}
+        />
       </Container>
     </Box>
   );
 };
 
-export default OccupationForm;
+export default OccupationLevelForm;

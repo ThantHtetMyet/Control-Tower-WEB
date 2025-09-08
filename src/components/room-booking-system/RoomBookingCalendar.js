@@ -25,42 +25,39 @@ import {
   ChevronRight,
   Close
 } from '@mui/icons-material';
+// Add fetchRooms import back
 import { fetchRooms } from '../api-services/roomService';
 import { fetchCalendarBookings } from '../api-services/roombookingService';
 
 const RoomBookingCalendar = () => {
+  // Add rooms state back
+  const [rooms, setRooms] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [bookings, setBookings] = useState([]);
-  const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDateBookings, setSelectedDateBookings] = useState([]);
   const [loadingDate, setLoadingDate] = useState(null);
-  // Add the missing state variables
-  const [selectedRoomFilter, setSelectedRoomFilter] = useState('all');
+  const [selectedRoomFilter, setSelectedRoomFilter] = useState(''); // Keep as empty string for "All Rooms"
   const [allDateBookings, setAllDateBookings] = useState([]);
 
-  // Load rooms on component mount
+  // Add useEffect to load rooms on component mount
   useEffect(() => {
     loadRooms();
   }, []);
 
-  // Remove this useEffect completely:
-  // useEffect(() => {
-  //   loadMonthBookings();
-  // }, [currentDate]);
-
+  // Add loadRooms function back
   const loadRooms = async () => {
     try {
-      const roomsData = await fetchRooms();
-      setRooms(roomsData);
-    } catch (err) {
+      const roomData = await fetchRooms();
+      setRooms(roomData);
+    } catch (error) {
+      console.error('Error loading rooms:', error);
       setError('Failed to load rooms');
     }
   };
-
   const loadMonthBookings = async () => {
     setLoading(true);
     try {
@@ -85,7 +82,7 @@ const RoomBookingCalendar = () => {
     setSelectedDate(date);
     setModalOpen(true);
     setSelectedDateBookings([]);
-    setSelectedRoomFilter(''); // Reset room filter when opening modal
+    setSelectedRoomFilter(''); // Reset to "All Rooms" when opening modal
     
     // Load bookings for the selected date
     const dayBookings = await loadDateBookings(date);
@@ -102,35 +99,33 @@ const RoomBookingCalendar = () => {
   };
 
   // New function to handle room filter change
+  // Update handleRoomFilterChange to filter bookings by selected room
   const handleRoomFilterChange = (event) => {
     const roomId = event.target.value;
     setSelectedRoomFilter(roomId);
     
-    if (roomId === '') {
-      // Show all bookings
+    if (roomId === 'all') {
+      // Show all bookings when "All Rooms" is selected
       setSelectedDateBookings(allDateBookings);
     } else {
-      // Filter bookings by selected room
-      const filteredBookings = allDateBookings.filter(booking => booking.RoomID === roomId);
+      // Filter bookings by selected room ID - handle both string and number comparisons
+      const filteredBookings = allDateBookings.filter(booking => {
+        if (!booking.roomID) return false;
+        return booking.roomID.toString() === roomId.toString() || booking.roomID === roomId;
+      });
       setSelectedDateBookings(filteredBookings);
     }
   };
 
   // Get unique rooms from the current date's bookings
+  // Update getAvailableRooms to use actual room data from API
   const getAvailableRooms = () => {
-    // Add null checks and ensure proper property mapping
+    if (!rooms || rooms.length === 0) return [];
+    
     return rooms
-      .filter(room => room && room.ID && room.Name) // Filter out invalid rooms
-      .map(room => ({
-        id: room.ID,
-        name: room.Name
-      }))
-      .sort((a, b) => {
-        // Add null checks for the sort comparison
-        const nameA = a.name || '';
-        const nameB = b.name || '';
-        return nameA.localeCompare(nameB);
-      });
+      .filter(room => room && room.id && room.name)
+      .map(room => ({ id: room.id, name: room.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   };
   const navigateMonth = (direction) => {
     const newDate = new Date(currentDate);
@@ -221,11 +216,6 @@ const RoomBookingCalendar = () => {
     });
   };
 
-  const getRoomName = (roomId) => {
-    const room = rooms.find(r => r.id === roomId);
-    return room ? room.name : 'Unknown Room';
-  };
-
   const days = getDaysInMonth();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -285,7 +275,7 @@ const RoomBookingCalendar = () => {
                     cursor: 'pointer',
                     position: 'relative',
                     minHeight: '60px',
-                    backgroundColor: isTodayDate ? 'primary.main' : 'transparent',
+                    backgroundColor: isTodayDate ? '#3f51b5' : 'transparent',
                     color: isTodayDate ? 'primary.contrastText' : 
                            isCurrentMonthDay ? 'text.primary' : 'text.disabled',
                     '&:hover': {
@@ -339,7 +329,7 @@ const RoomBookingCalendar = () => {
             {/* Room Filter Dropdown */}
             
             {allDateBookings.length > 0 && (
-              <Box sx={{ mb: 2 }}>
+                <Box sx={{ mb: 2 }}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Filter by Room</InputLabel>
                   <Select
@@ -347,11 +337,11 @@ const RoomBookingCalendar = () => {
                     label="Filter by Room"
                     onChange={handleRoomFilterChange}
                   >
-                    <MenuItem value="">
-                      <em>All Rooms ({allDateBookings.length} bookings)</em>
+                    <MenuItem value="all">
+                      All Rooms ({allDateBookings.length} bookings)
                     </MenuItem>
                     {getAvailableRooms().map((room) => {
-                      const roomBookingCount = allDateBookings.filter(b => b.RoomID === room.id).length;
+                      const roomBookingCount = allDateBookings.filter(b => b.roomID === room.id).length;
                       return (
                         <MenuItem key={room.id} value={room.id}>
                           {room.name} ({roomBookingCount} booking{roomBookingCount !== 1 ? 's' : ''})

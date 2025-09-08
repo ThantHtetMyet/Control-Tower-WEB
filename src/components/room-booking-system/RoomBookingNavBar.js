@@ -69,6 +69,13 @@ const RoomBookingNavBar = () => {
           >
             Home
           </Button>
+          {/* Add Calendar menu for all users */}
+          <Button 
+            onClick={() => navigate('/room-booking-system/calendar')}
+            sx={getButtonStyle('/room-booking-system/calendar')}
+          >
+            Calendar
+          </Button>
           {/* Show Buildings and Rooms menu items only for HR department */}
           {hasHRAccess() && (
             <>
@@ -93,13 +100,7 @@ const RoomBookingNavBar = () => {
           >
             Bookings
           </Button>
-          {/* Add Calendar menu for all users */}
-          <Button 
-            onClick={() => navigate('/room-booking-system/calendar')}
-            sx={getButtonStyle('/room-booking-system/calendar')}
-          >
-            Calendar
-          </Button>
+          
         </Box>
 
         {user && (

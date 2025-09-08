@@ -10,54 +10,44 @@ import {
   Container,
   Card,
   Stack,
-  Rating,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
+  MenuItem,
+  Rating
 } from '@mui/material';
-import { Save, Cancel, ArrowBack, Star } from '@mui/icons-material';
+import { Save, Cancel, ArrowBack } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import EmployeeNavBar from './EmployeeNavBar';
-import { API_URL } from '../../config/apiConfig';
+import { createSubDepartment } from '../api-services/subDepartmentService';
+import { getDepartments } from '../api-services/employeeService';
 
-const API_BASE_URL = API_URL;
-
-const OccupationForm = () => {
+const SubDepartmentForm = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [departments, setDepartments] = useState([]);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
-  const [occupationLevels, setOccupationLevels] = useState([]);
   const [formData, setFormData] = useState({
-    occupationName: '',
+    departmentID: '',
+    name: '',
     description: '',
     remark: '',
-    rating: 0,
-    occupationLevelId: '',
+    rating: 3,
     createdBy: user?.id || '00000000-0000-0000-0000-000000000000'
   });
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    fetchOccupationLevels();
-  }, []);
-
-  const fetchOccupationLevels = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/OccupationLevel`);
-      if (response.ok) {
-        const data = await response.json();
-        setOccupationLevels(data);
-      } else {
-        showNotification('Failed to fetch occupation levels', 'error');
+    const loadDepartments = async () => {
+      try {
+        const data = await getDepartments();
+        setDepartments(data);
+      } catch (error) {
+        console.error('Error loading departments:', error);
+        showNotification('Error loading departments', 'error');
       }
-    } catch (error) {
-      console.error('Error fetching occupation levels:', error);
-      showNotification('Error fetching occupation levels', 'error');
-    }
-  };
+    };
+    loadDepartments();
+  }, []);
 
   const handleChange = (field) => (event) => {
     const value = event.target.value;
@@ -77,23 +67,24 @@ const OccupationForm = () => {
   const handleRatingChange = (event, newValue) => {
     setFormData({
       ...formData,
-      rating: newValue || 0
+      rating: newValue
     });
   };
 
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.occupationName.trim()) {
-      newErrors.occupationName = 'Occupation name is required';
-    } else if (formData.occupationName.length > 100) {
-      newErrors.occupationName = 'Occupation name must be less than 100 characters';
+    if (!formData.departmentID.trim()) {
+      newErrors.departmentID = 'Department is required';
     }
-    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Sub-department name is required';
+    } else if (formData.name.length > 100) {
+      newErrors.name = 'Sub-department name must be less than 100 characters';
+    }
     if (formData.description && formData.description.length > 500) {
       newErrors.description = 'Description must be less than 500 characters';
     }
-    
     if (formData.remark && formData.remark.length > 200) {
       newErrors.remark = 'Remark must be less than 200 characters';
     }
@@ -112,37 +103,29 @@ const OccupationForm = () => {
     if (!validateForm()) {
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
-      const response = await fetch(`${API_BASE_URL}/Occupation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      if (response.ok) {
-        showNotification('Occupation created successfully!', 'success');
-        setTimeout(() => {
-          navigate('/employee-management/occupations');
-        }, 1500);
-      } else {
-        const errorText = await response.text();
-        showNotification(errorText || 'Error creating occupation', 'error');
-      }
+      const submitData = {
+        ...formData,
+        rating: parseInt(formData.rating)
+      };
+      await createSubDepartment(submitData);
+      showNotification('Sub-department created successfully!', 'success');
+      setTimeout(() => {
+        navigate('/employee-management/sub-departments');
+      }, 1500);
     } catch (error) {
-      console.error('Error creating occupation:', error);
-      showNotification('Error creating occupation. Please try again.', 'error');
+      console.error('Error creating sub-department:', error);
+      showNotification('Error creating sub-department. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/occupations');
+    navigate('/employee-management/sub-departments');
   };
 
   return (
@@ -161,7 +144,7 @@ const OccupationForm = () => {
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Button
-              onClick={() => navigate('/employee-management/occupations')}
+              onClick={() => navigate('/employee-management/sub-departments')}
               sx={{
                 color: 'white',
                 minWidth: 'auto',
@@ -175,7 +158,7 @@ const OccupationForm = () => {
               <ArrowBack />
             </Button>
             <Typography variant="h4" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
-              Create New Occupation
+              Create New Sub-Department
             </Typography>
           </Stack>
         </Box>
@@ -190,12 +173,42 @@ const OccupationForm = () => {
             <form onSubmit={handleSubmit}>
               <Stack spacing={4}>
                 <TextField
+                  select
                   fullWidth
-                  label="Occupation Name"
-                  value={formData.occupationName}
-                  onChange={handleChange('occupationName')}
-                  error={!!errors.occupationName}
-                  helperText={errors.occupationName}
+                  label="Parent Department"
+                  value={formData.departmentID}
+                  onChange={handleChange('departmentID')}
+                  error={!!errors.departmentID}
+                  helperText={errors.departmentID}
+                  required
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#34C759',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      '&.Mui-focused': {
+                        color: '#34C759',
+                      },
+                    },
+                  }}
+                >
+                  {departments.map((dept) => (
+                    <MenuItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                
+                <TextField
+                  fullWidth
+                  label="Sub-Department Name"
+                  value={formData.name}
+                  onChange={handleChange('name')}
+                  error={!!errors.name}
+                  helperText={errors.name}
                   required
                   variant="outlined"
                   sx={{
@@ -211,34 +224,6 @@ const OccupationForm = () => {
                     },
                   }}
                 />
-
-                {/* Occupation Level */}
-                <FormControl fullWidth>
-                  <InputLabel sx={{
-                    '&.Mui-focused': {
-                      color: '#34C759',
-                    },
-                  }}>Occupation Level</InputLabel>
-                  <Select
-                    value={formData.occupationLevelId}
-                    onChange={handleChange('occupationLevelId')}
-                    label="Occupation Level"
-                    sx={{
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#34C759',
-                      },
-                    }}
-                  >
-                    <MenuItem value="">
-                      <em>Select a level (optional)</em>
-                    </MenuItem>
-                    {occupationLevels.map((level) => (
-                      <MenuItem key={level.id} value={level.id}>
-                        {level.levelName} (Rank: {level.rank})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
                 
                 <TextField
                   fullWidth
@@ -323,7 +308,7 @@ const OccupationForm = () => {
                       }
                     }}
                   >
-                    {loading ? 'Creating...' : 'Create Occupation'}
+                    {loading ? 'Creating...' : 'Create Sub-Department'}
                   </Button>
                 </Box>
               </Stack>
@@ -350,4 +335,4 @@ const OccupationForm = () => {
   );
 };
 
-export default OccupationForm;
+export default SubDepartmentForm;

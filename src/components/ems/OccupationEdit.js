@@ -10,16 +10,17 @@ import {
   CircularProgress,
   Container,
   Card,
-  Stack
+  Stack,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { Save, Cancel, Star, ArrowBack } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import EmployeeNavBar from './EmployeeNavBar';
-
 import { API_URL } from '../../config/apiConfig';
-
-const API_BASE_URL = API_URL;
 
 const OccupationEdit = () => {
   const navigate = useNavigate();
@@ -27,56 +28,67 @@ const OccupationEdit = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
-  const [notification, setNotification] = useState({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
-  
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
+  const [occupationLevels, setOccupationLevels] = useState([]);
   const [formData, setFormData] = useState({
-    id: '',
     occupationName: '',
     description: '',
     remark: '',
-    rating: 3,
-    updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
+    rating: 0,
+    occupationLevelId: '',
+    updatedBy: user?.id || ''
   });
-
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     fetchOccupation();
+    fetchOccupationLevels();
   }, [id]);
 
   const fetchOccupation = async () => {
     try {
       setFetchLoading(true);
-      const response = await fetch(`${API_BASE_URL}/Occupation/${id}`);
-      if (!response.ok) {
-        throw new Error('Occupation not found');
+      const response = await fetch(`${API_URL}/Occupation/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setFormData({
+          occupationName: data.occupationName || '',
+          description: data.description || '',
+          remark: data.remark || '',
+          rating: data.rating || 0,
+          occupationLevelId: data.occupationLevelID || '',
+          updatedBy: user?.id || ''
+        });
+      } else {
+        showNotification('Failed to fetch occupation details', 'error');
+        navigate('/employee-management/occupations');
       }
-      const data = await response.json();
-      setFormData({
-        id: data.id,
-        occupationName: data.occupationName,
-        description: data.description || '',
-        remark: data.remark || '',
-        rating: data.rating,
-        updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
-      });
-    } catch (err) {
-      showNotification('Error fetching occupation: ' + err.message, 'error');
+    } catch (error) {
+      console.error('Error fetching occupation:', error);
+      showNotification('Error fetching occupation details', 'error');
+      navigate('/employee-management/occupations');
     } finally {
       setFetchLoading(false);
     }
   };
 
+  const fetchOccupationLevels = async () => {
+    try {
+      const response = await fetch(`${API_URL}/OccupationLevel`);
+      if (response.ok) {
+        const data = await response.json();
+        setOccupationLevels(data);
+      } else {
+        showNotification('Failed to fetch occupation levels', 'error');
+      }
+    } catch (error) {
+      console.error('Error fetching occupation levels:', error);
+      showNotification('Error fetching occupation levels', 'error');
+    }
+  };
+
   const showNotification = (message, severity = 'success') => {
-    setNotification({
-      open: true,
-      message,
-      severity
-    });
+    setNotification({ open: true, message, severity });
   };
 
   const handleInputChange = (e) => {
@@ -98,7 +110,7 @@ const OccupationEdit = () => {
   const handleRatingChange = (event, newValue) => {
     setFormData(prev => ({
       ...prev,
-      rating: newValue || 1
+      rating: newValue
     }));
   };
 
@@ -107,6 +119,16 @@ const OccupationEdit = () => {
     
     if (!formData.occupationName.trim()) {
       newErrors.occupationName = 'Occupation name is required';
+    } else if (formData.occupationName.length > 100) {
+      newErrors.occupationName = 'Occupation name must be less than 100 characters';
+    }
+    
+    if (formData.description && formData.description.length > 500) {
+      newErrors.description = 'Description must be less than 500 characters';
+    }
+    
+    if (formData.remark && formData.remark.length > 200) {
+      newErrors.remark = 'Remark must be less than 200 characters';
     }
     
     setErrors(newErrors);
@@ -119,38 +141,30 @@ const OccupationEdit = () => {
     if (!validateForm()) {
       return;
     }
-
+    
+    setLoading(true);
+    
     try {
-      setLoading(true);
-
-      const submitData = {
-        id: formData.id,
-        occupationName: formData.occupationName,
-        description: formData.description,
-        remark: formData.remark,
-        rating: formData.rating,
-        updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
-      };
-
-      const response = await fetch(`${API_BASE_URL}/Occupation/${id}`, {
+      const response = await fetch(`${API_URL}/Occupation/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(submitData),
+        body: JSON.stringify(formData)
       });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || 'Failed to update occupation');
+      
+      if (response.ok) {
+        showNotification('Occupation updated successfully!', 'success');
+        setTimeout(() => {
+          navigate('/employee-management/occupations');
+        }, 1500);
+      } else {
+        const errorText = await response.text();
+        showNotification(errorText || 'Failed to update occupation', 'error');
       }
-
-      showNotification('Occupation updated successfully!');
-      setTimeout(() => {
-        navigate('/employee-management/occupations');
-      }, 2000);
-    } catch (err) {
-      showNotification('Error updating occupation: ' + err.message, 'error');
+    } catch (error) {
+      console.error('Error updating occupation:', error);
+      showNotification('Error updating occupation. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -162,20 +176,27 @@ const OccupationEdit = () => {
 
   if (fetchLoading) {
     return (
-      <Box sx={{ flexGrow: 1, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+      <Box sx={{ bgcolor: '#f8fafc', minHeight: '100vh' }}>
         <EmployeeNavBar />
-        <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-          <CircularProgress sx={{ color: '#34C759' }} />
-        </Box>
+        <Container maxWidth="md" sx={{ py: 4 }}>
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+            <Stack alignItems="center" spacing={2}>
+              <CircularProgress size={60} sx={{ color: '#34C759' }} />
+              <Typography variant="h6" color="textSecondary">
+                Loading occupation details...
+              </Typography>
+            </Stack>
+          </Box>
+        </Container>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ flexGrow: 1, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+    <Box sx={{ bgcolor: '#f8fafc', minHeight: '100vh' }}>
       <EmployeeNavBar />
       
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="md" sx={{ py: 4 }}>
         {/* Header Section */}
         <Box sx={{
           background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
@@ -183,183 +204,196 @@ const OccupationEdit = () => {
           p: 4,
           mb: 4,
           color: 'white',
-          boxShadow: '0 8px 32px rgba(52, 199, 89, 0.3)'
+          position: 'relative',
+          overflow: 'hidden'
         }}>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Button
-              onClick={() => navigate('/employee-management/occupations')}
-              sx={{
-                color: 'white',
-                minWidth: 'auto',
-                p: 1,
-                borderRadius: 2,
-                '&:hover': {
-                  bgcolor: 'rgba(255, 255, 255, 0.1)'
-                }
-              }}
-            >
-              <ArrowBack />
-            </Button>
-            <Typography variant="h4" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
-              Edit Occupation
-            </Typography>
-          </Stack>
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={() => navigate('/employee-management/occupations')}
+            sx={{
+              color: 'white',
+              bgcolor: 'rgba(255,255,255,0.2)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+              borderRadius: 2,
+              mb: 2
+            }}
+          >
+            Back to Occupations
+          </Button>
+          
+          <Typography variant="h4" fontWeight="bold">
+            Edit Occupation
+          </Typography>
+          <Typography variant="subtitle1" sx={{ opacity: 0.9, mt: 1 }}>
+            Update occupation information and level assignment
+          </Typography>
+          
+          {/* Background decoration */}
+          <Box sx={{
+            position: 'absolute',
+            top: -50,
+            right: -50,
+            width: 200,
+            height: 200,
+            borderRadius: '50%',
+            bgcolor: 'rgba(255,255,255,0.1)'
+          }} />
         </Box>
 
         {/* Form Section */}
-        <Card sx={{ 
-          borderRadius: 3, 
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-          overflow: 'hidden'
-        }}>
-          <Box sx={{ p: 4 }}>
-            <Box component="form" onSubmit={handleSubmit}>
-              <Stack spacing={3}>
-                <TextField
-                  fullWidth
-                  label="Occupation Name"
-                  name="occupationName"
-                  value={formData.occupationName}
-                  onChange={handleInputChange}
-                  required
-                  error={!!errors.occupationName}
-                  helperText={errors.occupationName || "Enter the name of the occupation"}
-                  variant="outlined"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '&:hover fieldset': {
-                        borderColor: '#34C759',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: '#34C759',
-                      },
-                    },
-                    '& .MuiInputLabel-root.Mui-focused': {
-                      color: '#34C759',
-                    },
-                  }}
-                />
-                
-                <TextField
-                  fullWidth
-                  label="Description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  multiline
-                  rows={3}
-                  variant="outlined"
-                  helperText="Describe the occupation responsibilities and requirements"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '&:hover fieldset': {
-                        borderColor: '#34C759',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: '#34C759',
-                      },
-                    },
-                    '& .MuiInputLabel-root.Mui-focused': {
-                      color: '#34C759',
-                    },
-                  }}
-                />
-                
-                <TextField
-                  fullWidth
-                  label="Remark"
-                  name="remark"
-                  value={formData.remark}
-                  onChange={handleInputChange}
-                  multiline
-                  rows={2}
-                  variant="outlined"
-                  helperText="Additional notes or comments"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '&:hover fieldset': {
-                        borderColor: '#34C759',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: '#34C759',
-                      },
-                    },
-                    '& .MuiInputLabel-root.Mui-focused': {
-                      color: '#34C759',
-                    },
-                  }}
-                />
+        <Card sx={{ borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
+          <Box component="form" onSubmit={handleSubmit} sx={{ p: 4 }}>
+            <Stack spacing={3}>
+              <TextField
+                fullWidth
+                label="Occupation Name"
+                name="occupationName"
+                value={formData.occupationName}
+                onChange={handleInputChange}
+                error={!!errors.occupationName}
+                helperText={errors.occupationName}
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#34C759'
+                    }
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': {
+                    color: '#34C759'
+                  }
+                }}
+              />
 
-                {/* Action Buttons */}
-                <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Cancel />}
-                    onClick={handleCancel}
-                    sx={{
-                      borderColor: '#6c757d',
-                      color: '#6c757d',
-                      '&:hover': {
-                        borderColor: '#5a6268',
-                        color: '#5a6268',
-                        backgroundColor: 'rgba(108, 117, 125, 0.04)'
-                      },
-                      px: 3,
-                      py: 1.5
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    startIcon={<Save />}
-                    disabled={loading}
-                    sx={{
-                      background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #28A745 0%, #1e7e34 100%)',
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(52, 199, 89, 0.3)'
-                      },
-                      '&:disabled': {
-                        background: 'linear-gradient(135deg, #a8a8a8 0%, #8d8d8d 100%)'
-                      },
-                      px: 3,
-                      py: 1.5
-                    }}
-                  >
-                    {loading ? 'Updating...' : 'Update Occupation'}
-                  </Button>
-                </Stack>
-              </Stack>
-            </Box>
+              <FormControl fullWidth>
+                <InputLabel sx={{
+                  '&.Mui-focused': {
+                    color: '#34C759'
+                  }
+                }}>Occupation Level</InputLabel>
+                <Select
+                  name="occupationLevelId"
+                  value={formData.occupationLevelId}
+                  onChange={handleInputChange}
+                  label="Occupation Level"
+                  sx={{
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#34C759'
+                    }
+                  }}
+                >
+                  <MenuItem value="">
+                    <em>Select Occupation Level</em>
+                  </MenuItem>
+                  {occupationLevels.map((level) => (
+                    <MenuItem key={level.id} value={level.id}>
+                      {level.levelName} (Rank: {level.rank})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <TextField
+                fullWidth
+                label="Description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                error={!!errors.description}
+                helperText={errors.description}
+                multiline
+                rows={4}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#34C759'
+                    }
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': {
+                    color: '#34C759'
+                  }
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Remark"
+                name="remark"
+                value={formData.remark}
+                onChange={handleInputChange}
+                error={!!errors.remark}
+                helperText={errors.remark}
+                multiline
+                rows={2}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#34C759'
+                    }
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': {
+                    color: '#34C759'
+                  }
+                }}
+              />
+              
+              <Box sx={{ display: 'flex', gap: 2, pt: 2 }}>
+                <Button
+                  type="button"
+                  variant="outlined"
+                  onClick={handleCancel}
+                  startIcon={<Cancel />}
+                  sx={{
+                    flex: 1,
+                    py: 1.5,
+                    borderColor: '#64748b',
+                    color: '#64748b',
+                    '&:hover': {
+                      borderColor: '#475569',
+                      color: '#475569',
+                      bgcolor: '#f8fafc'
+                    }
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                  sx={{
+                    flex: 1,
+                    py: 1.5,
+                    background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #28A745 0%, #1e7e34 100%)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(52, 199, 89, 0.3)'
+                    },
+                    '&:disabled': {
+                      background: '#94a3b8',
+                      color: 'white'
+                    }
+                  }}
+                >
+                  {loading ? 'Updating...' : 'Update Occupation'}
+                </Button>
+              </Box>
+            </Stack>
           </Box>
         </Card>
-
-        {/* Background decoration */}
-        <Box sx={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'linear-gradient(135deg, rgba(52, 199, 89, 0.02) 0%, rgba(40, 167, 69, 0.02) 100%)',
-          zIndex: -1,
-          pointerEvents: 'none'
-        }} />
       </Container>
 
+      {/* Notification Snackbar */}
       <Snackbar
         open={notification.open}
         autoHideDuration={6000}
         onClose={() => setNotification({ ...notification, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Alert 
-          onClose={() => setNotification({ ...notification, open: false })} 
+        <Alert
+          onClose={() => setNotification({ ...notification, open: false })}
           severity={notification.severity}
           sx={{ width: '100%' }}
         >

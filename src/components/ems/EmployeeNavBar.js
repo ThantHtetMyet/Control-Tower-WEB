@@ -88,10 +88,22 @@ const EmployeeNavBar = () => {
             Departments
           </Button>
           <Button 
+            onClick={() => navigate('/employee-management/sub-departments')}
+            sx={getButtonStyle('/employee-management/sub-departments')}
+          >
+            Sub Departments
+          </Button>
+          <Button 
             onClick={() => navigate('/employee-management/occupations')}
             sx={getButtonStyle('/employee-management/occupations')}
           >
             Occupations
+          </Button>
+          <Button 
+            onClick={() => navigate('/employee-management/occupation-levels')}
+            sx={getButtonStyle('/employee-management/occupation-levels')}
+          >
+            Occupation Levels
           </Button>
           <Button 
             onClick={() => navigate('/employee-management/applications')}

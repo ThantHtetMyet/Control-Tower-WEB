@@ -196,9 +196,7 @@ const EmployeeList = () => {
                 >
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ bgcolor: '#34C759', width: 40, height: 40 }}>
-                        {getInitials(employee.firstName, employee.lastName)}
-                      </Avatar>
+                      
                       <Box>
                         <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                           {employee.firstName} {employee.lastName}

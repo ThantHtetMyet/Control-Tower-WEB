@@ -37,8 +37,12 @@ import OccupationList from './components/ems/OccupationList';
 import OccupationForm from './components/ems/OccupationForm';
 import OccupationEdit from './components/ems/OccupationEdit';
 import OccupationDetails from './components/ems/OccupationDetails';
+// Add OccupationLevel imports
+import OccupationLevelList from './components/ems/OccupationLevelList';
+import OccupationLevelForm from './components/ems/OccupationLevelForm';
+import OccupationLevelEdit from './components/ems/OccupationLevelEdit';
+import OccupationLevelDetails from './components/ems/OccupationLevelDetails';
 import ApplicationForm from './components/ems/ApplicationForm';
-// Add these missing imports
 import ApplicationEdit from './components/ems/ApplicationEdit';
 import ApplicationDetails from './components/ems/ApplicationDetails';
 import CompanyList from './components/ems/CompanyList';
@@ -46,6 +50,11 @@ import CompanyForm from './components/ems/CompanyForm';
 import CompanyEdit from './components/ems/CompanyEdit';
 import CompanyDetails from './components/ems/CompanyDetails';
 
+// Add SubDepartment imports
+import SubDepartmentList from './components/ems/SubDepartmentList';
+import SubDepartmentForm from './components/ems/SubDepartmentForm';
+import SubDepartmentEdit from './components/ems/SubDepartmentEdit';
+import SubDepartmentDetails from './components/ems/SubDepartmentDetails';
 // Add NewsPortalSystem imports
 import NewsList from './components/news-portal-system/NewsList';
 import NewsForm from './components/news-portal-system/NewsForm';
@@ -146,6 +155,28 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+                {/* SubDepartment Routes */}
+                <Route path="/employee-management/sub-departments" element={
+                  <HRProtectedRoute>
+                    <SubDepartmentList />
+                  </HRProtectedRoute>
+                } />
+                <Route path="/employee-management/sub-departments/new" element={
+                  <HRProtectedRoute>
+                    <SubDepartmentForm />
+                  </HRProtectedRoute>
+                } />
+                <Route path="/employee-management/sub-departments/:id" element={
+                  <HRProtectedRoute>
+                    <SubDepartmentDetails />
+                  </HRProtectedRoute>
+                } />
+                <Route path="/employee-management/sub-departments/:id/edit" element={
+                  <HRProtectedRoute>
+                    <SubDepartmentEdit />
+                  </HRProtectedRoute>
+                } />
+                
                 {/* Employee Routes */}
                 <Route
                   path="/employee-management/employees"
@@ -210,6 +241,40 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <OccupationEdit />
+                    </ProtectedRoute>
+                  } 
+                />
+
+                {/* OccupationLevel Routes */}
+                <Route 
+                  path="/employee-management/occupation-levels" 
+                  element={
+                    <ProtectedRoute>
+                      <OccupationLevelList />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/employee-management/occupation-levels/new" 
+                  element={
+                    <ProtectedRoute>
+                      <OccupationLevelForm />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/employee-management/occupation-levels/details/:id" 
+                  element={
+                    <ProtectedRoute>
+                      <OccupationLevelDetails />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/employee-management/occupation-levels/edit/:id" 
+                  element={
+                    <ProtectedRoute>
+                      <OccupationLevelEdit />
                     </ProtectedRoute>
                   } 
                 />

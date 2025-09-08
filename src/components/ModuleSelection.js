@@ -320,9 +320,9 @@ const ModuleSelection = () => {
     } else if (module.id === 'room-booking-system') {
       // Route HR users to buildings page and non-HR users to bookings page
       if (hasHRAccess()) {
-        navigate('/room-booking-system/buildings');
+        navigate('/room-booking-system/calendar');
       } else {
-        navigate('/room-booking-system/bookings');
+        navigate('/room-booking-system/calendar');
       }
     } else {
       alert(`${module.title} is coming soon!`);

@@ -5,57 +5,79 @@ import {
   Button,
   Typography,
   Paper,
+  Grid,
+  Rating,
   Alert,
   Snackbar,
+  CircularProgress,
   Container,
   Card,
   Stack,
-  Rating,
-  FormControl,
-  InputLabel,
-  Select,
   MenuItem
 } from '@mui/material';
-import { Save, Cancel, ArrowBack, Star } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { Save, Cancel, ArrowBack } from '@mui/icons-material';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import EmployeeNavBar from './EmployeeNavBar';
-import { API_URL } from '../../config/apiConfig';
+import { fetchSubDepartmentById, updateSubDepartment } from '../api-services/subDepartmentService';
+import { getDepartments } from '../api-services/employeeService';
 
-const API_BASE_URL = API_URL;
-
-const OccupationForm = () => {
+const SubDepartmentEdit = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [departments, setDepartments] = useState([]);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
-  const [occupationLevels, setOccupationLevels] = useState([]);
   const [formData, setFormData] = useState({
-    occupationName: '',
+    id: '',
+    departmentID: '',
+    name: '',
     description: '',
     remark: '',
-    rating: 0,
-    occupationLevelId: '',
-    createdBy: user?.id || '00000000-0000-0000-0000-000000000000'
+    rating: 3,
+    updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
   });
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    fetchOccupationLevels();
-  }, []);
+    fetchSubDepartment();
+  }, [id]);
 
-  const fetchOccupationLevels = async () => {
+  useEffect(() => {
+    if (user?.id) {
+      setFormData(prev => ({
+        ...prev,
+        updatedBy: user.id
+      }));
+    }
+  }, [user]);
+
+  const fetchSubDepartment = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/OccupationLevel`);
-      if (response.ok) {
-        const data = await response.json();
-        setOccupationLevels(data);
-      } else {
-        showNotification('Failed to fetch occupation levels', 'error');
-      }
+      setInitialLoading(true);
+      const [subDepartmentData, departmentsData] = await Promise.all([
+        fetchSubDepartmentById(id),
+        getDepartments()
+      ]);
+      
+      setDepartments(departmentsData);
+      setFormData({
+        id: subDepartmentData.id,
+        departmentID: subDepartmentData.departmentID,
+        name: subDepartmentData.name,
+        description: subDepartmentData.description || '',
+        remark: subDepartmentData.remark || '',
+        rating: subDepartmentData.rating ? subDepartmentData.rating : 3,
+        updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
+      });
     } catch (error) {
-      console.error('Error fetching occupation levels:', error);
-      showNotification('Error fetching occupation levels', 'error');
+      console.error('Error fetching sub-department:', error);
+      showNotification('Error loading sub-department data', 'error');
+      navigate('/employee-management/sub-departments');
+    } finally {
+      setInitialLoading(false);
     }
   };
 
@@ -77,25 +99,27 @@ const OccupationForm = () => {
   const handleRatingChange = (event, newValue) => {
     setFormData({
       ...formData,
-      rating: newValue || 0
+      rating: newValue
     });
   };
 
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.occupationName.trim()) {
-      newErrors.occupationName = 'Occupation name is required';
-    } else if (formData.occupationName.length > 100) {
-      newErrors.occupationName = 'Occupation name must be less than 100 characters';
+    if (!formData.departmentID.trim()) {
+      newErrors.departmentID = 'Department is required';
     }
-    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Sub-department name is required';
+    }
+    if (formData.name.length > 100) {
+      newErrors.name = 'Sub-department name must be less than 100 characters';
+    }
     if (formData.description && formData.description.length > 500) {
       newErrors.description = 'Description must be less than 500 characters';
     }
-    
-    if (formData.remark && formData.remark.length > 200) {
-      newErrors.remark = 'Remark must be less than 200 characters';
+    if (formData.remark && formData.remark.length > 500) {
+      newErrors.remark = 'Remark must be less than 500 characters';
     }
     
     setErrors(newErrors);
@@ -112,38 +136,42 @@ const OccupationForm = () => {
     if (!validateForm()) {
       return;
     }
-    
-    setLoading(true);
-    
+
     try {
-      const response = await fetch(`${API_BASE_URL}/Occupation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      if (response.ok) {
-        showNotification('Occupation created successfully!', 'success');
-        setTimeout(() => {
-          navigate('/employee-management/occupations');
-        }, 1500);
-      } else {
-        const errorText = await response.text();
-        showNotification(errorText || 'Error creating occupation', 'error');
-      }
+      setLoading(true);
+      const submitData = {
+        ...formData,
+        rating: parseInt(formData.rating)
+      };
+      await updateSubDepartment(id, submitData);
+      showNotification('Sub-department updated successfully!', 'success');
+      setTimeout(() => {
+        navigate('/employee-management/sub-departments');
+      }, 1500);
     } catch (error) {
-      console.error('Error creating occupation:', error);
-      showNotification('Error creating occupation. Please try again.', 'error');
+      console.error('Error updating sub-department:', error);
+      showNotification('Error updating sub-department. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/occupations');
+    navigate('/employee-management/sub-departments');
   };
+
+  if (initialLoading) {
+    return (
+      <Box sx={{ flexGrow: 1, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+        <EmployeeNavBar />
+        <Container maxWidth="xl" sx={{ py: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+            <CircularProgress sx={{ color: '#34C759' }} />
+          </Box>
+        </Container>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ flexGrow: 1, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
@@ -161,7 +189,7 @@ const OccupationForm = () => {
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Button
-              onClick={() => navigate('/employee-management/occupations')}
+              onClick={() => navigate('/employee-management/sub-departments')}
               sx={{
                 color: 'white',
                 minWidth: 'auto',
@@ -175,7 +203,7 @@ const OccupationForm = () => {
               <ArrowBack />
             </Button>
             <Typography variant="h4" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
-              Create New Occupation
+              Edit Sub-Department
             </Typography>
           </Stack>
         </Box>
@@ -189,19 +217,55 @@ const OccupationForm = () => {
           <Box sx={{ p: 4 }}>
             <form onSubmit={handleSubmit}>
               <Stack spacing={4}>
+                {/* Parent Department */}
                 <TextField
                   fullWidth
-                  label="Occupation Name"
-                  value={formData.occupationName}
-                  onChange={handleChange('occupationName')}
-                  error={!!errors.occupationName}
-                  helperText={errors.occupationName}
+                  select
+                  label="Parent Department"
+                  value={formData.departmentID}
+                  onChange={handleChange('departmentID')}
+                  error={!!errors.departmentID}
+                  helperText={errors.departmentID}
                   required
                   variant="outlined"
                   sx={{
                     '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
                       '&.Mui-focused fieldset': {
                         borderColor: '#34C759',
+                        borderWidth: 2
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      '&.Mui-focused': {
+                        color: '#34C759',
+                      },
+                    },
+                  }}
+                >
+                  {departments.map((department) => (
+                    <MenuItem key={department.id} value={department.id}>
+                      {department.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+
+                {/* Sub-Department Name */}
+                <TextField
+                  fullWidth
+                  label="Sub-Department Name"
+                  value={formData.name}
+                  onChange={handleChange('name')}
+                  error={!!errors.name}
+                  helperText={errors.name}
+                  required
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#34C759',
+                        borderWidth: 2
                       },
                     },
                     '& .MuiInputLabel-root': {
@@ -211,35 +275,8 @@ const OccupationForm = () => {
                     },
                   }}
                 />
-
-                {/* Occupation Level */}
-                <FormControl fullWidth>
-                  <InputLabel sx={{
-                    '&.Mui-focused': {
-                      color: '#34C759',
-                    },
-                  }}>Occupation Level</InputLabel>
-                  <Select
-                    value={formData.occupationLevelId}
-                    onChange={handleChange('occupationLevelId')}
-                    label="Occupation Level"
-                    sx={{
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#34C759',
-                      },
-                    }}
-                  >
-                    <MenuItem value="">
-                      <em>Select a level (optional)</em>
-                    </MenuItem>
-                    {occupationLevels.map((level) => (
-                      <MenuItem key={level.id} value={level.id}>
-                        {level.levelName} (Rank: {level.rank})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
                 
+                {/* Description */}
                 <TextField
                   fullWidth
                   label="Description"
@@ -252,8 +289,10 @@ const OccupationForm = () => {
                   variant="outlined"
                   sx={{
                     '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
                       '&.Mui-focused fieldset': {
                         borderColor: '#34C759',
+                        borderWidth: 2
                       },
                     },
                     '& .MuiInputLabel-root': {
@@ -264,6 +303,7 @@ const OccupationForm = () => {
                   }}
                 />
                 
+                {/* Remark */}
                 <TextField
                   fullWidth
                   label="Remark"
@@ -274,8 +314,10 @@ const OccupationForm = () => {
                   variant="outlined"
                   sx={{
                     '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
                       '&.Mui-focused fieldset': {
                         borderColor: '#34C759',
+                        borderWidth: 2
                       },
                     },
                     '& .MuiInputLabel-root': {
@@ -285,19 +327,32 @@ const OccupationForm = () => {
                     },
                   }}
                 />
-
-                
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+                {/* Buttons */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 3, 
+                  justifyContent: 'flex-end', 
+                  mt: 4,
+                  pt: 3,
+                  borderTop: '1px solid #e2e8f0'
+                }}>
                   <Button
                     variant="outlined"
                     onClick={handleCancel}
                     startIcon={<Cancel />}
                     sx={{
-                      borderColor: '#666',
-                      color: '#666',
+                      borderColor: '#64748b',
+                      color: '#64748b',
+                      borderRadius: 2,
+                      px: 4,
+                      py: 1.5,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: '1rem',
                       '&:hover': {
-                        borderColor: '#333',
-                        color: '#333'
+                        borderColor: '#475569',
+                        color: '#475569',
+                        bgcolor: '#f8fafc'
                       }
                     }}
                   >
@@ -310,20 +365,27 @@ const OccupationForm = () => {
                     startIcon={<Save />}
                     sx={{
                       background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
-                      color: 'white',
-                      fontWeight: 'bold',
+                      borderRadius: 2,
+                      px: 4,
+                      py: 1.5,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      boxShadow: '0 4px 12px rgba(52, 199, 89, 0.4)',
                       '&:hover': {
-                        background: 'linear-gradient(135deg, #28A745 0%, #1e7e34 100%)',
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(52, 199, 89, 0.3)'
+                        background: 'linear-gradient(135deg, #28A745 0%, #22C55E 100%)',
+                        boxShadow: '0 6px 16px rgba(52, 199, 89, 0.5)',
+                        transform: 'translateY(-1px)'
                       },
                       '&:disabled': {
-                        background: '#ccc',
-                        color: '#666'
-                      }
+                        background: '#e2e8f0',
+                        color: '#94a3b8',
+                        boxShadow: 'none'
+                      },
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    {loading ? 'Creating...' : 'Create Occupation'}
+                    {loading ? 'Updating...' : 'Update Sub-Department'}
                   </Button>
                 </Box>
               </Stack>
@@ -331,6 +393,7 @@ const OccupationForm = () => {
           </Box>
         </Card>
 
+        {/* Notification Snackbar */}
         <Snackbar
           open={notification.open}
           autoHideDuration={6000}
@@ -350,4 +413,4 @@ const OccupationForm = () => {
   );
 };
 
-export default OccupationForm;
+export default SubDepartmentEdit;
