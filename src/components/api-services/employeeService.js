@@ -48,6 +48,12 @@ export const getOccupation = async (id) => {
   return response.data;
 };
 
+// Occupation Level API calls
+export const getOccupationLevels = async () => {
+  const response = await api.get('/occupationlevel');
+  return response.data;
+};
+
 // Dashboard statistics
 export const getDashboardStats = async () => {
   try {

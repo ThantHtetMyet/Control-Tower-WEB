@@ -23,7 +23,12 @@ import {
   Badge,
   Divider,
   TextField,
-  InputAdornment
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Stack
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -40,11 +45,13 @@ import {
   FilterList as FilterListIcon,
   Refresh as RefreshIcon,
   Dashboard as DashboardIcon,
-  Assignment as AssignmentIcon
+  Assignment as AssignmentIcon,
+  AccountTree as AccountTreeIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getDashboardStats, getEmployees } from '../api-services/employeeService';
 import EmployeeNavBar from './EmployeeNavBar';
+import EmployeeHierarchyModal from './EmployeeHierarchyModal';
 
 function EmployeeDashboard() {
   const navigate = useNavigate();
@@ -60,6 +67,7 @@ function EmployeeDashboard() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [showHierarchy, setShowHierarchy] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -173,30 +181,70 @@ function EmployeeDashboard() {
       <EmployeeNavBar />
       <Box p={3}>
         {/* Enhanced Header Section */}
-        <Box sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 4,
-          p: 3,
-          background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
-          borderRadius: 3,
-          color: 'white',
-          boxShadow: '0 4px 20px rgba(52, 199, 89, 0.3)'
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <DashboardIcon sx={{ fontSize: 40 }} />
-            <Box>
-              <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                Employee Management Dashboard
-              </Typography>
-              <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
-                Welcome back! Here's your employee overview
-              </Typography>
-            </Box>
-          </Box>
+        {/* Header Section */}
+        <Paper 
+          elevation={0}
+          sx={{ 
+            p: 4, 
+            mb: 4, 
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
           
-        </Box>
+          <Box sx={{ position: 'relative', zIndex: 2 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
+              
+              <Stack spacing={1}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                  Employee Management Dashboard
+                </Typography>
+                <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
+                  Welcome back! Here's your employee overview
+                </Typography>
+              </Stack>
+                
+                <Button
+                  variant="contained"
+                  startIcon={<AccountTreeIcon />}
+                  onClick={() => setShowHierarchy(true)}
+                  sx={{
+                    fontWeight: 'bold',
+                    textTransform: 'none',
+                    transition: 'all 0.3s ease',
+                    background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
+                    color: 'white',
+                    '&:hover': { 
+                      background: 'linear-gradient(135deg, #28A745 0%, #1e7e34 100%)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(52, 199, 89, 0.3)'
+                    },
+                    px: 3
+                  }}
+                >
+                  View Employee Hierarchy
+                </Button>
+            </Stack>
+            
+            
+          </Box>
+          {/* Background decoration */}
+          <Box 
+            sx={{
+              position: 'absolute',
+              top: -50,
+              right: -50,
+              width: 200,
+              height: 200,
+              borderRadius: '50%',
+              bgcolor: 'rgba(255,255,255,0.1)',
+              zIndex: 1
+            }} 
+          />
+        </Paper>
         
         {/* Enhanced Statistics Cards */}
         <Grid container spacing={3} mb={4}>
@@ -453,10 +501,18 @@ function EmployeeDashboard() {
                     startIcon={<PersonAddIcon />}
                     onClick={() => navigate('/employee-management/employees/new')}
                     sx={{
-                      background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
+                      background: 'linear-gradient(45deg, #34C759 30%, #28A745 90%)',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      borderRadius: '25px',
+                      textTransform: 'none',
+                      boxShadow: '0 3px 5px 2px rgba(52, 199, 89, .3)',
                       '&:hover': {
-                        background: 'linear-gradient(135deg, #28A745 0%, #1e7e34 100%)'
-                      }
+                        background: 'linear-gradient(45deg, #28A745 30%, #20A040 90%)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 6px 10px 4px rgba(52, 199, 89, .3)',
+                      },
+                      transition: 'all 0.3s ease'
                     }}
                   >
                     Add First Employee
@@ -467,6 +523,12 @@ function EmployeeDashboard() {
           </CardContent>
         </Card>
       </Box>
+
+      {/* Employee Hierarchy Modal */}
+      <EmployeeHierarchyModal 
+        open={showHierarchy} 
+        onClose={() => setShowHierarchy(false)} 
+      />
 
       {/* Add CSS for rotation animation */}
       <style jsx>{`

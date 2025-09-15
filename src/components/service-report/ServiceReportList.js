@@ -218,7 +218,7 @@ function ServiceReportList() {
           pb: 2 
         }}>
           <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#800080' }}>
-            Service Reports
+            Issue Tracker List
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <Button

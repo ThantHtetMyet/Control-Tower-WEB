@@ -459,7 +459,7 @@ const SignIn = () => {
                   letterSpacing: '0.5px'
                 }}
               >
-                ControlxTower
+                Willowglen Services Pte Ltd
               </Typography>
             </Box>
 

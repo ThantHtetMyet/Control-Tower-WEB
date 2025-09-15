@@ -8,8 +8,9 @@ import { Edit, Delete, Add, Visibility, Person } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import EmployeeNavBar from './EmployeeNavBar';
 
-import { API_URL } from '../../config/apiConfig';
+import { getEmployees } from '../api-services/employeeService'; // Add this import
 
+import { API_URL } from '../../config/apiConfig';
 const API_BASE_URL = API_URL;
 
 const EmployeeList = () => {
@@ -28,11 +29,8 @@ const EmployeeList = () => {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/Employee`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch employees');
-      }
-      const data = await response.json();
+      // Replace direct fetch with employeeService
+      const data = await getEmployees();
       setEmployees(data);
     } catch (err) {
       setError('Error fetching employees: ' + err.message);
@@ -169,6 +167,7 @@ const EmployeeList = () => {
                 }}>Employee</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', color: '#2E7D32' }}>Staff ID</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', color: '#2E7D32' }}>Department</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: '#2E7D32' }}>Sub Department</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', color: '#2E7D32' }}>Occupation</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', color: '#2E7D32' }}>Contact</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', color: '#2E7D32' }}>Gender</TableCell>
@@ -210,11 +209,14 @@ const EmployeeList = () => {
                   <TableCell>
                     <Typography variant="body2">{employee.staffCardID}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      ID: {employee.staffIDCardID}
+                      {employee.staffIDCardID}
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">{employee.departmentName}</Typography>
+                    <Typography variant="body2">{employee.departmentName || 'N/A'}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{employee.subDepartmentName || 'N/A'}</Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">{employee.occupationName}</Typography>

@@ -166,9 +166,7 @@ const CompanyList = () => {
                   >
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: '#34C759', width: 40, height: 40 }}>
-                          {getInitials(company.name)}
-                        </Avatar>
+                        
                         <Box>
                           <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                             {company.name}

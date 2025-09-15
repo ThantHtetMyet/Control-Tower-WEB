@@ -40,6 +40,7 @@ import {
   createEmployeeApplicationAccess 
 } from '../api-services/employeeService';
 import { API_URL } from '../../config/apiConfig';
+import { fetchSubDepartments } from '../api-services/subDepartmentService';
 
 const API_BASE_URL = API_URL;
 
@@ -52,7 +53,7 @@ const EmployeeEdit = () => {
   const [fetchLoading, setFetchLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [departments, setDepartments] = useState([]);
+  const [subDepartments, setSubDepartments] = useState([]);
   const [occupations, setOccupations] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [applications, setApplications] = useState([]);
@@ -69,7 +70,7 @@ const EmployeeEdit = () => {
   const [formData, setFormData] = useState({
     id: '',
     companyID: '',
-    departmentID: '',
+    subDepartmentID: '',
     occupationID: '',
     staffCardID: '',
     staffRFIDCardID: '',
@@ -97,7 +98,7 @@ const EmployeeEdit = () => {
   useEffect(() => {
     fetchEmployee();
     fetchCompanies();
-    fetchDepartments();
+    fetchSubDepartmentsData(); // Changed from fetchSubDepartments
     fetchOccupations();
     fetchApplications();
     fetchAccessLevels();
@@ -113,10 +114,10 @@ const EmployeeEdit = () => {
       const data = await response.json();
       
       setFormData({
-        id: data.id,
-        companyID: data.companyID,
-        departmentID: data.departmentID,
-        occupationID: data.occupationID,
+      id: data.id,
+      companyID: data.companyID,
+      subDepartmentID: data.subDepartmentID, // Changed from departmentID
+      occupationID: data.occupationID,
         staffCardID: data.staffCardID,
         staffRFIDCardID: data.staffRFIDCardID,
         firstName: data.firstName,
@@ -185,15 +186,12 @@ const EmployeeEdit = () => {
     }
   };
 
-  const fetchDepartments = async () => {
+  const fetchSubDepartmentsData = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/Department`);
-      if (response.ok) {
-        const data = await response.json();
-        setDepartments(data);
-      }
+      const data = await fetchSubDepartments(1, 1000); // Fetch all subdepartments
+      setSubDepartments(data.items || data);
     } catch (err) {
-      console.error('Error fetching departments:', err);
+      console.error('Error fetching sub-departments:', err);
     }
   };
 
@@ -244,7 +242,27 @@ const EmployeeEdit = () => {
 
   const handleApplicationChange = (event) => {
     const value = event.target.value;
-    setSelectedApplications(typeof value === 'string' ? value.split(',') : value);
+    const newSelectedApplications = typeof value === 'string' ? value.split(',') : value;
+    setSelectedApplications(newSelectedApplications);
+    
+    // Initialize access levels for newly selected applications
+    const newAccessLevels = { ...applicationAccessLevels };
+    newSelectedApplications.forEach(appId => {
+      if (!newAccessLevels[appId]) {
+        // Set default to 'User' access level ID
+        const userAccessLevel = accessLevels.find(level => level.levelName === 'User');
+        newAccessLevels[appId] = userAccessLevel?.id || '';
+      }
+    });
+    
+    // Remove access levels for unselected applications
+    Object.keys(newAccessLevels).forEach(appId => {
+      if (!newSelectedApplications.includes(appId)) {
+        delete newAccessLevels[appId];
+      }
+    });
+    
+    setApplicationAccessLevels(newAccessLevels);
   };
 
   const handleAccessLevelChange = (appId, accessLevelId) => {
@@ -277,7 +295,7 @@ const EmployeeEdit = () => {
         // Map camelCase to PascalCase for backend
         ID: formData.id,
         CompanyID: formData.companyID,
-        DepartmentID: formData.departmentID,
+        SubDepartmentID: formData.subDepartmentID, // Changed from DepartmentID
         OccupationID: formData.occupationID,
         StaffCardID: formData.staffCardID,
         StaffRFIDCardID: formData.staffRFIDCardID,
@@ -776,16 +794,16 @@ const EmployeeEdit = () => {
                 <TextField
                   fullWidth
                   select
-                  label="Department"
-                  name="departmentID"
-                  value={formData.departmentID}
+                  label="Sub Department"
+                  name="subDepartmentID"
+                  value={formData.subDepartmentID}
                   onChange={handleInputChange}
                   required
                   variant="outlined"
                 >
-                  {departments.map((dept) => (
-                    <MenuItem key={dept.id} value={dept.id}>
-                      {dept.name}
+                  {subDepartments.map((subDept) => (
+                    <MenuItem key={subDept.id} value={subDept.id}>
+                      {subDept.departmentName} ({subDept.name})
                     </MenuItem>
                   ))}
                 </TextField>

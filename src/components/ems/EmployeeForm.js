@@ -29,6 +29,7 @@ import EmployeeNavBar from './EmployeeNavBar';
 import applicationService from '../api-services/applicationService';
 import accessLevelService from '../api-services/accessLevelService';
 import employeeApplicationAccessService from '../api-services/employeeApplicationAccessService';
+import { fetchSubDepartments } from '../api-services/subDepartmentService';
 
 import { API_URL } from '../../config/apiConfig';
 
@@ -40,7 +41,7 @@ const EmployeeForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [departments, setDepartments] = useState([]);
+  const [subDepartments, setSubDepartments] = useState([]);
   const [occupations, setOccupations] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [applications, setApplications] = useState([]);
@@ -55,10 +56,10 @@ const EmployeeForm = () => {
   // Update formData initial state to match backend
   const [formData, setFormData] = useState({
       companyID: '',
-      departmentID: '',
+      subDepartmentID: '',
       occupationID: '',
       staffCardID: '',
-      staffIDCardID: '',
+      staffRFIDCardID: '',
       firstName: '',
       lastName: '',
       email: '',
@@ -84,7 +85,7 @@ const EmployeeForm = () => {
 
   useEffect(() => {
     fetchCompanies();
-    fetchDepartments();
+    fetchSubDepartmentsData();
     fetchOccupations();
     fetchApplications();
     fetchAccessLevels();
@@ -102,15 +103,12 @@ const EmployeeForm = () => {
     }
   };
 
-  const fetchDepartments = async () => {
+  const fetchSubDepartmentsData = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/Department`);
-      if (response.ok) {
-        const data = await response.json();
-        setDepartments(data);
-      }
+      const data = await fetchSubDepartments(1, 1000); // Fetch all subdepartments
+      setSubDepartments(data.items || data);
     } catch (err) {
-      console.error('Error fetching departments:', err);
+      console.error('Error fetching sub-departments:', err);
     }
   };
 
@@ -229,7 +227,14 @@ const EmployeeForm = () => {
           
           // Add application accesses as JSON string
           if (applicationAccesses.length > 0) {
-              formDataToSend.append('applicationAccesses', JSON.stringify(applicationAccesses));
+              // Instead of JSON string, send individual fields
+              applicationAccesses.forEach((access, index) => {
+                  formDataToSend.append(`ApplicationAccesses[${index}].ApplicationID`, access.applicationID);
+                  formDataToSend.append(`ApplicationAccesses[${index}].AccessLevelID`, access.accessLevelID);
+                  formDataToSend.append(`ApplicationAccesses[${index}].GrantedDate`, new Date().toISOString());
+                  formDataToSend.append(`ApplicationAccesses[${index}].CreatedBy`, formData.createdBy);
+                  formDataToSend.append(`ApplicationAccesses[${index}].GrantedBy`, formData.createdBy);
+              });
           }
   
           // First, create the employee (without image)
@@ -248,7 +253,7 @@ const EmployeeForm = () => {
               }
               
               setSuccessMessage('Employee created successfully!');
-              setTimeout(() => navigate('/ems/employees'), 2000);
+              setTimeout(() => navigate('/employee-management/employees'), 2000);
           } else {
               const errorData = await response.text();
               throw new Error(errorData || 'Failed to create employee');
@@ -610,16 +615,16 @@ const EmployeeForm = () => {
                 <TextField
                   fullWidth
                   select
-                  label="Department"
-                  name="departmentID"
-                  value={formData.departmentID}
+                  label="Sub Department"
+                  name="subDepartmentID"
+                  value={formData.subDepartmentID}
                   onChange={handleInputChange}
                   required
                   variant="outlined"
                 >
-                  {departments.map((dept) => (
-                    <MenuItem key={dept.id} value={dept.id}>
-                      {dept.name}
+                  {subDepartments.map((subDept) => (
+                    <MenuItem key={subDept.id} value={subDept.id}>
+                      {subDept.departmentName} ({subDept.name})
                     </MenuItem>
                   ))}
                 </TextField>
@@ -651,8 +656,8 @@ const EmployeeForm = () => {
                 <TextField
                   fullWidth
                   label="Staff RFID Card ID"
-                  name="staffIDCardID"
-                  value={formData.staffIDCardID}
+                  name="staffRFIDCardID"
+                  value={formData.staffRFIDCardID}
                   onChange={handleInputChange}
                   required
                   variant="outlined"

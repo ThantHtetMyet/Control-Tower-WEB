@@ -19,7 +19,7 @@ import { FiTrash2 as DeleteIcon, FiPlus as AddIcon } from 'react-icons/fi';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
 import { useNavigate } from 'react-router-dom';
-import CustomModal from '../common/CustomModal';
+import ServiceReportModal from './ServiceReportModal';
 import { API_URL } from '../../config/apiConfig';
 
 const API_BASE_URL = API_URL;
@@ -418,7 +418,7 @@ const ServiceReportForm = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterMoment}>
-      <CustomModal
+      <ServiceReportModal
         open={showSuccessModal}
         onClose={handleModalClose}
         title="Success"

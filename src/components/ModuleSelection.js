@@ -311,8 +311,8 @@ const ModuleSelection = () => {
         }
       });
     } else {
-    if (module.id === 'service-report-system') {
-      navigate('/service-report-system');
+    if (module.id === 'report-management-system') {
+      navigate('/report-management-system');
     } else if (module.id === 'user-management-system') {
       navigate('/employee-management');
     } else if (module.id === 'news-portal-system') {

@@ -12,8 +12,6 @@ import {
   Divider,
   List,
   ListItem,
-  ListItemText,
-  Button,
   CircularProgress,
   FormControl,
   InputLabel,
@@ -33,8 +31,8 @@ const RoomBookingCalendar = () => {
   // Add rooms state back
   const [rooms, setRooms] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(false);
+  //const [bookings, setBookings] = useState([]);
+  //const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -58,26 +56,7 @@ const RoomBookingCalendar = () => {
       setError('Failed to load rooms');
     }
   };
-  const loadMonthBookings = async () => {
-    setLoading(true);
-    try {
-      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-      
-      // Fetch bookings for all rooms for the entire month
-      const bookingsData = await fetchCalendarBookings(
-        null, // No specific room - get all rooms
-        startOfMonth.toISOString().split('T')[0],
-        endOfMonth.toISOString().split('T')[0]
-      );
-      setBookings(bookingsData);
-    } catch (err) {
-      setError('Failed to load bookings');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  
   const handleDateClick = async (date) => {
     setSelectedDate(date);
     setModalOpen(true);
@@ -141,7 +120,7 @@ const RoomBookingCalendar = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
+    //const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
     

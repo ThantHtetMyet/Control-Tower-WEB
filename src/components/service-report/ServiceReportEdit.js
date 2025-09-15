@@ -18,7 +18,7 @@ import {
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
 import { useNavigate, useParams } from 'react-router-dom';
-import CustomModal from '../common/CustomModal';
+import ServiceReportModal from './ServiceReportModal';
 import moment from 'moment';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -277,12 +277,12 @@ const ServiceReportEdit = () => {
                 displayValue: reportData.formStatus?.[0]?.name || ''
               },
               jobNumber: reportData.jobNumber || '',
-              serviceTypeRemark: reportData.serviceTypeRemark || '',
-              issueReportedRemark: reportData.issueReportedRemark || '',
-              issueFoundRemark: reportData.issueFoundRemark || '',
-              actionTakenRemark: reportData.actionTakenRemark || '',
-              furtherActionRemark: reportData.furtherActionTakenRemark || '',
-              formStatusRemark: reportData.formStatusRemark || ''
+              serviceTypeRemark: reportData.serviceType?.[0]?.remark || '',
+              issueReportedRemark: reportData.issueReported?.[0]?.remark || '',
+              issueFoundRemark: reportData.issueFound?.[0]?.remark || '',
+              actionTakenRemark: reportData.actionTaken?.[0]?.remark || '',
+              furtherActionRemark: reportData.furtherActionTaken?.[0]?.remark || '',
+              formStatusRemark: reportData.formStatus?.[0]?.remark || ''
             });
 
             // Add MaterialUsed data loading
@@ -316,19 +316,17 @@ const ServiceReportEdit = () => {
   const handleSubmit = async () => {
     try {
       const requestData = {
-        // Add missing required field
         jobNumber: formData.jobNumber || '',
         customer: formData.customer || '',
         contactNo: formData.contactNo || '',
-        // Convert empty strings to null for nullable Guid fields
         projectNoID: formData.projectNo.id || null,
         systemID: formData.system.id || null,
         locationID: formData.location.id || null,
         followupActionID: formData.followUpAction.id || null,
-        failureDetectedDate: formData.failureDetectedTime?.toISOString(),
-        responseDate: formData.responseTime?.toISOString(),
-        arrivalDate: formData.arrivalTime?.toISOString(),
-        completionDate: formData.completionTime?.toISOString(),
+        failureDetectedDate: formData.failureDetectedTime?.toISOString() || null,
+        responseDate: formData.responseTime?.toISOString() || null,
+        arrivalDate: formData.arrivalTime?.toISOString() || null,
+        completionDate: formData.completionTime?.toISOString() || null,
         serviceType: [{
           id: formData.serviceTypes.id || null,
           remark: formData.serviceTypeRemark || ''
@@ -349,14 +347,13 @@ const ServiceReportEdit = () => {
           description: formData.actionTakenDescription || '',
           remark: formData.actionTakenRemark || ''
         }],
-        furtherAction: [{
+        furtherActionTaken: [{
           id: formData.furtherAction.id || null,
           remark: formData.furtherActionRemark || ''
         }],
-        // Add MaterialUsed data
         materialsUsed: materialsUsed.map(material => ({
-          ID: material.id, // Send ID for existing materials (null for new ones)
-          Quantity: parseInt(material.quantity) || 0, // Convert to integer
+          ID: material.id,
+          Quantity: parseInt(material.quantity) || 0,
           Description: material.description || '',
           SerialNo: material.serialNo || ''
         })),
@@ -475,7 +472,7 @@ const ServiceReportEdit = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterMoment}>
-      <CustomModal
+      <ServiceReportModal
         open={showSuccessModal}
         onClose={handleModalClose}
         title="Success"

@@ -87,9 +87,14 @@ import RoomBookingList from './components/room-booking-system/RoomBookingList';
 import RoomBookingForm from './components/room-booking-system/RoomBookingForm';
 import RoomBookingDetailsRouter from './components/room-booking-system/RoomBookingDetailsRouter';
 import RoomBookingEdit from './components/room-booking-system/RoomBookingEdit';
-
-// Add import
 import RoomBookingCalendar from './components/room-booking-system/RoomBookingCalendar';
+
+// ... existing code ...
+import ReportFormNavBar from './components/report-management-system/ReportFormNavBar';
+import ReportFormList from './components/report-management-system/ReportFormList';
+import ReportFormDetails from './components/report-management-system/ReportFormDetails';
+import ReportFormForm from './components/report-management-system/ReportFormForm/ReportFormForm';
+import ReportFormEdit from './components/report-management-system/ReportFormEdit';
 
 function App() {
   return (
@@ -639,6 +644,65 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+
+                
+                {/* Report Management System Routes */}
+                <Route
+                  path="/report-management-system"
+                  element={
+                    <ProtectedRoute>
+                      <ReportFormNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <ReportFormList />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/report-management-system/report-forms"
+                  element={
+                    <ProtectedRoute>
+                      <ReportFormNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <ReportFormList />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/report-management-system/report-forms/new"
+                  element={
+                    <ProtectedRoute>
+                      <ReportFormNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <ReportFormForm />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/report-management-system/report-forms/details/:id"
+                  element={
+                    <ProtectedRoute>
+                      <ReportFormNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <ReportFormDetails />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/report-management-system/report-forms/edit/:id"
+                  element={
+                    <ProtectedRoute>
+                      <ReportFormNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <ReportFormEdit />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                
               </Routes>
             </Box>
           </Router>

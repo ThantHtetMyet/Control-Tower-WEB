@@ -523,7 +523,12 @@ const EmployeeDetails = () => {
             <Grid container spacing={3}>
               <FieldContainer 
                 label="Department" 
-                value={employee.departmentName}
+                value={employee.departmentName || 'N/A'}
+                icon={<Business fontSize="small" />}
+              />
+              <FieldContainer 
+                label="Sub Department" 
+                value={employee.subDepartmentName || 'N/A'}
                 icon={<Business fontSize="small" />}
               />
               <FieldContainer 
