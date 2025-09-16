@@ -28,7 +28,7 @@ const ReportFormList = () => {
     try {
       setLoading(true);
       const data = await getReportForms(1, 50, '', selectedTypeId || null);
-      setReportForms(data.items || data);
+      setReportForms(data.data || data); // Change from data.items to data.data
     } catch (err) {
       setError('Error fetching report forms: ' + err.message);
     } finally {
@@ -108,7 +108,7 @@ const ReportFormList = () => {
           onClick={() => navigate('/report-management-system/report-forms/new')}
           sx={{
             background: RMSTheme.gradients.primary,
-            color: RMSTheme.text.onPrimary,
+            color: '#FFFFFF',
             boxShadow: RMSTheme.shadows.medium,
             '&:hover': {
               background: RMSTheme.gradients.accent,
@@ -157,49 +157,82 @@ const ReportFormList = () => {
         sx={{ 
           backgroundColor: RMSTheme.background.paper,
           boxShadow: RMSTheme.shadows.medium,
-          borderRadius: RMSTheme.borderRadius.medium
+          borderRadius: RMSTheme.borderRadius.medium,
+          overflowX: 'auto'
         }}
       >
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: RMSTheme.background.hover }}>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary }}>ID</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary }}>Type</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary }}>Form Status</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary }}>Upload Status</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary }}>Upload Hostname</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary }}>Upload IP</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary }}>Created Date</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary }}>Actions</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 150 }}>Report Type</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 120 }}>Job No</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 200 }}>System Name</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 200 }}>Station Name</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 120 }}>Form Status</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 150 }}>Created Date</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 150 }}>Created By</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 150 }}>Updated By</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 120 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {reportForms.map((form) => (
               <TableRow 
                 key={form.id}
+                onDoubleClick={() => navigate(`/report-management-system/report-forms/details/${form.id}`)}
                 sx={{
                   '&:hover': {
-                    backgroundColor: RMSTheme.background.hover
+                    backgroundColor: RMSTheme.background.hover,
+                    cursor: 'pointer'
                   }
                 }}
               >
-                <TableCell sx={{ color: RMSTheme.text.primary }}>{form.id}</TableCell>
                 <TableCell sx={{ color: RMSTheme.text.primary }}>
-                  {reportFormTypes.find(type => type.id === form.reportFormTypeId)?.name || 'Unknown'}
+                  {form.reportFormTypeName || 'N/A'}
                 </TableCell>
-                <TableCell>{getStatusChip(form.formStatus)}</TableCell>
-                <TableCell>{getUploadStatusChip(form.uploadStatus)}</TableCell>
-                <TableCell sx={{ color: RMSTheme.text.secondary }}>{form.uploadHostname || 'N/A'}</TableCell>
-                <TableCell sx={{ color: RMSTheme.text.secondary }}>{form.uploadIPAddress || 'N/A'}</TableCell>
+                <TableCell sx={{ color: RMSTheme.text.primary }}>
+                  {form.jobNo || 'N/A'}
+                </TableCell>
+                <TableCell sx={{ color: RMSTheme.text.primary }}>
+                  <Tooltip title={form.systemNameWarehouseName || 'N/A'}>
+                    <span>
+                      {form.systemNameWarehouseName ? 
+                        (form.systemNameWarehouseName.length > 30 ? 
+                          form.systemNameWarehouseName.substring(0, 30) + '...' : 
+                          form.systemNameWarehouseName
+                        ) : 'N/A'
+                      }
+                    </span>
+                  </Tooltip>
+                </TableCell>
+                <TableCell sx={{ color: RMSTheme.text.primary }}>
+                  <Tooltip title={form.stationNameWarehouseName || 'N/A'}>
+                    <span>
+                      {form.stationNameWarehouseName ? 
+                        (form.stationNameWarehouseName.length > 30 ? 
+                          form.stationNameWarehouseName.substring(0, 30) + '...' : 
+                          form.stationNameWarehouseName
+                        ) : 'N/A'
+                      }
+                    </span>
+                  </Tooltip>
+                </TableCell>
+                <TableCell>{getStatusChip(form.formStatus || 'N/A')}</TableCell>
                 <TableCell sx={{ color: RMSTheme.text.secondary }}>
                   {form.createdDate ? moment(form.createdDate).format('YYYY-MM-DD HH:mm') : 'N/A'}
+                </TableCell>
+                <TableCell sx={{ color: RMSTheme.text.secondary }}>
+                  {form.createdByUserName || 'N/A'}
+                </TableCell>
+                <TableCell sx={{ color: RMSTheme.text.secondary }}>
+                  {form.updatedByUserName || 'N/A'}
                 </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     <Tooltip title="View Details">
                       <IconButton
                         size="small"
-                        onClick={() => navigate(`/report-management-system/report-forms/${form.id}`)}
+                        onClick={() => navigate(`/report-management-system/report-forms/details/${form.id}`)}
                         sx={{
                           color: RMSTheme.status.info,
                           '&:hover': {

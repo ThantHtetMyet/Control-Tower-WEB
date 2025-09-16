@@ -10,13 +10,12 @@ import {
   Alert
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext'; // Add this import
+import { useAuth } from '../../contexts/AuthContext';
 import RMSTheme from '../../theme-resource/RMSTheme';
 import FirstContainer from './FirstContainer';
 import CMReportForm from './CMReportForm';
-import PMReportForm from './PMReportForm';
-import { getReportFormTypes, createReportForm, submitCMReportForm } from '../../api-services/reportFormService';
-// Add import at the top
+import RTUPMReportForm from './RTUPMReportForm'; // Updated import
+import { getReportFormTypes, createReportForm, submitCMReportForm, getNextJobNumber } from '../../api-services/reportFormService';
 import CMReviewReportForm from './CMReviewReportForm';
 
 const steps = [
@@ -27,52 +26,58 @@ const steps = [
 
 const ReportFormForm = () => {
   const navigate = useNavigate();
-  const { user } = useAuth(); // Add this line
+  const { user } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
-  const [formData, setFormData] = useState({
-    // Step 1 - Basic Information
-    stationName: '',
-    systemDescription: '',
-    projectNo: '',
-    customer: '',
-    reportFormTypeID: '',
-    
-    // CM-specific fields
-    failureDetectedDate: '',
-    responseDate: '',
-    arrivalDate: '',
-    completionDate: '',
-    
-    // Step 2 - Technical Details
-    technicalSpecs: '',
-    equipmentDetails: '',
-    installationDate: '',
-    
-    
-    // Step 4 - Review
-    reviewComments: ''
-  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [reportFormTypes, setReportFormTypes] = useState([]);
-  
-  // Add state for storing images from CMReportForm
   const [beforeIssueImages, setBeforeIssueImages] = useState([]);
   const [afterActionImages, setAfterActionImages] = useState([]);
+  const [formData, setFormData] = useState({
+    reportFormTypeID: '',
+    systemNameWarehouseID: '',
+    stationNameWarehouseID: '',
+    systemDescription: '',
+    stationName: '',
+    projectNo: '',
+    customer: '',
+    jobNo: '', // Add jobNo to formData
+    uploadStatus: 'Pending',
+    uploadHostname: '',
+    uploadIPAddress: '',
+    formStatus: 'Draft'
+  });
 
   useEffect(() => {
-    fetchReportFormTypes();
-  }, []);
+    const fetchReportFormTypes = async () => {
+      try {
+        const response = await getReportFormTypes();
+        setReportFormTypes(response || []);
+      } catch (error) {
+        console.error('Error fetching report form types:', error);
+        setError('Failed to load report form types');
+      }
+    };
 
-  const fetchReportFormTypes = async () => {
-    try {
-      const response = await getReportFormTypes();
-      setReportFormTypes(response);
-    } catch (error) {
-      console.error('Error fetching report form types:', error);
-      setError('Failed to load report form types');
-    }
-  };
+    // Updated fetchNextJobNumber function using the service
+    const fetchNextJobNumber = async () => {
+      try {
+        const data = await getNextJobNumber();
+        setFormData(prev => ({ ...prev, jobNo: data.jobNumber }));
+      } catch (error) {
+        console.error('Error fetching job number:', error);
+        if (error.response?.status === 401) {
+          console.error('User not authenticated');
+        } else if (error.response?.status === 404) {
+          console.error('API endpoint not found - check if backend server is running');
+        }
+      }
+    };
+
+    fetchReportFormTypes();
+    fetchNextJobNumber();
+  }, []);
 
   const handleNext = () => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
@@ -95,27 +100,56 @@ const ReportFormForm = () => {
     
     setLoading(true);
     setError('');
+    setSuccessMessage('');
     
     try {
       // Check if this is a CM report form
       const isCorrectiveMaintenance = formData.reportFormTypeID === 2 || 
         reportFormTypes.find(type => type.id === formData.reportFormTypeID)?.name?.toLowerCase().includes('corrective');
       
+      let result;
+      
       if (isCorrectiveMaintenance) {
         // Add user ID to formData before submission
         const formDataWithUser = {
           ...formData,
-          userId: user.id // Use uppercase ID to match backend expectation
+          userId: user.id
         };
-        const result = await submitCMReportForm(formDataWithUser, beforeIssueImages, afterActionImages);
+        result = await submitCMReportForm(formDataWithUser, beforeIssueImages, afterActionImages);
         console.log('CM Report Form submitted successfully:', result);
       } else {
-        // Use the generic submission for other types
-        await createReportForm(formData);
+        // Use the generic submission for other types with complete data
+        const completeFormData = {
+          ReportFormTypeID: formData.reportFormTypeID,
+          JobNo: formData.jobNo,
+          SystemNameWarehouseID: formData.systemNameWarehouseID,
+          StationNameWarehouseID: formData.stationNameWarehouseID,
+          UploadStatus: formData.uploadStatus,
+          UploadHostname: formData.uploadHostname,
+          UploadIPAddress: formData.uploadIPAddress,
+          FormStatus: formData.formStatus
+        };
+        result = await createReportForm(completeFormData);
+        console.log('Report Form created successfully:', result);
       }
       
-      // Handle success
-      navigate('/report-management-system/report-forms');
+      // Update formData with the returned JobNo
+      if (result && result.jobNo) {
+        setFormData(prev => ({ ...prev, jobNo: result.jobNo }));
+        setSuccessMessage(`Report form created successfully! Job No: ${result.jobNo}`);
+        
+        // Show success message for 3 seconds before navigating
+        setTimeout(() => {
+          navigate('/report-management-system/report-forms');
+        }, 3000);
+      } else {
+        // If no JobNo returned, still navigate but show generic success
+        setSuccessMessage('Report form created successfully!');
+        setTimeout(() => {
+          navigate('/report-management-system/report-forms');
+        }, 2000);
+      }
+      
     } catch (error) {
       console.error('Error creating report form:', error);
       setError('Failed to create report form: ' + (error.message || 'Unknown error'));
@@ -133,8 +167,19 @@ const ReportFormForm = () => {
   const getStepContent = (step) => {
     const isCorrectiveMaintenance = formData.reportFormTypeID === 2 || 
       reportFormTypes.find(type => type.id === formData.reportFormTypeID)?.name?.toLowerCase().includes('corrective');
-    const isPreventativeMaintenance = formData.reportFormTypeID === 1 || 
-      reportFormTypes.find(type => type.id === formData.reportFormTypeID)?.name?.toLowerCase().includes('preventive');
+    
+    // Updated PM routing logic based on pmReportFormTypeName directly
+    const isRTUPreventativeMaintenance = formData.pmReportFormTypeName && 
+      formData.pmReportFormTypeName.toLowerCase() === 'rtu';
+    
+    const isServerPreventativeMaintenance = formData.pmReportFormTypeName && 
+      formData.pmReportFormTypeName.toLowerCase() === 'server';
+    
+    const isLVPreventativeMaintenance = formData.pmReportFormTypeName && 
+      formData.pmReportFormTypeName.toLowerCase() === 'lv pm';
+
+    // Add combined preventive maintenance check
+    const isPreventativeMaintenance = isRTUPreventativeMaintenance || isServerPreventativeMaintenance || isLVPreventativeMaintenance;
 
     switch (step) {
       case 0:
@@ -155,19 +200,53 @@ const ReportFormForm = () => {
               onInputChange={handleInputChange}
               onNext={handleNext}
               onBack={handleBack}
-              onImageDataUpdate={handleImageDataUpdate} // Pass the image handler
+              onImageDataUpdate={handleImageDataUpdate}
+              initialBeforeIssueImages={beforeIssueImages}
+              initialAfterActionImages={afterActionImages}
             />
           );
         }
-        if (isPreventativeMaintenance) {
+        if (isRTUPreventativeMaintenance) {
           return (
-            <PMReportForm
+            <RTUPMReportForm
               formData={formData}
               reportFormTypes={reportFormTypes}
               onInputChange={handleInputChange}
               onNext={handleNext}
               onBack={handleBack}
             />
+          );
+        }
+        if (isServerPreventativeMaintenance) {
+          return (
+            <Box sx={{ padding: 4, textAlign: 'center' }}>
+              <Typography variant="h6" color="text.secondary">
+                Server PM Report Form - Coming Soon
+              </Typography>
+              <Button
+                variant="outlined"
+                onClick={handleBack}
+                sx={{ marginTop: 2 }}
+              >
+                Back
+              </Button>
+            </Box>
+          );
+        }
+        if (isLVPreventativeMaintenance) {
+          return (
+            <Box sx={{ padding: 4, textAlign: 'center' }}>
+              <Typography variant="h6" color="text.secondary">
+                LV PM Report Form - Coming Soon
+              </Typography>
+              <Button
+                variant="outlined"
+                onClick={handleBack}
+                sx={{ marginTop: 2 }}
+              >
+                Back
+              </Button>
+            </Box>
           );
         }
         return (
@@ -191,7 +270,7 @@ const ReportFormForm = () => {
             <CMReviewReportForm
               formData={formData}
               reportFormTypes={reportFormTypes}
-              onNext={handleSubmit}  // This will now properly submit the form
+              onNext={handleSubmit}
               onBack={handleBack}
               loading={loading}
               error={error}
@@ -214,7 +293,7 @@ const ReportFormForm = () => {
         return (
           <Box sx={{ padding: 4, textAlign: 'center' }}>
             <Typography variant="h6" color="text.secondary">
-              Review not available for this form type.
+              Review step not available for this form type.
             </Typography>
             <Button variant="outlined" onClick={handleBack} sx={{ marginTop: 2 }}>
               Back
@@ -242,18 +321,55 @@ const ReportFormForm = () => {
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
         }}
       >
-        <Typography 
-          variant="h4" 
-          gutterBottom 
-          sx={{ 
-            color: '#2C3E50',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            marginBottom: 3
-          }}
-        >
-          Create New Report Form
-        </Typography>
+        {/* Header with JobNo in top right corner */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: 3
+        }}>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              color: '#2C3E50',
+              fontWeight: 'bold'
+            }}
+          >
+            Create New Report Form
+          </Typography>
+          
+          {/* JobNo display in top right corner */}
+          <Box sx={{
+            backgroundColor: '#f5f5f5',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            border: '1px solid #ddd'
+          }}>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                color: '#2C3E50',
+                fontWeight: 'normal',
+                fontSize: '14px',
+                display: 'inline'
+              }}
+            >
+              Job No: 
+            </Typography>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                color: '#FF0000',
+                fontWeight: 'bold',
+                fontSize: '24px',
+                display: 'inline',
+                marginLeft: '8px'
+              }}
+            >
+              {formData.jobNo || 'Loading...'}
+            </Typography>
+          </Box>
+        </Box>
 
         <Stepper activeStep={activeStep} sx={{ 
           marginBottom: 4,
@@ -287,6 +403,17 @@ const ReportFormForm = () => {
             color: '#c62828'
           }}>
             {error}
+          </Alert>
+        )}
+
+        {successMessage && (
+          <Alert severity="success" sx={{ 
+            marginBottom: 2,
+            backgroundColor: '#e8f5e8',
+            color: '#2e7d32',
+            fontWeight: 'bold'
+          }}>
+            {successMessage}
           </Alert>
         )}
 

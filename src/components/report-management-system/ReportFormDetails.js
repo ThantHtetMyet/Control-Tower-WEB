@@ -11,7 +11,16 @@ import {
   Alert,
   CircularProgress,
   Divider,
-  Container
+  Container,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import {
   Description,
@@ -21,7 +30,14 @@ import {
   NetworkCheck,
   CloudUpload,
   ArrowBack,
-  Edit
+  Edit,
+  Business,
+  Assignment,
+  Settings,
+  Info,
+  ExpandMore,
+  Storage,
+  Security
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getReportForm } from '../api-services/reportFormService';
@@ -84,6 +100,36 @@ const ReportFormDetails = () => {
     );
   };
 
+  const InfoField = ({ label, value, icon: Icon }) => (
+    <Grid item xs={12} sm={6} md={4}>
+      <Box sx={{ p: 2, backgroundColor: RMSTheme.background.paper, borderRadius: 1, height: '100%' }}>
+        <Typography 
+          variant="subtitle2" 
+          sx={{ 
+            color: RMSTheme.text.secondary,
+            fontWeight: 'bold',
+            mb: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}
+        >
+          {Icon && <Icon fontSize="small" />}
+          {label}
+        </Typography>
+        <Typography 
+          variant="body1"
+          sx={{ 
+            color: RMSTheme.text.primary,
+            wordBreak: 'break-word'
+          }}
+        >
+          {value || 'Not specified'}
+        </Typography>
+      </Box>
+    </Grid>
+  );
+
   if (loading) {
     return (
       <Box sx={{ 
@@ -100,7 +146,7 @@ const ReportFormDetails = () => {
 
   if (error) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4, backgroundColor: RMSTheme.background.default, minHeight: '100vh' }}>
+      <Container maxWidth="lg" sx={{ mt: 4, backgroundColor: RMSTheme.background.default, minHeight: '100vh' }}>
         <Alert severity="error">{error}</Alert>
       </Container>
     );
@@ -108,14 +154,14 @@ const ReportFormDetails = () => {
 
   if (!reportForm) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4, backgroundColor: RMSTheme.background.default, minHeight: '100vh' }}>
+      <Container maxWidth="lg" sx={{ mt: 4, backgroundColor: RMSTheme.background.default, minHeight: '100vh' }}>
         <Alert severity="info">Report form not found</Alert>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ 
+    <Container maxWidth="lg" sx={{ 
       py: 4,
       backgroundColor: RMSTheme.background.default,
       minHeight: '100vh'
@@ -138,22 +184,33 @@ const ReportFormDetails = () => {
           </Button>
         </Box>
         
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography 
-            variant="h4" 
-            component="h1"
-            sx={{ 
-              color: RMSTheme.text.primary,
-              fontWeight: 'bold'
-            }}
-          >
-            Report Form Details
-          </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+          <Box>
+            <Typography 
+              variant="h4" 
+              component="h1"
+              sx={{ 
+                color: RMSTheme.text.primary,
+                fontWeight: 'bold',
+                mb: 1
+              }}
+            >
+              Report Form Details
+            </Typography>
+            <Typography 
+              variant="subtitle1"
+              sx={{ 
+                color: RMSTheme.text.secondary
+              }}
+            >
+              Form ID: {reportForm.id}
+            </Typography>
+          </Box>
           
           <Button
             variant="contained"
             startIcon={<Edit />}
-            onClick={() => navigate(`/report-management-system/report-forms/${id}/edit`)}
+            onClick={() => navigate(`/report-management-system/report-forms/edit/${id}`)}
             sx={{
               background: RMSTheme.gradients.primary,
               color: RMSTheme.text.onPrimary,
@@ -169,260 +226,343 @@ const ReportFormDetails = () => {
         </Box>
       </Box>
 
-      {/* Main Content */}
+      {/* Status Overview */}
+      <Card sx={{
+        backgroundColor: RMSTheme.background.paper,
+        boxShadow: RMSTheme.shadows.medium,
+        borderRadius: RMSTheme.borderRadius.medium,
+        mb: 3
+      }}>
+        <CardContent sx={{ p: 3 }}>
+          <Typography 
+            variant="h6" 
+            gutterBottom
+            sx={{ 
+              color: RMSTheme.primary.main,
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              mb: 3
+            }}
+          >
+            <Info />
+            Status Overview
+          </Typography>
+          
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="subtitle2" sx={{ color: RMSTheme.text.secondary, mb: 1 }}>
+                  Form Status
+                </Typography>
+                {getStatusChip(reportForm.formStatus)}
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="subtitle2" sx={{ color: RMSTheme.text.secondary, mb: 1 }}>
+                  Upload Status
+                </Typography>
+                {getUploadStatusChip(reportForm.uploadStatus)}
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="subtitle2" sx={{ color: RMSTheme.text.secondary, mb: 1 }}>
+                  Report Type
+                </Typography>
+                <Typography variant="body1" sx={{ color: RMSTheme.text.primary, fontWeight: 'medium' }}>
+                  {reportForm.reportFormType?.name || reportForm.reportFormTypeName || 'Unknown'}
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="subtitle2" sx={{ color: RMSTheme.text.secondary, mb: 1 }}>
+                  Created Date
+                </Typography>
+                <Typography variant="body1" sx={{ color: RMSTheme.text.primary, fontWeight: 'medium' }}>
+                  {reportForm.createdDate ? moment(reportForm.createdDate).format('MMM DD, YYYY') : 'N/A'}
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* Detailed Information Sections */}
       <Grid container spacing={3}>
-        {/* Basic Information */}
+        {/* Project Information */}
         <Grid item xs={12}>
-          <Card sx={{
-            backgroundColor: RMSTheme.background.paper,
-            boxShadow: RMSTheme.shadows.medium,
-            borderRadius: RMSTheme.borderRadius.medium
-          }}>
-            <CardContent sx={{ p: 3 }}>
+          <Accordion defaultExpanded>
+            <AccordionSummary expandIcon={<ExpandMore />}>
               <Typography 
                 variant="h6" 
-                gutterBottom
                 sx={{ 
                   color: RMSTheme.primary.main,
                   fontWeight: 'bold',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 1,
-                  mb: 3
+                  gap: 1
                 }}
               >
-                <Description />
-                Basic Information
+                <Business />
+                Project Information
               </Typography>
-              
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <Box>
-                    <Typography 
-                      variant="subtitle2" 
-                      sx={{ 
-                        color: RMSTheme.text.secondary,
-                        fontWeight: 'bold',
-                        mb: 1
-                      }}
-                    >
-                      Form ID
-                    </Typography>
-                    <Typography 
-                      variant="body1"
-                      sx={{ color: RMSTheme.text.primary }}
-                    >
-                      {reportForm.id}
-                    </Typography>
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <Box>
-                    <Typography 
-                      variant="subtitle2" 
-                      sx={{ 
-                        color: RMSTheme.text.secondary,
-                        fontWeight: 'bold',
-                        mb: 1
-                      }}
-                    >
-                      Report Type
-                    </Typography>
-                    <Typography 
-                      variant="body1"
-                      sx={{ color: RMSTheme.text.primary }}
-                    >
-                      {reportForm.reportFormType?.name || 'Unknown'}
-                    </Typography>
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <Box>
-                    <Typography 
-                      variant="subtitle2" 
-                      sx={{ 
-                        color: RMSTheme.text.secondary,
-                        fontWeight: 'bold',
-                        mb: 1
-                      }}
-                    >
-                      Form Status
-                    </Typography>
-                    {getStatusChip(reportForm.formStatus)}
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <Box>
-                    <Typography 
-                      variant="subtitle2" 
-                      sx={{ 
-                        color: RMSTheme.text.secondary,
-                        fontWeight: 'bold',
-                        mb: 1
-                      }}
-                    >
-                      Upload Status
-                    </Typography>
-                    {getUploadStatusChip(reportForm.uploadStatus)}
-                  </Box>
-                </Grid>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Grid container spacing={2}>
+                <InfoField 
+                  label="Customer" 
+                  value={reportForm.customer} 
+                  icon={Business}
+                />
+                <InfoField 
+                  label="Project Number" 
+                  value={reportForm.projectNo} 
+                  icon={Assignment}
+                />
+                <InfoField 
+                  label="System Description" 
+                  value={reportForm.systemDescription} 
+                  icon={Settings}
+                />
+                <InfoField 
+                  label="Project Manager" 
+                  value={reportForm.projectManager} 
+                  icon={Person}
+                />
+                <InfoField 
+                  label="Site Location" 
+                  value={reportForm.siteLocation} 
+                  icon={Business}
+                />
+                <InfoField 
+                  label="Contract Number" 
+                  value={reportForm.contractNumber} 
+                  icon={Description}
+                />
               </Grid>
-            </CardContent>
-          </Card>
+            </AccordionDetails>
+          </Accordion>
         </Grid>
 
         {/* Technical Information */}
         <Grid item xs={12}>
-          <Card sx={{
-            backgroundColor: RMSTheme.background.paper,
-            boxShadow: RMSTheme.shadows.medium,
-            borderRadius: RMSTheme.borderRadius.medium
-          }}>
-            <CardContent sx={{ p: 3 }}>
+          <Accordion defaultExpanded>
+            <AccordionSummary expandIcon={<ExpandMore />}>
               <Typography 
                 variant="h6" 
-                gutterBottom
                 sx={{ 
                   color: RMSTheme.primary.main,
                   fontWeight: 'bold',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 1,
-                  mb: 3
+                  gap: 1
                 }}
               >
                 <Computer />
                 Technical Information
               </Typography>
-              
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <Box>
-                    <Typography 
-                      variant="subtitle2" 
-                      sx={{ 
-                        color: RMSTheme.text.secondary,
-                        fontWeight: 'bold',
-                        mb: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                      }}
-                    >
-                      <Computer fontSize="small" />
-                      Upload Hostname
-                    </Typography>
-                    <Typography 
-                      variant="body1"
-                      sx={{ color: RMSTheme.text.primary }}
-                    >
-                      {reportForm.uploadHostname || 'Not specified'}
-                    </Typography>
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <Box>
-                    <Typography 
-                      variant="subtitle2" 
-                      sx={{ 
-                        color: RMSTheme.text.secondary,
-                        fontWeight: 'bold',
-                        mb: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                      }}
-                    >
-                      <NetworkCheck fontSize="small" />
-                      Upload IP Address
-                    </Typography>
-                    <Typography 
-                      variant="body1"
-                      sx={{ color: RMSTheme.text.primary }}
-                    >
-                      {reportForm.uploadIPAddress || 'Not specified'}
-                    </Typography>
-                  </Box>
-                </Grid>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Grid container spacing={2}>
+                <InfoField 
+                  label="Upload Hostname" 
+                  value={reportForm.uploadHostname} 
+                  icon={Computer}
+                />
+                <InfoField 
+                  label="Upload IP Address" 
+                  value={reportForm.uploadIPAddress} 
+                  icon={NetworkCheck}
+                />
+                <InfoField 
+                  label="Server Environment" 
+                  value={reportForm.serverEnvironment} 
+                  icon={Storage}
+                />
+                <InfoField 
+                  label="Database Version" 
+                  value={reportForm.databaseVersion} 
+                  icon={Storage}
+                />
+                <InfoField 
+                  label="Application Version" 
+                  value={reportForm.applicationVersion} 
+                  icon={Settings}
+                />
+                <InfoField 
+                  label="Security Level" 
+                  value={reportForm.securityLevel} 
+                  icon={Security}
+                />
               </Grid>
-            </CardContent>
-          </Card>
+            </AccordionDetails>
+          </Accordion>
         </Grid>
 
-        {/* Timestamps */}
+        {/* Form Details */}
         <Grid item xs={12}>
-          <Card sx={{
-            backgroundColor: RMSTheme.background.paper,
-            boxShadow: RMSTheme.shadows.medium,
-            borderRadius: RMSTheme.borderRadius.medium
-          }}>
-            <CardContent sx={{ p: 3 }}>
+          <Accordion defaultExpanded>
+            <AccordionSummary expandIcon={<ExpandMore />}>
               <Typography 
                 variant="h6" 
-                gutterBottom
                 sx={{ 
                   color: RMSTheme.primary.main,
                   fontWeight: 'bold',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 1,
-                  mb: 3
+                  gap: 1
+                }}
+              >
+                <Description />
+                Form Details
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Grid container spacing={2}>
+                <InfoField 
+                  label="Form Title" 
+                  value={reportForm.formTitle} 
+                  icon={Description}
+                />
+                <InfoField 
+                  label="Form Description" 
+                  value={reportForm.formDescription} 
+                  icon={Description}
+                />
+                <InfoField 
+                  label="Form Version" 
+                  value={reportForm.formVersion} 
+                  icon={Info}
+                />
+                <InfoField 
+                  label="Template Used" 
+                  value={reportForm.templateName} 
+                  icon={Description}
+                />
+                <InfoField 
+                  label="Priority Level" 
+                  value={reportForm.priorityLevel} 
+                  icon={Info}
+                />
+                <InfoField 
+                  label="Assigned To" 
+                  value={reportForm.assignedTo} 
+                  icon={Person}
+                />
+              </Grid>
+            </AccordionDetails>
+          </Accordion>
+        </Grid>
+
+        {/* Timestamps & Audit Trail */}
+        <Grid item xs={12}>
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: RMSTheme.primary.main,
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
                 }}
               >
                 <CalendarToday />
-                Timestamps
+                Timestamps & Audit Trail
               </Typography>
-              
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <Box>
-                    <Typography 
-                      variant="subtitle2" 
-                      sx={{ 
-                        color: RMSTheme.text.secondary,
-                        fontWeight: 'bold',
-                        mb: 1
-                      }}
-                    >
-                      Created Date
-                    </Typography>
-                    <Typography 
-                      variant="body1"
-                      sx={{ color: RMSTheme.text.primary }}
-                    >
-                      {reportForm.createdDate ? moment(reportForm.createdDate).format('YYYY-MM-DD HH:mm:ss') : 'Not available'}
-                    </Typography>
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <Box>
-                    <Typography 
-                      variant="subtitle2" 
-                      sx={{ 
-                        color: RMSTheme.text.secondary,
-                        fontWeight: 'bold',
-                        mb: 1
-                      }}
-                    >
-                      Last Modified
-                    </Typography>
-                    <Typography 
-                      variant="body1"
-                      sx={{ color: RMSTheme.text.primary }}
-                    >
-                      {reportForm.modifiedDate ? moment(reportForm.modifiedDate).format('YYYY-MM-DD HH:mm:ss') : 'Not available'}
-                    </Typography>
-                  </Box>
-                </Grid>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Grid container spacing={2}>
+                <InfoField 
+                  label="Created Date" 
+                  value={reportForm.createdDate ? moment(reportForm.createdDate).format('YYYY-MM-DD HH:mm:ss') : null} 
+                  icon={CalendarToday}
+                />
+                <InfoField 
+                  label="Last Modified" 
+                  value={reportForm.modifiedDate ? moment(reportForm.modifiedDate).format('YYYY-MM-DD HH:mm:ss') : null} 
+                  icon={CalendarToday}
+                />
+                <InfoField 
+                  label="Submitted Date" 
+                  value={reportForm.submittedDate ? moment(reportForm.submittedDate).format('YYYY-MM-DD HH:mm:ss') : null} 
+                  icon={CalendarToday}
+                />
+                <InfoField 
+                  label="Approved Date" 
+                  value={reportForm.approvedDate ? moment(reportForm.approvedDate).format('YYYY-MM-DD HH:mm:ss') : null} 
+                  icon={CalendarToday}
+                />
+                <InfoField 
+                  label="Created By" 
+                  value={reportForm.createdBy} 
+                  icon={Person}
+                />
+                <InfoField 
+                  label="Modified By" 
+                  value={reportForm.modifiedBy} 
+                  icon={Person}
+                />
               </Grid>
-            </CardContent>
-          </Card>
+            </AccordionDetails>
+          </Accordion>
         </Grid>
+
+        {/* Additional Information */}
+        {(reportForm.notes || reportForm.comments || reportForm.attachments) && (
+          <Grid item xs={12}>
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    color: RMSTheme.primary.main,
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}
+                >
+                  <Info />
+                  Additional Information
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Grid container spacing={2}>
+                  {reportForm.notes && (
+                    <Grid item xs={12}>
+                      <Box sx={{ p: 2, backgroundColor: RMSTheme.background.paper, borderRadius: 1 }}>
+                        <Typography variant="subtitle2" sx={{ color: RMSTheme.text.secondary, fontWeight: 'bold', mb: 1 }}>
+                          Notes
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: RMSTheme.text.primary, whiteSpace: 'pre-wrap' }}>
+                          {reportForm.notes}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  )}
+                  {reportForm.comments && (
+                    <Grid item xs={12}>
+                      <Box sx={{ p: 2, backgroundColor: RMSTheme.background.paper, borderRadius: 1 }}>
+                        <Typography variant="subtitle2" sx={{ color: RMSTheme.text.secondary, fontWeight: 'bold', mb: 1 }}>
+                          Comments
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: RMSTheme.text.primary, whiteSpace: 'pre-wrap' }}>
+                          {reportForm.comments}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  )}
+                </Grid>
+              </AccordionDetails>
+            </Accordion>
+          </Grid>
+        )}
       </Grid>
     </Container>
   );

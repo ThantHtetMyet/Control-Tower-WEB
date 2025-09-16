@@ -82,12 +82,6 @@ const ReportFormNavBar = () => {
           >
             Report Forms
           </Button>
-          <Button 
-            onClick={() => navigate('/report-management-system/report-types')}
-            sx={getButtonStyle('/report-management-system/report-types')}
-          >
-            Report Types
-          </Button>
         </Box>
 
         {user && (

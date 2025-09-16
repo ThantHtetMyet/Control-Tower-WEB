@@ -149,7 +149,16 @@ const MultipleImageUploadField = ({ field, label, images, previews, onUpload, on
   );
 };
 
-const CMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onBack, onImageDataUpdate }) => {
+const CMReportForm = ({ 
+  formData, 
+  reportFormTypes, 
+  onInputChange, 
+  onNext, 
+  onBack, 
+  onImageDataUpdate,
+  initialBeforeIssueImages = [],
+  initialAfterActionImages = []
+}) => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [warehouseData, setWarehouseData] = useState({
     furtherActions: [],
@@ -157,10 +166,10 @@ const CMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onBack
   });
   const [loading, setLoading] = useState(true);
 
-  // Multiple images state for each section
-  const [beforeIssueImages, setBeforeIssueImages] = useState([]);
+  // Multiple images state for each section - Initialize with passed values
+  const [beforeIssueImages, setBeforeIssueImages] = useState(initialBeforeIssueImages);
   const [beforeIssuePreviews, setBeforeIssuePreviews] = useState([]);
-  const [afterActionImages, setAfterActionImages] = useState([]);
+  const [afterActionImages, setAfterActionImages] = useState(initialAfterActionImages);
   const [afterActionPreviews, setAfterActionPreviews] = useState([]);
 
   // Helper function to format date without timezone conversion
@@ -181,7 +190,7 @@ const CMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onBack
     return selectedType?.name || formData.reportFormTypeID;
   };
 
-  // Fetch warehouse data on component mount
+  // 1. Fetch warehouse data on component mount
   useEffect(() => {
     const fetchWarehouseData = async () => {
       try {
@@ -200,7 +209,56 @@ const CMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onBack
     };
 
     fetchWarehouseData();
-  }, []);
+  }, []); // Empty dependency array - only run on mount
+
+  // 2. Initialize image previews when component receives initial images
+  useEffect(() => {
+    // Create previews for initial before issue images
+    if (initialBeforeIssueImages.length > 0) {
+      const previews = initialBeforeIssueImages.map(file => {
+        if (file instanceof File) {
+          return URL.createObjectURL(file);
+        }
+        return null;
+      }).filter(Boolean);
+      setBeforeIssuePreviews(previews);
+    }
+    
+    // Create previews for initial after action images
+    if (initialAfterActionImages.length > 0) {
+      const previews = initialAfterActionImages.map(file => {
+        if (file instanceof File) {
+          return URL.createObjectURL(file);
+        }
+        return null;
+      }).filter(Boolean);
+      setAfterActionPreviews(previews);
+    }
+  }, [initialBeforeIssueImages, initialAfterActionImages]); // Depend on initial images
+
+  // 3. Cleanup image preview URLs on unmount and when previews change
+  useEffect(() => {
+    // Cleanup function that runs when component unmounts or previews change
+    return () => {
+      beforeIssuePreviews.forEach(preview => {
+        if (preview && typeof preview === 'string') {
+          URL.revokeObjectURL(preview);
+        }
+      });
+      afterActionPreviews.forEach(preview => {
+        if (preview && typeof preview === 'string') {
+          URL.revokeObjectURL(preview);
+        }
+      });
+    };
+  }, [beforeIssuePreviews, afterActionPreviews]); // Depend on preview arrays
+
+  // 4. Update parent component when images change
+  useEffect(() => {
+    if (onImageDataUpdate) {
+      onImageDataUpdate(beforeIssueImages, afterActionImages);
+    }
+  }, [beforeIssueImages, afterActionImages, onImageDataUpdate]); // Depend on image arrays and callback
 
   // Multiple image upload handlers
   const handleBeforeIssueUpload = (event) => {

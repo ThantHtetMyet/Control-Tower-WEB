@@ -46,12 +46,12 @@ const RMSTheme = {
   
   // Text colors - High contrast for dark theme
   text: {
-    primary: '#000000',
-    secondary: '#000000',
-    disabled: '#000000',
-    hint: '#000000',
-    onPrimary: '#000000',
-    onDark: '#000000'
+    primary: '#000000',        // Changed from #000000 to white
+    secondary: '#B0BEC5',      // Changed from #000000 to light gray
+    disabled: '#78909C',       // Changed from #000000 to medium gray
+    hint: '#90A4AE',          // Changed from #000000 to hint gray
+    onPrimary: '#FFFFFF',      // Changed from #000000 to white
+    onDark: '#FFFFFF'          // Changed from #000000 to white
   },
   
   // Component-specific styles
@@ -86,6 +86,13 @@ const RMSTheme = {
         text: '#FFFFFF',
         border: 'rgba(255, 255, 255, 0.2)',
         shadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
+      },
+      danger: {
+        background: '#E74C3C',
+        hover: '#C0392B',
+        text: '#FFFFFF',
+        border: 'rgba(255, 255, 255, 0.2)',
+        shadow: '0 4px 16px rgba(231, 76, 60, 0.3)'
       },
       outlined: {
         border: 'rgba(255, 255, 255, 0.3)',

@@ -21,7 +21,19 @@ export const getReportForm = async (id) => {
 };
 
 export const createReportForm = async (reportFormData) => {
-  const response = await api.post('/reportform', reportFormData);
+  // Ensure all required fields are present
+  const completeData = {
+    ReportFormTypeID: reportFormData.ReportFormTypeID,
+    JobNo: reportFormData.JobNo,
+    SystemNameWarehouseID: reportFormData.SystemNameWarehouseID,
+    StationNameWarehouseID: reportFormData.StationNameWarehouseID,
+    UploadStatus: reportFormData.UploadStatus || 'Pending',
+    UploadHostname: reportFormData.UploadHostname || '',
+    UploadIPAddress: reportFormData.UploadIPAddress || '',
+    FormStatus: reportFormData.FormStatus || 'Draft'
+  };
+  
+  const response = await api.post('/reportform', completeData);
   return response.data;
 };
 
@@ -32,6 +44,13 @@ export const updateReportForm = async (id, reportFormData) => {
 
 export const deleteReportForm = async (id) => {
   const response = await api.delete(`/reportform/${id}`);
+  return response.data;
+};
+
+
+// Get next job number for report form
+export const getNextJobNumber = async () => {
+  const response = await api.get('/reportform/NextJobNumber');
   return response.data;
 };
 
@@ -135,21 +154,28 @@ export const submitCMReportForm = async (formData, beforeIssueImages, afterActio
       throw new Error('Required image types not found');
     }
 
-    // Step 1: Create ReportForm entry
+    // Step 1: Create ReportForm entry with ALL required fields
     const reportFormData = {
       ReportFormTypeID: formData.reportFormTypeID,
+      JobNo: formData.jobNo,  // ✅ Add JobNo
+      SystemNameWarehouseID: formData.systemNameWarehouseID,  // ✅ Add SystemName FK
+      StationNameWarehouseID: formData.stationNameWarehouseID,  // ✅ Add StationName FK
+      UploadStatus: formData.uploadStatus,
+      UploadHostname: formData.uploadHostname,
+      UploadIPAddress: formData.uploadIPAddress,
+      FormStatus: formData.formStatus
     };
     const reportForm = await createReportForm(reportFormData);
     
-    // Step 2: Create CMReportForm entry
+    // Step 2: Create CMReportForm entry (removed SystemName/StationName as they're now in ReportForm)
     const cmReportFormData = {
       reportFormID: reportForm.id,
       furtherActionTakenID: formData.furtherActionTakenID,
       formstatusID: formData.formstatusID,
-      stationName: formData.stationName,
+      // ❌ Removed: stationName (now in ReportForm as FK)
       customer: formData.customer,
       projectNo: formData.projectNo,
-      systemDescription: formData.systemDescription,
+      // ❌ Removed: systemDescription (now handled via FK relationship)
       issueReportedDescription: formData.issueReportedDescription,
       issueFoundDescription: formData.issueFoundDescription,
       actionTakenDescription: formData.actionTakenDescription,
@@ -189,10 +215,22 @@ export const submitCMReportForm = async (formData, beforeIssueImages, afterActio
       success: true,
       reportForm,
       cmReportForm,
+      jobNo: reportForm.jobNo,  // ✅ Return JobNo for frontend update
       message: 'CM Report Form submitted successfully'
     };
   } catch (error) {
     console.error('Error submitting CM Report Form:', error);
     throw error;
   }
+};
+
+// PM Report Form Types API calls
+export const getPMReportFormTypes = async () => {
+  const response = await api.get('/pmreportformtype');
+  return response.data;
+};
+
+export const getPMReportFormType = async (id) => {
+  const response = await api.get(`/pmreportformtype/${id}`);
+  return response.data;
 };
