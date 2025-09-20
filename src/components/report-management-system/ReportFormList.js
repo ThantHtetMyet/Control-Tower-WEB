@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { Edit, Delete, Add, Visibility, Description } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { getReportForms, getReportFormTypes, deleteReportForm } from '../api-services/reportFormService';
+import { getReportForms, getReportFormTypes, deleteReportForm, getRTUPMReportForm } from '../api-services/reportFormService';
 import moment from 'moment';
 import RMSTheme from '../theme-resource/RMSTheme';
 
@@ -165,6 +165,7 @@ const ReportFormList = () => {
           <TableHead>
             <TableRow sx={{ backgroundColor: RMSTheme.background.hover }}>
               <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 150 }}>Report Type</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 150 }}>Specific Report Type</TableCell>
               <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 120 }}>Job No</TableCell>
               <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 200 }}>System Name</TableCell>
               <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 200 }}>Station Name</TableCell>
@@ -179,7 +180,14 @@ const ReportFormList = () => {
             {reportForms.map((form) => (
               <TableRow 
                 key={form.id}
-                onDoubleClick={() => navigate(`/report-management-system/report-forms/details/${form.id}`)}
+                onDoubleClick={() => {
+                  // Check if it's an RTU PM report
+                  if (form.specificReportTypeName === 'RTU') {
+                    navigate(`/report-management-system/report-forms/rtu-pm-details/${form.id}`);
+                  } else {
+                    navigate(`/report-management-system/report-forms/details/${form.id}`);
+                  }
+                }}
                 sx={{
                   '&:hover': {
                     backgroundColor: RMSTheme.background.hover,
@@ -189,6 +197,9 @@ const ReportFormList = () => {
               >
                 <TableCell sx={{ color: RMSTheme.text.primary }}>
                   {form.reportFormTypeName || 'N/A'}
+                </TableCell>
+                <TableCell sx={{ color: RMSTheme.text.primary }}>
+                  {form.specificReportTypeName || 'N/A'}
                 </TableCell>
                 <TableCell sx={{ color: RMSTheme.text.primary }}>
                   {form.jobNo || 'N/A'}

@@ -7,7 +7,8 @@ import {
   StepLabel,
   Button,
   Typography,
-  Alert
+  Alert,
+  Snackbar
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,8 +16,9 @@ import RMSTheme from '../../theme-resource/RMSTheme';
 import FirstContainer from './FirstContainer';
 import CMReportForm from './CMReportForm';
 import RTUPMReportForm from './RTUPMReportForm'; // Updated import
-import { getReportFormTypes, createReportForm, submitCMReportForm, getNextJobNumber } from '../../api-services/reportFormService';
+import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, getNextJobNumber } from '../../api-services/reportFormService';
 import CMReviewReportForm from './CMReviewReportForm';
+import RTUPMReviewReportForm from './RTUPMReviewReportForm'; 
 
 const steps = [
   'Basic Information',
@@ -34,6 +36,22 @@ const ReportFormForm = () => {
   const [reportFormTypes, setReportFormTypes] = useState([]);
   const [beforeIssueImages, setBeforeIssueImages] = useState([]);
   const [afterActionImages, setAfterActionImages] = useState([]);
+  
+  // Add toast notification state
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  
+  // Add RTU PM data state management
+  const [rtuPMData, setRtuPMData] = useState({
+    pmMainRtuCabinetImages: [],
+    pmChamberMagneticContactImages: [],
+    pmRTUCabinetCoolingImages: [],
+    pmDVREquipmentImages: [],
+    mainRTUCabinetData: [],
+    pmChamberMagneticContactData: [],
+    pmRTUCabinetCoolingData: [],
+    pmDVREquipmentData: []
+  });
+  
   const [formData, setFormData] = useState({
     reportFormTypeID: '',
     systemNameWarehouseID: '',
@@ -83,6 +101,23 @@ const ReportFormForm = () => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
 
+    
+  // Updated RTU PM detection logic
+  const isRTUPreventativeMaintenance = formData.pmReportFormTypeName === 'RTU' || 
+    (formData.reportFormTypeID && reportFormTypes.some(type => 
+      type.id === formData.reportFormTypeID && 
+      type.name?.toLowerCase().includes('preventative') && 
+      type.name?.toLowerCase().includes('rtu')
+    ));
+
+  // Alternative: Check if we have any RTU PM data regardless of arrays being populated
+  const hasRTUPMData = rtuPMData && (
+    Array.isArray(rtuPMData.mainRTUCabinetData) ||
+    Array.isArray(rtuPMData.pmChamberMagneticContactData) ||
+    Array.isArray(rtuPMData.pmRTUCabinetCoolingData) ||
+    Array.isArray(rtuPMData.pmDVREquipmentData)
+  );
+
   const handleBack = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
@@ -104,9 +139,20 @@ const ReportFormForm = () => {
     
     try {
       // Check if this is a CM report form
-      const isCorrectiveMaintenance = formData.reportFormTypeID === 2 || 
-        reportFormTypes.find(type => type.id === formData.reportFormTypeID)?.name?.toLowerCase().includes('corrective');
+      const isCorrectiveMaintenance = reportFormTypes.find(type => type.id === formData.reportFormTypeID)?.name?.toLowerCase().includes('corrective');
+
+      // Check if this is a PM report form (generic check first)
+      // Remove the hardcoded ID check (=== 1) since IDs are UUIDs
+      const isPreventativeMaintenance = 
+        reportFormTypes.find(type => type.id === formData.reportFormTypeID)?.name?.toLowerCase().includes('preventative');
       
+      // More specific check for RTU PM reports
+      const isRTUPreventativeMaintenance = isPreventativeMaintenance && (
+        formData.pmReportFormTypeName?.toLowerCase() === 'rtu' ||
+        // Fallback: check if we're in RTU PM context by checking if rtuPMData has content
+        (rtuPMData.mainRTUCabinetData && rtuPMData.mainRTUCabinetData.length > 0)
+      );
+            
       let result;
       
       if (isCorrectiveMaintenance) {
@@ -117,7 +163,26 @@ const ReportFormForm = () => {
         };
         result = await submitCMReportForm(formDataWithUser, beforeIssueImages, afterActionImages);
         console.log('CM Report Form submitted successfully:', result);
+      } else if (isRTUPreventativeMaintenance) {
+        console.log("RTU Preventative Maintenance is working");
+        // Handle RTU PM report submission
+        result = await submitRTUPMReportForm(formData, rtuPMData, user);
+        console.log('RTU PM Report Form submitted successfully:', result);
+        
+        // Show success toast for RTU PM reports
+        setShowSuccessToast(true);
+        
+        // Navigate after a short delay to show the toast
+        setTimeout(() => {
+          navigate('/report-management-system/report-forms');
+        }, 2000);
+        
+        return; // Exit early to avoid the generic success handling below
+      } else if (isPreventativeMaintenance) {
+        console.log("Other PM type (not RTU) - not implemented yet");
+        throw new Error('This PM report type is not yet implemented');
       } else {
+        console.log("OTHERS Report Form is working");
         // Use the generic submission for other types with complete data
         const completeFormData = {
           ReportFormTypeID: formData.reportFormTypeID,
@@ -168,7 +233,6 @@ const ReportFormForm = () => {
     const isCorrectiveMaintenance = formData.reportFormTypeID === 2 || 
       reportFormTypes.find(type => type.id === formData.reportFormTypeID)?.name?.toLowerCase().includes('corrective');
     
-    // Updated PM routing logic based on pmReportFormTypeName directly
     const isRTUPreventativeMaintenance = formData.pmReportFormTypeName && 
       formData.pmReportFormTypeName.toLowerCase() === 'rtu';
     
@@ -178,7 +242,6 @@ const ReportFormForm = () => {
     const isLVPreventativeMaintenance = formData.pmReportFormTypeName && 
       formData.pmReportFormTypeName.toLowerCase() === 'lv pm';
 
-    // Add combined preventive maintenance check
     const isPreventativeMaintenance = isRTUPreventativeMaintenance || isServerPreventativeMaintenance || isLVPreventativeMaintenance;
 
     switch (step) {
@@ -214,6 +277,8 @@ const ReportFormForm = () => {
               onInputChange={handleInputChange}
               onNext={handleNext}
               onBack={handleBack}
+              onRTUPMDataUpdate={handleRTUPMDataUpdate}
+              initialRTUPMData={rtuPMData}
             />
           );
         }
@@ -277,19 +342,32 @@ const ReportFormForm = () => {
             />
           );
         }
-        if (isPreventativeMaintenance) {
-          // Add PM review component when available
+        if (isRTUPreventativeMaintenance) {
           return (
-            <Box sx={{ padding: 4, textAlign: 'center' }}>
-              <Typography variant="h6" color="text.secondary">
-                PM Review component not implemented yet.
-              </Typography>
-              <Button variant="outlined" onClick={handleBack} sx={{ marginTop: 2 }}>
-                Back
-              </Button>
-            </Box>
+            <RTUPMReviewReportForm
+              formData={formData}
+              reportFormTypes={reportFormTypes}
+              onNext={handleSubmit}
+              onBack={handleBack}
+              loading={loading}
+              error={error}
+              rtuPMData={rtuPMData}
+            />
           );
         }
+        if (isPreventativeMaintenance) {
+            // Other PM types - keep existing placeholder
+            return (
+              <Box sx={{ padding: 4, textAlign: 'center' }}>
+                <Typography variant="h6" color="text.secondary">
+                  PM Review component not implemented yet.
+                </Typography>
+                <Button variant="outlined" onClick={handleBack} sx={{ marginTop: 2 }}>
+                  Back
+                </Button>
+              </Box>
+            );
+          }
         return (
           <Box sx={{ padding: 4, textAlign: 'center' }}>
             <Typography variant="h6" color="text.secondary">
@@ -303,6 +381,11 @@ const ReportFormForm = () => {
       default:
         return 'Unknown step';
     }
+  };
+
+  // Add function to handle RTU PM data update
+  const handleRTUPMDataUpdate = (data) => {
+    setRtuPMData(data);
   };
 
   return (
@@ -421,6 +504,15 @@ const ReportFormForm = () => {
           {getStepContent(activeStep)}
         </Box>
       </Paper>
+
+      {/* Success Toast Notification */}
+      <Snackbar
+        open={showSuccessToast}
+        autoHideDuration={3000}
+        onClose={() => setShowSuccessToast(false)}
+        message="RTU Report Form created successfully!"
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Box>
   );
 };

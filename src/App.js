@@ -89,12 +89,11 @@ import RoomBookingDetailsRouter from './components/room-booking-system/RoomBooki
 import RoomBookingEdit from './components/room-booking-system/RoomBookingEdit';
 import RoomBookingCalendar from './components/room-booking-system/RoomBookingCalendar';
 
-// ... existing code ...
 import ReportFormNavBar from './components/report-management-system/ReportFormNavBar';
 import ReportFormList from './components/report-management-system/ReportFormList';
-import ReportFormDetails from './components/report-management-system/ReportFormDetails';
 import ReportFormForm from './components/report-management-system/ReportFormForm/ReportFormForm';
 import ReportFormEdit from './components/report-management-system/ReportFormEdit';
+import RTUPMReportFormDetails from './components/report-management-system/ReportFormDetails/RTUPMReportFormDetails';
 
 function App() {
   return (
@@ -681,17 +680,6 @@ function App() {
                   }
                 />
                 <Route
-                  path="/report-management-system/report-forms/details/:id"
-                  element={
-                    <ProtectedRoute>
-                      <ReportFormNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <ReportFormDetails />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
                   path="/report-management-system/report-forms/edit/:id"
                   element={
                     <ProtectedRoute>
@@ -703,6 +691,17 @@ function App() {
                   }
                 />
                 
+                <Route
+                  path="/report-management-system/report-forms/rtu-pm-details/:id"
+                  element={
+                    <ProtectedRoute>
+                      <ReportFormNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <RTUPMReportFormDetails />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
               </Routes>
             </Box>
           </Router>

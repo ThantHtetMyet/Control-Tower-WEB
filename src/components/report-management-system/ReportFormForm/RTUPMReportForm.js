@@ -19,9 +19,20 @@ import {
   DialogTitle,
   DialogContent,
   DialogContentText,
-  DialogActions
+  DialogActions,
+  Card,
+  CardContent,
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { 
+  Add as AddIcon, 
+  Delete as DeleteIcon,
+  CloudUpload as CloudUploadIcon,
+  Image as ImageIcon,
+  PhotoCamera,
+  Build,
+  Settings,
+  Videocam
+} from '@mui/icons-material';
 import RMSTheme from '../../theme-resource/RMSTheme';
 import { getPMReportFormTypes } from '../../api-services/reportFormService';
 
@@ -29,25 +40,182 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
-const RTUPMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onBack }) => {
+const MultipleImageUploadField = ({ field, label, images, previews, onUpload, onRemove, icon: IconComponent = ImageIcon }) => {
+  return (
+    <Card sx={{ 
+      border: '2px dashed #e0e0e0', 
+      backgroundColor: '#fafafa',
+      '&:hover': {
+        borderColor: '#1976d2',
+        backgroundColor: '#f5f5f5'
+      }
+    }}>
+      <CardContent>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, marginBottom: 2 }}>
+          <IconComponent sx={{ color: '#1976d2' }} />
+          <Typography variant="h6" sx={{ color: '#1976d2', fontWeight: 600 }}>
+            {label}
+          </Typography>
+        </Box>
+        
+        <input
+          accept="image/*"
+          style={{ display: 'none' }}
+          id={`${field}-upload`}
+          multiple
+          type="file"
+          onChange={onUpload}
+        />
+        <label htmlFor={`${field}-upload`}>
+          <Button
+            variant="contained"
+            component="span"
+            startIcon={<CloudUploadIcon />}
+            sx={{
+              marginBottom: 2,
+              background: '#1976d2',
+              '&:hover': {
+                background: '#1565c0'
+              }
+            }}
+          >
+            Upload Images
+          </Button>
+        </label>
+        
+        {images.length > 0 && (
+          <Grid container spacing={2}>
+            {previews.map((preview, index) => (
+              <Grid item xs={6} sm={4} md={3} key={index}>
+                <Box sx={{ position: 'relative' }}>
+                  <img
+                    src={preview}
+                    alt={`Preview ${index + 1}`}
+                    style={{
+                      width: '100%',
+                      height: '120px',
+                      objectFit: 'cover',
+                      borderRadius: '8px',
+                      border: '1px solid #e0e0e0'
+                    }}
+                  />
+                  <IconButton
+                    onClick={() => onRemove(index)}
+                    sx={{
+                      position: 'absolute',
+                      top: 4,
+                      right: 4,
+                      backgroundColor: 'rgba(244, 67, 54, 0.8)',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: 'rgba(244, 67, 54, 1)'
+                      },
+                      width: 28,
+                      height: 28
+                    }}
+                    size="small"
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        )}
+        
+        {images.length === 0 && (
+          <Box sx={{ 
+            textAlign: 'center', 
+            padding: 3, 
+            color: '#666',
+            border: '1px dashed #ccc',
+            borderRadius: 2,
+            backgroundColor: '#f9f9f9'
+          }}>
+            <ImageIcon sx={{ fontSize: 48, color: '#ccc', marginBottom: 1 }} />
+            <Typography variant="body2">
+              No images uploaded yet. Click "Upload Images" to add photos.
+            </Typography>
+          </Box>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+const RTUPMReportForm = ({ 
+  formData, 
+  reportFormTypes, 
+  onInputChange, 
+  onNext, 
+  onBack,
+  onRTUPMDataUpdate,
+  initialRTUPMData = {}
+}) => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [pmReportFormTypes, setPMReportFormTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // MainRTUCabinet state management - starts empty
-  const [mainRTUCabinetData, setMainRTUCabinetData] = useState([]);
+  // Image upload state management - Initialize with data from parent
+  const [pmMainRtuCabinetImages, setPmMainRtuCabinetImages] = useState(initialRTUPMData.pmMainRtuCabinetImages || []);
+  const [pmMainRtuCabinetPreviews, setPmMainRtuCabinetPreviews] = useState([]);
+  
+  const [pmChamberMagneticContactImages, setPmChamberMagneticContactImages] = useState(initialRTUPMData.pmChamberMagneticContactImages || []);
+  const [pmChamberMagneticContactPreviews, setPmChamberMagneticContactPreviews] = useState([]);
+  
+  const [pmRTUCabinetCoolingImages, setPmRTUCabinetCoolingImages] = useState(initialRTUPMData.pmRTUCabinetCoolingImages || []);
+  const [pmRTUCabinetCoolingPreviews, setPmRTUCabinetCoolingPreviews] = useState([]);
+  
+  const [pmDVREquipmentImages, setPmDVREquipmentImages] = useState(initialRTUPMData.pmDVREquipmentImages || []);
+  const [pmDVREquipmentPreviews, setPmDVREquipmentPreviews] = useState([]);
+  
+  // MainRTUCabinet state management - Initialize with data from parent or default
+  const [mainRTUCabinetData, setMainRTUCabinetData] = useState(initialRTUPMData.mainRTUCabinetData || [{
+    RTUCabinet: '',
+    EquipmentRack: '',
+    Monitor: '',
+    MouseKeyboard: '',
+    CPU6000Card: '',
+    InputCard: '',
+    MegapopNTU: '',
+    NetworkRouter: '',
+    NetworkSwitch: '',
+    DigitalVideoRecorder: '',
+    RTUDoorContact: '',
+    PowerSupplyUnit: '',
+    UPSTakingOverTest: '',
+    UPSBattery: '',
+    Remarks: ''
+  }]);
   const [selectedRowIndex, setSelectedRowIndex] = useState(null);
   
-  // PMChamberMagneticContact state management - starts empty
-  const [pmChamberMagneticContactData, setPMChamberMagneticContactData] = useState([]);
+  // PMChamberMagneticContact state management - Initialize with data from parent or default
+  const [pmChamberMagneticContactData, setPMChamberMagneticContactData] = useState(initialRTUPMData.pmChamberMagneticContactData || [{
+    ChamberNumber: '1',
+    ChamberOGBox: '',
+    ChamberContact1: '',
+    ChamberContact2: '',
+    ChamberContact3: '',
+    Remarks: ''
+  }]);
   const [selectedChamberRowIndex, setSelectedChamberRowIndex] = useState(null);
   
-  // PMRTUCabinetCooling state management - starts empty
-  const [pmRTUCabinetCoolingData, setPMRTUCabinetCoolingData] = useState([]);
+  // PMRTUCabinetCooling state management - Initialize with data from parent or default
+  const [pmRTUCabinetCoolingData, setPMRTUCabinetCoolingData] = useState(initialRTUPMData.pmRTUCabinetCoolingData || [{
+    FanNumber: '1',
+    FunctionalStatus: '',
+    Remarks: ''
+  }]);
   const [selectedCoolingRowIndex, setSelectedCoolingRowIndex] = useState(null);
   
-  // PMDVREquipment state management - starts empty
-  const [pmDVREquipmentData, setPMDVREquipmentData] = useState([]);
+  // PMDVREquipment state management - Initialize with data from parent or default
+  const [pmDVREquipmentData, setPMDVREquipmentData] = useState(initialRTUPMData.pmDVREquipmentData || [{
+    DVRComm: '',
+    DVRRAIDComm: '',
+    TimeSyncNTPServer: '',
+    Recording24x7: '',
+    Remarks: ''
+  }]);
   const [selectedDVRRowIndex, setSelectedDVRRowIndex] = useState(null);
   
   // Modal state for clear confirmation
@@ -85,6 +253,123 @@ const RTUPMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onB
   
   // DVR Equipment dropdown options
   const dvrDropdownOptions = ['', 'NA', 'PASS', 'FAIL'];
+  
+  // Image upload handlers for PMMainRtuCabinet
+  const handlePmMainRtuCabinetUpload = (event) => {
+    const files = Array.from(event.target.files);
+    const validFiles = files.filter(file => {
+      const isValidType = file.type.startsWith('image/');
+      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
+      return isValidType && isValidSize;
+    });
+    
+    if (validFiles.length !== files.length) {
+      alert('Some files were skipped. Please ensure all files are images under 10MB.');
+    }
+    
+    setPmMainRtuCabinetImages(prev => [...prev, ...validFiles]);
+    
+    // Create preview URLs
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPmMainRtuCabinetPreviews(prev => [...prev, e.target.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+  
+  const handleRemovePmMainRtuCabinet = (index) => {
+    setPmMainRtuCabinetImages(prev => prev.filter((_, i) => i !== index));
+    setPmMainRtuCabinetPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  // Image upload handlers for PMChamberMagneticContact
+  const handlePmChamberMagneticContactUpload = (event) => {
+    const files = Array.from(event.target.files);
+    const validFiles = files.filter(file => {
+      const isValidType = file.type.startsWith('image/');
+      const isValidSize = file.size <= 10 * 1024 * 1024;
+      return isValidType && isValidSize;
+    });
+    
+    if (validFiles.length !== files.length) {
+      alert('Some files were skipped. Please ensure all files are images under 10MB.');
+    }
+    
+    setPmChamberMagneticContactImages(prev => [...prev, ...validFiles]);
+    
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPmChamberMagneticContactPreviews(prev => [...prev, e.target.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+  
+  const handleRemovePmChamberMagneticContact = (index) => {
+    setPmChamberMagneticContactImages(prev => prev.filter((_, i) => i !== index));
+    setPmChamberMagneticContactPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  // Image upload handlers for PMRTUCabinetCooling
+  const handlePmRTUCabinetCoolingUpload = (event) => {
+    const files = Array.from(event.target.files);
+    const validFiles = files.filter(file => {
+      const isValidType = file.type.startsWith('image/');
+      const isValidSize = file.size <= 10 * 1024 * 1024;
+      return isValidType && isValidSize;
+    });
+    
+    if (validFiles.length !== files.length) {
+      alert('Some files were skipped. Please ensure all files are images under 10MB.');
+    }
+    
+    setPmRTUCabinetCoolingImages(prev => [...prev, ...validFiles]);
+    
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPmRTUCabinetCoolingPreviews(prev => [...prev, e.target.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+  
+  const handleRemovePmRTUCabinetCooling = (index) => {
+    setPmRTUCabinetCoolingImages(prev => prev.filter((_, i) => i !== index));
+    setPmRTUCabinetCoolingPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  // Image upload handlers for PMDVREquipment
+  const handlePmDVREquipmentUpload = (event) => {
+    const files = Array.from(event.target.files);
+    const validFiles = files.filter(file => {
+      const isValidType = file.type.startsWith('image/');
+      const isValidSize = file.size <= 10 * 1024 * 1024;
+      return isValidType && isValidSize;
+    });
+    
+    if (validFiles.length !== files.length) {
+      alert('Some files were skipped. Please ensure all files are images under 10MB.');
+    }
+    
+    setPmDVREquipmentImages(prev => [...prev, ...validFiles]);
+    
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPmDVREquipmentPreviews(prev => [...prev, e.target.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+  
+  const handleRemovePmDVREquipment = (index) => {
+    setPmDVREquipmentImages(prev => prev.filter((_, i) => i !== index));
+    setPmDVREquipmentPreviews(prev => prev.filter((_, i) => i !== index));
+  };
   
   // Handler to add new MainRTUCabinet row
   const handleAddMainRTUCabinetRow = () => {
@@ -429,6 +714,75 @@ const RTUPMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onB
     loadPMReportFormTypes();
   }, []);
   
+  // Regenerate image previews when initialRTUPMData changes (when navigating back)
+  useEffect(() => {
+    if (initialRTUPMData.pmMainRtuCabinetImages && initialRTUPMData.pmMainRtuCabinetImages.length > 0) {
+      const previews = initialRTUPMData.pmMainRtuCabinetImages.map(file => {
+        if (file instanceof File) {
+          return URL.createObjectURL(file);
+        }
+        return null;
+      }).filter(Boolean);
+      setPmMainRtuCabinetPreviews(previews);
+    }
+    
+    if (initialRTUPMData.pmChamberMagneticContactImages && initialRTUPMData.pmChamberMagneticContactImages.length > 0) {
+      const previews = initialRTUPMData.pmChamberMagneticContactImages.map(file => {
+        if (file instanceof File) {
+          return URL.createObjectURL(file);
+        }
+        return null;
+      }).filter(Boolean);
+      setPmChamberMagneticContactPreviews(previews);
+    }
+    
+    if (initialRTUPMData.pmRTUCabinetCoolingImages && initialRTUPMData.pmRTUCabinetCoolingImages.length > 0) {
+      const previews = initialRTUPMData.pmRTUCabinetCoolingImages.map(file => {
+        if (file instanceof File) {
+          return URL.createObjectURL(file);
+        }
+        return null;
+      }).filter(Boolean);
+      setPmRTUCabinetCoolingPreviews(previews);
+    }
+    
+    if (initialRTUPMData.pmDVREquipmentImages && initialRTUPMData.pmDVREquipmentImages.length > 0) {
+      const previews = initialRTUPMData.pmDVREquipmentImages.map(file => {
+        if (file instanceof File) {
+          return URL.createObjectURL(file);
+        }
+        return null;
+      }).filter(Boolean);
+      setPmDVREquipmentPreviews(previews);
+    }
+  }, [initialRTUPMData]);
+  
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      pmMainRtuCabinetPreviews.forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      pmChamberMagneticContactPreviews.forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      pmRTUCabinetCoolingPreviews.forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      pmDVREquipmentPreviews.forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, [pmMainRtuCabinetPreviews, pmChamberMagneticContactPreviews, pmRTUCabinetCoolingPreviews, pmDVREquipmentPreviews]);
+  
   // Get selected PM Report Form Type name for display
   const getSelectedPMReportFormTypeName = () => {
     if (!pmReportFormTypes || !formData.pmReportFormTypeID) {
@@ -489,7 +843,23 @@ const RTUPMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onB
   
   // Handle next button
   const handleNext = () => {
-    // Add validation logic here if needed
+    // Collect all RTU PM data
+    const rtuPMDataToPass = {
+      pmMainRtuCabinetImages,
+      pmChamberMagneticContactImages,
+      pmRTUCabinetCoolingImages,
+      pmDVREquipmentImages,
+      mainRTUCabinetData,
+      pmChamberMagneticContactData,
+      pmRTUCabinetCoolingData,
+      pmDVREquipmentData
+    };
+    
+    // Pass data to parent before proceeding
+    if (onRTUPMDataUpdate) {
+      onRTUPMDataUpdate(rtuPMDataToPass);
+    }
+    
     onNext();
   };
   
@@ -788,7 +1158,8 @@ const RTUPMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onB
             {/* Main RTU Cabinet Section */}
             <Paper sx={sectionContainerStyle}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
-                🏗️ Main RTU Cabinet Information
+                <Build sx={{ marginRight: 1, verticalAlign: 'middle' }} />
+                Main RTU Cabinet Information
               </Typography>
               
               {/* Action Buttons */}
@@ -1189,12 +1560,26 @@ const RTUPMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onB
                   </Table>
                 </TableContainer>
               </Box>
+              
+              {/* PMMainRtuCabinet Image Upload */}
+              <Box sx={{ marginTop: 3 }}>
+                <MultipleImageUploadField 
+                  field="pmMainRtuCabinetImages"
+                  label="PM Main RTU Cabinet Images"
+                  images={pmMainRtuCabinetImages}
+                  previews={pmMainRtuCabinetPreviews}
+                  onUpload={handlePmMainRtuCabinetUpload}
+                  onRemove={handleRemovePmMainRtuCabinet}
+                  icon={Settings}
+                />
+              </Box>
             </Paper>
             
             {/* PM Chamber Magnetic Contact Section */}
             <Paper sx={sectionContainerStyle}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
-                🔌 PM Chamber Magnetic Contact Information
+                <Settings sx={{ marginRight: 1, verticalAlign: 'middle' }} />
+                PM Chamber Magnetic Contact Information
               </Typography>
               
               {/* Action Buttons */}
@@ -1439,12 +1824,26 @@ const RTUPMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onB
                   </Table>
                 </TableContainer>
               </Box>
+              
+              {/* PMChamberMagneticContact Image Upload */}
+              <Box sx={{ marginTop: 3 }}>
+                <MultipleImageUploadField 
+                  field="pmChamberMagneticContactImages"
+                  label="PM Chamber Magnetic Contact Images"
+                  images={pmChamberMagneticContactImages}
+                  previews={pmChamberMagneticContactPreviews}
+                  onUpload={handlePmChamberMagneticContactUpload}
+                  onRemove={handleRemovePmChamberMagneticContact}
+                  icon={PhotoCamera}
+                />
+              </Box>
             </Paper>
             
             {/* PM RTU Cabinet Cooling Section */}
             <Paper sx={sectionContainerStyle}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
-                ❄️ PM RTU Cabinet Cooling Information
+                <Settings sx={{ marginRight: 1, verticalAlign: 'middle' }} />
+                PM RTU Cabinet Cooling Information
               </Typography>
               
               {/* Action Buttons */}
@@ -1636,12 +2035,26 @@ const RTUPMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onB
                   </Table>
                 </TableContainer>
               </Box>
+              
+              {/* PM RTU Cabinet Cooling Images */}
+              <Box sx={{ marginTop: 3 }}>
+                <MultipleImageUploadField
+                  field="pmRTUCabinetCooling"
+                  label="PM RTU Cabinet Cooling Images"
+                  images={pmRTUCabinetCoolingImages}
+                  previews={pmRTUCabinetCoolingPreviews}
+                  onUpload={handlePmRTUCabinetCoolingUpload}
+                  onRemove={handleRemovePmRTUCabinetCooling}
+                  icon={Settings}
+                />
+              </Box>
             </Paper>
             
             {/* PM DVR Equipment Section */}
             <Paper sx={sectionContainerStyle}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
-                📹 PM DVR Equipment Information
+                <Videocam sx={{ marginRight: 1, verticalAlign: 'middle' }} />
+                PM DVR Equipment Information
               </Typography>
               
               {/* Action Buttons */}
@@ -1868,6 +2281,19 @@ const RTUPMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onB
                   </Table>
                 </TableContainer>
               </Box>
+              
+              {/* PM DVR Equipment Images */}
+              <Box sx={{ marginTop: 3 }}>
+                <MultipleImageUploadField
+                  field="pmDVREquipment"
+                  label="PM DVR Equipment Images"
+                  images={pmDVREquipmentImages}
+                  previews={pmDVREquipmentPreviews}
+                  onUpload={handlePmDVREquipmentUpload}
+                  onRemove={handleRemovePmDVREquipment}
+                  icon={Videocam}
+                />
+              </Box>
             </Paper>
             
             {/* Cleaning of Cabinet / Equipment Section */}
@@ -1961,26 +2387,26 @@ const RTUPMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onB
                 📝 Remarks
               </Typography>
               
-              <Grid container spacing={3} sx={{ marginTop: 1 }}>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Remarks"
-                    value={formData.remarks || ''}
-                    onChange={(e) => onInputChange('remarks', e.target.value)}
-                    sx={{
-                      ...fieldStyle,
-                      width: '100%',
-                      '& .MuiInputBase-root': {
-                        width: '100%'
-                      }
-                    }}
-                    multiline
-                    rows={4}
-                    placeholder="Enter any additional notes..."
-                  />
-                </Grid>
-              </Grid>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                <TextField
+                  fullWidth
+                  value={formData.remarks || ''}
+                  onChange={(e) => onInputChange('remarks', e.target.value)}
+                  sx={{
+                    ...fieldStyle,
+                    width: '100%',
+                    '& .MuiInputBase-root': {
+                      width: '100%'
+                    },
+                    '& .MuiOutlinedInput-root': {
+                      width: '100%'
+                    }
+                  }}
+                  multiline
+                  rows={4}
+                  placeholder="Remarks"
+                />
+              </Box>
             </Paper>
 
             {/* Attended By & Approved By Section */}
