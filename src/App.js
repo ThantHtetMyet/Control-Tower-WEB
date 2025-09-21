@@ -94,6 +94,7 @@ import ReportFormList from './components/report-management-system/ReportFormList
 import ReportFormForm from './components/report-management-system/ReportFormForm/ReportFormForm';
 import ReportFormEdit from './components/report-management-system/ReportFormEdit';
 import RTUPMReportFormDetails from './components/report-management-system/ReportFormDetails/RTUPMReportFormDetails';
+import CMReportFormDetails from './components/report-management-system/ReportFormDetails/CMReportFormDetails';
 
 function App() {
   return (
@@ -698,6 +699,18 @@ function App() {
                       <ReportFormNavBar />
                       <Box sx={{ flexGrow: 1, p: 3 }}>
                         <RTUPMReportFormDetails />
+                      </Box>
+                    </ProtectedRoute>
+                  }
+                />
+                
+                <Route
+                  path="/report-management-system/report-forms/cm-details/:id"
+                  element={
+                    <ProtectedRoute>
+                      <ReportFormNavBar />
+                      <Box sx={{ flexGrow: 1, p: 3 }}>
+                        <CMReportFormDetails />
                       </Box>
                     </ProtectedRoute>
                   }

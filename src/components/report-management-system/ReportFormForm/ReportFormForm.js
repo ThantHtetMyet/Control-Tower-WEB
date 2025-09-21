@@ -40,6 +40,11 @@ const ReportFormForm = () => {
   // Add toast notification state
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   
+  // Add CM material used data state management
+  const [materialUsedData, setMaterialUsedData] = useState([]);
+  const [materialUsedOldSerialImages, setMaterialUsedOldSerialImages] = useState([]);
+  const [materialUsedNewSerialImages, setMaterialUsedNewSerialImages] = useState([]);
+  
   // Add RTU PM data state management
   const [rtuPMData, setRtuPMData] = useState({
     pmMainRtuCabinetImages: [],
@@ -161,7 +166,14 @@ const ReportFormForm = () => {
           ...formData,
           userId: user.id
         };
-        result = await submitCMReportForm(formDataWithUser, beforeIssueImages, afterActionImages);
+        result = await submitCMReportForm(
+          formDataWithUser, 
+          beforeIssueImages, 
+          afterActionImages,
+          materialUsedData,
+          materialUsedOldSerialImages,
+          materialUsedNewSerialImages
+        );
         console.log('CM Report Form submitted successfully:', result);
       } else if (isRTUPreventativeMaintenance) {
         console.log("RTU Preventative Maintenance is working");
@@ -229,6 +241,13 @@ const ReportFormForm = () => {
     setAfterActionImages(afterImages);
   };
 
+  // Add function to handle material used data from CMReportForm
+  const handleMaterialUsedDataUpdate = (materialData, oldSerialImages, newSerialImages) => {
+    setMaterialUsedData(materialData);
+    setMaterialUsedOldSerialImages(oldSerialImages);
+    setMaterialUsedNewSerialImages(newSerialImages);
+  };
+
   const getStepContent = (step) => {
     const isCorrectiveMaintenance = formData.reportFormTypeID === 2 || 
       reportFormTypes.find(type => type.id === formData.reportFormTypeID)?.name?.toLowerCase().includes('corrective');
@@ -266,6 +285,10 @@ const ReportFormForm = () => {
               onImageDataUpdate={handleImageDataUpdate}
               initialBeforeIssueImages={beforeIssueImages}
               initialAfterActionImages={afterActionImages}
+              onMaterialUsedDataUpdate={handleMaterialUsedDataUpdate}
+              initialMaterialUsedData={materialUsedData}
+              initialMaterialUsedOldSerialImages={materialUsedOldSerialImages}
+              initialMaterialUsedNewSerialImages={materialUsedNewSerialImages}
             />
           );
         }
@@ -339,6 +362,9 @@ const ReportFormForm = () => {
               onBack={handleBack}
               loading={loading}
               error={error}
+              materialUsedData={materialUsedData}
+              materialUsedOldSerialImages={materialUsedOldSerialImages}
+              materialUsedNewSerialImages={materialUsedNewSerialImages}
             />
           );
         }

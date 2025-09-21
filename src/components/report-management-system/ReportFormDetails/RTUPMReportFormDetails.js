@@ -28,7 +28,8 @@ import {
   Videocam as VideocamIcon,
   RemoveCircle as RemoveCircleIcon,
   AccessTime,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Print as PrintIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import RMSTheme from '../../theme-resource/RMSTheme';
@@ -440,9 +441,55 @@ const RTUPMReportFormDetails = () => {
 
   return (
     <Box sx={{ padding: 3 }}>
-      <Typography variant="h4" sx={{ marginBottom: 3, color: '#1976d2', fontWeight: 'bold' }}>
-        RTU Preventive Maintenance Report - Details
-      </Typography>
+      {/* Header with JobNo in top right corner */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: 3
+      }}>
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            color: '#1976d2', 
+            fontWeight: 'bold' 
+          }}
+        >
+          RTU Preventive Maintenance Report - Details
+        </Typography>
+        
+        {/* JobNo display in top right corner */}
+        <Box sx={{
+          backgroundColor: '#f5f5f5',
+          padding: '8px 16px',
+          borderRadius: '8px',
+          border: '1px solid #ddd'
+        }}>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              color: '#2C3E50',
+              fontWeight: 'normal',
+              fontSize: '14px',
+              display: 'inline'
+            }}
+          >
+            Job No: 
+          </Typography>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              color: '#FF0000',
+              fontWeight: 'bold',
+              fontSize: '16px',
+              display: 'inline',
+              marginLeft: '4px'
+            }}
+          >
+            {formData.jobNo || 'Not assigned'}
+          </Typography>
+        </Box>
+      </Box>
 
       {error && (
         <Alert severity="error" sx={{ marginBottom: 3 }}>
@@ -450,52 +497,120 @@ const RTUPMReportFormDetails = () => {
         </Alert>
       )}
 
+      {/* Action Buttons - Moved to top */}
+      <Paper sx={{
+        backgroundColor: '#ffffff',
+        borderRadius: '12px',
+        padding: '24px',
+        marginBottom: '24px',
+        border: '1px solid #e0e0e0',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+        transition: 'box-shadow 0.3s ease',
+        '&:hover': {
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)'
+        }
+      }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Button
+            variant="contained"
+            onClick={handleBack}
+            sx={{
+              background: RMSTheme.components.button.primary.background,
+              color: RMSTheme.components.button.primary.text,
+              padding: '12px 32px',
+              borderRadius: RMSTheme.borderRadius.small,
+              border: `1px solid ${RMSTheme.components.button.primary.border}`,
+              boxShadow: RMSTheme.components.button.primary.shadow,
+              '&:hover': {
+                background: RMSTheme.components.button.primary.hover
+              }
+            }}
+          >
+            ← Back
+          </Button>
+          
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="contained"
+              onClick={() => navigate(`/report-management-system/report-forms/edit/${id}`)}
+              sx={{
+                background: RMSTheme.components.button.primary.background,
+                color: RMSTheme.components.button.primary.text,
+                padding: '12px 32px',
+                borderRadius: RMSTheme.borderRadius.small,
+                border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                boxShadow: RMSTheme.components.button.primary.shadow,
+                '&:hover': {
+                  background: RMSTheme.components.button.primary.hover
+                }
+              }}
+            >
+              Edit Report
+            </Button>
+            
+            <Button
+              variant="contained"
+              onClick={() => window.print()}
+              startIcon={<PrintIcon />}
+              sx={{
+                background: RMSTheme.components.button.primary.background,
+                color: RMSTheme.components.button.primary.text,
+                padding: '12px 32px',
+                borderRadius: RMSTheme.borderRadius.small,
+                border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                boxShadow: RMSTheme.components.button.primary.shadow,
+                '&:hover': {
+                  background: RMSTheme.components.button.primary.hover
+                }
+              }}
+            >
+              Print Report
+            </Button>
+          </Box>
+        </Box>
+      </Paper>
+
       {/* Basic Information Section */}
       <Paper sx={sectionContainer}>
         <Typography variant="h5" sx={sectionHeader}>
           Basic Information
         </Typography>
         <Grid container spacing={3}>
+          
           <Grid item xs={12} md={6}>
             <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>Job Number</Typography>
-              <Typography variant="body1">{formData?.jobNo || 'Not assigned'}</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>System Description</Typography>
+              <Typography variant="body1">{formData.systemDescription || 'Not specified'}</Typography>
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>
             <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>System Description</Typography>
-              <Typography variant="body1">{formData?.systemNameWarehouseName || 'Not specified'}</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Station Name</Typography>
+              <Typography variant="body1">{formData.stationName || 'Not specified'}</Typography>
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>
             <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>Station Name</Typography>
-              <Typography variant="body1">{formData?.stationNameWarehouseName || 'Not specified'}</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Project No</Typography>
+              <Typography variant="body1">{formData.projectNo || 'Not specified'}</Typography>
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>
             <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>Project No</Typography>
-              <Typography variant="body1">{formData?.pmReportFormRTU?.projectNo || 'Not specified'}</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Customer</Typography>
+              <Typography variant="body1">{formData.customer || 'Not specified'}</Typography>
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>
             <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>Customer</Typography>
-              <Typography variant="body1">{formData?.pmReportFormRTU?.customer || 'Not specified'}</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Report Form Type</Typography>
+              <Typography variant="body1">{formData.reportFormTypeName || 'Preventative Maintenance'}</Typography>
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>
             <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>Report Form Type</Typography>
-              <Typography variant="body1">{formData?.reportFormTypeName || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>PM Report Form Type</Typography>
-              <Typography variant="body1">{formData?.pmReportFormRTU?.pmReportFormTypeName || 'Not specified'}</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>PM Report Form Type</Typography>
+              <Typography variant="body1">{formData.pmReportFormTypeName || 'RTU'}</Typography>
             </Box>
           </Grid>
         </Grid>
@@ -751,79 +866,6 @@ const RTUPMReportFormDetails = () => {
         </Grid>
       </Paper>
 
-      {/* Action Buttons - Updated to match RTUPMReviewReportForm styling */}
-      <Paper sx={{
-        backgroundColor: '#ffffff',
-        borderRadius: '12px',
-        padding: '24px',
-        marginBottom: '24px',
-        border: '1px solid #e0e0e0',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-        transition: 'box-shadow 0.3s ease',
-        '&:hover': {
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)'
-        },
-        background: '#ffffff',
-        marginBottom: 0
-      }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button
-            variant="contained"
-            onClick={handleBack}
-            sx={{
-              background: RMSTheme.components.button.primary.background,
-              color: RMSTheme.components.button.primary.text,
-              padding: '12px 32px',
-              borderRadius: RMSTheme.borderRadius.small,
-              border: `1px solid ${RMSTheme.components.button.primary.border}`,
-              boxShadow: RMSTheme.components.button.primary.shadow,
-              '&:hover': {
-                background: RMSTheme.components.button.primary.hover
-              }
-            }}
-          >
-            ← Back
-          </Button>
-          
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="contained"
-              onClick={() => navigate(`/report-management-system/report-forms/edit/${id}`)}
-              sx={{
-                background: RMSTheme.components.button.primary.background,
-                color: RMSTheme.components.button.primary.text,
-                padding: '12px 32px',
-                borderRadius: RMSTheme.borderRadius.small,
-                border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                boxShadow: RMSTheme.components.button.primary.shadow,
-                '&:hover': {
-                  background: RMSTheme.components.button.primary.hover
-                }
-              }}
-            >
-              Edit Report
-            </Button>
-            
-            <Button
-              variant="contained"
-              onClick={() => window.print()}
-              sx={{
-                background: RMSTheme.components.button.primary.background,
-                color: RMSTheme.components.button.primary.text,
-                padding: '12px 32px',
-                borderRadius: RMSTheme.components.button.primary.small,
-                border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                boxShadow: RMSTheme.components.button.primary.shadow,
-                '&:hover': {
-                  background: RMSTheme.components.button.primary.hover
-                }
-              }}
-            >
-              Print Report
-            </Button>
-          </Box>
-        </Box>
-      </Paper>
     </Box>
   );
 };

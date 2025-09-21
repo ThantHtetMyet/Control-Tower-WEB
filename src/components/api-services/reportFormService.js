@@ -97,6 +97,12 @@ export const getCMReportForm = async (id) => {
   return response.data;
 };
 
+// Add this function to get CM Report Form by ReportForm ID
+export const getCMReportFormByReportFormId = async (reportFormId) => {
+  const response = await api.get(`/cmreportform/ByReportForm/${reportFormId}`);
+  return response.data;
+};
+
 export const updateCMReportForm = async (id, cmReportFormData) => {
   const response = await api.put(`/cmreportform/${id}`, cmReportFormData);
   return response.data;
@@ -126,7 +132,7 @@ export const createReportFormImage = async (reportFormId, imageFile, reportFormI
 };
 
 export const getReportFormImages = async (reportFormId) => {
-  const response = await api.get(`/reportformimage/reportform/${reportFormId}`);
+  const response = await api.get(`/reportformimage/ByReportForm/${reportFormId}`);
   return response.data;
 };
 
@@ -148,12 +154,14 @@ export const getReportFormImageType = async (id) => {
 
 
 // Complete submission flow for CM Report Form
-export const submitCMReportForm = async (formData, beforeIssueImages, afterActionImages) => {
+export const submitCMReportForm = async (formData, beforeIssueImages, afterActionImages, materialUsedData = [], materialUsedOldSerialImages = [], materialUsedNewSerialImages = []) => {
   try {
     // Step 0: Get ReportFormImageTypes to get correct GUID IDs
     const imageTypes = await getReportFormImageTypes();
-    const beforeImageType = imageTypes.find(type => type.imageTypeName === 'Before');
-    const afterImageType = imageTypes.find(type => type.imageTypeName === 'After');
+    const beforeImageType = imageTypes.find(type => type.imageTypeName === 'CMBeforeIssueImage');
+    const afterImageType = imageTypes.find(type => type.imageTypeName === 'CMAfterIssueImage');
+    const materialUsedOldSerialImageType = imageTypes.find(type => type.imageTypeName === 'CMMaterialUsedOldSerialNo');
+    const materialUsedNewSerialImageType = imageTypes.find(type => type.imageTypeName === 'CMMaterialUsedNewSerialNo');
     
     if (!beforeImageType || !afterImageType) {
       throw new Error('Required image types not found');
@@ -162,9 +170,9 @@ export const submitCMReportForm = async (formData, beforeIssueImages, afterActio
     // Step 1: Create ReportForm entry with ALL required fields
     const reportFormData = {
       ReportFormTypeID: formData.reportFormTypeID,
-      JobNo: formData.jobNo,  // ✅ Add JobNo
-      SystemNameWarehouseID: formData.systemNameWarehouseID,  // ✅ Add SystemName FK
-      StationNameWarehouseID: formData.stationNameWarehouseID,  // ✅ Add StationName FK
+      JobNo: formData.jobNo,
+      SystemNameWarehouseID: formData.systemNameWarehouseID,
+      StationNameWarehouseID: formData.stationNameWarehouseID,
       UploadStatus: formData.uploadStatus,
       UploadHostname: formData.uploadHostname,
       UploadIPAddress: formData.uploadIPAddress,
@@ -172,15 +180,13 @@ export const submitCMReportForm = async (formData, beforeIssueImages, afterActio
     };
     const reportForm = await createReportForm(reportFormData);
     
-    // Step 2: Create CMReportForm entry (removed SystemName/StationName as they're now in ReportForm)
+    // Step 2: Create CMReportForm entry
     const cmReportFormData = {
       reportFormID: reportForm.id,
       furtherActionTakenID: formData.furtherActionTakenID,
       formstatusID: formData.formstatusID,
-      // ❌ Removed: stationName (now in ReportForm as FK)
       customer: formData.customer,
       projectNo: formData.projectNo,
-      // ❌ Removed: systemDescription (now handled via FK relationship)
       issueReportedDescription: formData.issueReportedDescription,
       issueFoundDescription: formData.issueFoundDescription,
       actionTakenDescription: formData.actionTakenDescription,
@@ -193,30 +199,82 @@ export const submitCMReportForm = async (formData, beforeIssueImages, afterActio
       remark: formData.Remark,
       createdBy: formData.userId
     };
-    const cmReportForm = await createCMReportForm(cmReportFormData);
+    const cmReportFormResponse = await createCMReportForm(cmReportFormData);
     
-    // Step 3: Upload before issue images with section-specific folder
+    // Fix: Extract the actual CMReportForm data from the response
+    // The backend returns CreatedAtAction which wraps the data
+    const cmReportForm = cmReportFormResponse.value || cmReportFormResponse;
+    
+    // Validate that we have the CMReportForm ID
+    if (!cmReportForm || !cmReportForm.id) {
+      console.error('CMReportForm creation failed - no ID returned:', cmReportFormResponse);
+      throw new Error('Failed to create CMReportForm - no ID returned from server');
+    }
+    
+    // Step 3: Create CMMaterialUsed entries if material used data exists
+    if (materialUsedData && materialUsedData.length > 0) {
+      const materialUsedPromises = materialUsedData.map(async (materialItem) => {
+        const materialUsedData = {
+          cmReportFormID: cmReportForm.id,
+          itemDescription: materialItem.ItemDescription,
+          newSerialNo: materialItem.NewSerialNo,
+          oldSerialNo: materialItem.OldSerialNo,
+          remark: materialItem.Remark,
+          createdBy: formData.userId
+        };
+        return createCMMaterialUsed(materialUsedData);
+      });
+      
+      await Promise.all(materialUsedPromises);
+    }
+    
+    // Step 4: Upload before issue images - using specific folder name
     const beforeImagePromises = beforeIssueImages.map(async (imageFile) => {
       return createReportFormImage(
         reportForm.id,                    // reportFormId
         imageFile,                       // imageFile
         beforeImageType.id,              // reportFormImageTypeId (GUID)
-        'BeforeIssueImages'              // sectionName for folder organization
+        'BeforeIssue'                    // Use "BeforeIssue" as folder name
       );
     });
     
-    // Step 4: Upload after action images with section-specific folder
+    // Step 5: Upload after action images - using specific folder name
     const afterImagePromises = afterActionImages.map(async (imageFile) => {
       return createReportFormImage(
         reportForm.id,                    // reportFormId
         imageFile,                       // imageFile
         afterImageType.id,               // reportFormImageTypeId (GUID)
-        'AfterActionImages'              // sectionName for folder organization
+        'AfterAction'                    // Use "AfterAction" as folder name
+      );
+    });
+    
+    // Step 6: Upload material used old serial images - using specific folder name
+    const materialUsedOldSerialPromises = materialUsedOldSerialImages.map(async (imageFile) => {
+      return createReportFormImage(
+        reportForm.id,                           // reportFormId
+        imageFile,                              // imageFile
+        materialUsedOldSerialImageType.id,      // reportFormImageTypeId (GUID)
+        'OldSerialNo'                           // Use "OldSerialNo" as folder name
+      );
+    });
+    
+    // Step 7: Upload material used new serial images - using specific folder name
+    const materialUsedNewSerialPromises = materialUsedNewSerialImages.map(async (imageFile) => {
+      return createReportFormImage(
+        reportForm.id,                           // reportFormId
+        imageFile,                              // imageFile
+        materialUsedNewSerialImageType.id,      // reportFormImageTypeId (GUID)
+        'NewSerialNo'                           // Use "NewSerialNo" as folder name
       );
     });
     
     // Wait for all image uploads to complete
-    await Promise.all([...beforeImagePromises, ...afterImagePromises]);
+    await Promise.all([
+      ...beforeImagePromises, 
+      ...afterImagePromises,
+      ...materialUsedOldSerialPromises,
+      ...materialUsedNewSerialPromises
+    ]);
     
     return {
       success: true,
@@ -487,3 +545,15 @@ export const getRTUPMReportForm = async (id) => {
 // export const submitServerPMReportForm = async (formData, serverPMData, user) => {
 //   // Implementation for Server PM reports
 // };
+
+// Add this function before the submitCMReportForm function
+export const createCMMaterialUsed = async (materialUsedData) => {
+  const response = await api.post('/CMMaterialUsed', materialUsedData);
+  return response.data;
+};
+
+// Add this function to get CM Material Used by CM Report Form ID
+export const getCMMaterialUsed = async (cmReportFormId) => {
+  const response = await api.get(`/CMMaterialUsed/bycmreportform/${cmReportFormId}`);
+  return response.data;
+};

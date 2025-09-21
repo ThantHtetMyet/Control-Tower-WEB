@@ -14,6 +14,17 @@ import {
   FormHelperText,
   Card,
   CardContent,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -21,6 +32,8 @@ import {
   Image as ImageIcon,
   PhotoCamera,
   Build,
+  Add as AddIcon,
+  Settings,
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -157,7 +170,11 @@ const CMReportForm = ({
   onBack, 
   onImageDataUpdate,
   initialBeforeIssueImages = [],
-  initialAfterActionImages = []
+  initialAfterActionImages = [],
+  onMaterialUsedDataUpdate,
+  initialMaterialUsedData = [],
+  initialMaterialUsedOldSerialImages = [],
+  initialMaterialUsedNewSerialImages = []
 }) => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [warehouseData, setWarehouseData] = useState({
@@ -171,6 +188,16 @@ const CMReportForm = ({
   const [beforeIssuePreviews, setBeforeIssuePreviews] = useState([]);
   const [afterActionImages, setAfterActionImages] = useState(initialAfterActionImages);
   const [afterActionPreviews, setAfterActionPreviews] = useState([]);
+
+  // Material Used state management
+  const [materialUsedData, setMaterialUsedData] = useState(initialMaterialUsedData.length > 0 ? initialMaterialUsedData : []);
+  const [materialUsedOldSerialImages, setMaterialUsedOldSerialImages] = useState(initialMaterialUsedOldSerialImages);
+  const [materialUsedOldSerialPreviews, setMaterialUsedOldSerialPreviews] = useState([]);
+  const [materialUsedNewSerialImages, setMaterialUsedNewSerialImages] = useState(initialMaterialUsedNewSerialImages);
+  const [materialUsedNewSerialPreviews, setMaterialUsedNewSerialPreviews] = useState([]);
+  
+  // Modal state for material used clear confirmation
+  const [showMaterialUsedClearConfirm, setShowMaterialUsedClearConfirm] = useState(false);
 
   // Helper function to format date without timezone conversion
   const formatDateForInput = (date) => {
@@ -234,7 +261,29 @@ const CMReportForm = ({
       }).filter(Boolean);
       setAfterActionPreviews(previews);
     }
-  }, [initialBeforeIssueImages, initialAfterActionImages]); // Depend on initial images
+    
+    // Create previews for initial material used old serial images
+    if (initialMaterialUsedOldSerialImages.length > 0) {
+      const previews = initialMaterialUsedOldSerialImages.map(file => {
+        if (file instanceof File) {
+          return URL.createObjectURL(file);
+        }
+        return null;
+      }).filter(Boolean);
+      setMaterialUsedOldSerialPreviews(previews);
+    }
+    
+    // Create previews for initial material used new serial images
+    if (initialMaterialUsedNewSerialImages.length > 0) {
+      const previews = initialMaterialUsedNewSerialImages.map(file => {
+        if (file instanceof File) {
+          return URL.createObjectURL(file);
+        }
+        return null;
+      }).filter(Boolean);
+      setMaterialUsedNewSerialPreviews(previews);
+    }
+  }, [initialBeforeIssueImages, initialAfterActionImages, initialMaterialUsedOldSerialImages, initialMaterialUsedNewSerialImages]); // Depend on initial images
 
   // 3. Cleanup image preview URLs on unmount and when previews change
   useEffect(() => {
@@ -250,8 +299,18 @@ const CMReportForm = ({
           URL.revokeObjectURL(preview);
         }
       });
+      materialUsedOldSerialPreviews.forEach(preview => {
+        if (preview && typeof preview === 'string') {
+          URL.revokeObjectURL(preview);
+        }
+      });
+      materialUsedNewSerialPreviews.forEach(preview => {
+        if (preview && typeof preview === 'string') {
+          URL.revokeObjectURL(preview);
+        }
+      });
     };
-  }, [beforeIssuePreviews, afterActionPreviews]); // Depend on preview arrays
+  }, [beforeIssuePreviews, afterActionPreviews, materialUsedOldSerialPreviews, materialUsedNewSerialPreviews]); // Depend on preview arrays
 
   // 4. Update parent component when images change
   useEffect(() => {
@@ -259,6 +318,13 @@ const CMReportForm = ({
       onImageDataUpdate(beforeIssueImages, afterActionImages);
     }
   }, [beforeIssueImages, afterActionImages, onImageDataUpdate]); // Depend on image arrays and callback
+
+  // 5. Update parent component when material used data changes
+  useEffect(() => {
+    if (onMaterialUsedDataUpdate) {
+      onMaterialUsedDataUpdate(materialUsedData, materialUsedOldSerialImages, materialUsedNewSerialImages);
+    }
+  }, [materialUsedData, materialUsedOldSerialImages, materialUsedNewSerialImages, onMaterialUsedDataUpdate]); // Depend on material used data and callback
 
   // Multiple image upload handlers
   const handleBeforeIssueUpload = (event) => {
@@ -351,13 +417,137 @@ const CMReportForm = ({
     onInputChange('afterActionImages', newImages);
   };
 
+  // Material Used Old Serial Image handlers
+  const handleMaterialUsedOldSerialUpload = (event) => {
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
+    
+    const validFiles = [];
+    const newPreviews = [];
+    
+    files.forEach(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`File ${file.name} is too large. Maximum size is 10MB.`);
+        return;
+      }
+      
+      validFiles.push(file);
+      newPreviews.push(URL.createObjectURL(file));
+    });
+    
+    if (validFiles.length > 0) {
+      setMaterialUsedOldSerialImages(prev => [...prev, ...validFiles]);
+      setMaterialUsedOldSerialPreviews(prev => [...prev, ...newPreviews]);
+    }
+    
+    event.target.value = '';
+  };
+
+  const handleRemoveMaterialUsedOldSerial = (index) => {
+    if (materialUsedOldSerialPreviews[index]) {
+      URL.revokeObjectURL(materialUsedOldSerialPreviews[index]);
+    }
+    
+    setMaterialUsedOldSerialImages(prev => prev.filter((_, i) => i !== index));
+    setMaterialUsedOldSerialPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Material Used New Serial Image handlers
+  const handleMaterialUsedNewSerialUpload = (event) => {
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
+    
+    const validFiles = [];
+    const newPreviews = [];
+    
+    files.forEach(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`File ${file.name} is too large. Maximum size is 10MB.`);
+        return;
+      }
+      
+      validFiles.push(file);
+      newPreviews.push(URL.createObjectURL(file));
+    });
+    
+    if (validFiles.length > 0) {
+      setMaterialUsedNewSerialImages(prev => [...prev, ...validFiles]);
+      setMaterialUsedNewSerialPreviews(prev => [...prev, ...newPreviews]);
+    }
+    
+    event.target.value = '';
+  };
+
+  const handleRemoveMaterialUsedNewSerial = (index) => {
+    if (materialUsedNewSerialPreviews[index]) {
+      URL.revokeObjectURL(materialUsedNewSerialPreviews[index]);
+    }
+    
+    setMaterialUsedNewSerialImages(prev => prev.filter((_, i) => i !== index));
+    setMaterialUsedNewSerialPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Material Used handlers
+  const handleAddMaterialUsedRow = () => {
+    setMaterialUsedData([...materialUsedData, {
+      ItemDescription: '',
+      NewSerialNo: '',
+      OldSerialNo: '',
+      Remark: ''
+    }]);
+  };
+
+  const handleRemoveMaterialUsedRow = (index) => {
+    const newData = materialUsedData.filter((_, i) => i !== index);
+    setMaterialUsedData(newData);
+  };
+
+  const handleMaterialUsedChange = (index, field, value) => {
+    const newData = [...materialUsedData];
+    newData[index][field] = value;
+    setMaterialUsedData(newData);
+  };
+
+  // Handler to show clear values confirmation modal
+  const handleMaterialUsedClearValuesConfirm = () => {
+    setShowMaterialUsedClearConfirm(true);
+  };
+
+  // Handler to execute clear all values (keep rows structure)
+  const handleMaterialUsedClearValuesExecute = () => {
+    // Clear table data
+    setMaterialUsedData([]);
+    
+    // Clear old serial images
+    materialUsedOldSerialPreviews.forEach(preview => {
+      if (preview && typeof preview === 'string') {
+        URL.revokeObjectURL(preview);
+      }
+    });
+    setMaterialUsedOldSerialImages([]);
+    setMaterialUsedOldSerialPreviews([]);
+    
+    // Clear new serial images
+    materialUsedNewSerialPreviews.forEach(preview => {
+      if (preview && typeof preview === 'string') {
+        URL.revokeObjectURL(preview);
+      }
+    });
+    setMaterialUsedNewSerialImages([]);
+    setMaterialUsedNewSerialPreviews([]);
+    
+    setShowMaterialUsedClearConfirm(false);
+  };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       beforeIssuePreviews.forEach(preview => URL.revokeObjectURL(preview));
       afterActionPreviews.forEach(preview => URL.revokeObjectURL(preview));
+      materialUsedOldSerialPreviews.forEach(preview => URL.revokeObjectURL(preview));
+      materialUsedNewSerialPreviews.forEach(preview => URL.revokeObjectURL(preview));
     };
-  }, [beforeIssuePreviews, afterActionPreviews]);
+  }, [beforeIssuePreviews, afterActionPreviews, materialUsedOldSerialPreviews, materialUsedNewSerialPreviews]);
 
   // Update the handleNext function to pass image data
   const handleNext = () => {
@@ -383,6 +573,10 @@ const CMReportForm = ({
       // Pass image data to parent before proceeding
       if (onImageDataUpdate) {
         onImageDataUpdate(beforeIssueImages, afterActionImages);
+      }
+      // Pass material used data to parent before proceeding
+      if (onMaterialUsedDataUpdate) {
+        onMaterialUsedDataUpdate(materialUsedData, materialUsedOldSerialImages, materialUsedNewSerialImages);
       }
       onNext();
     }
@@ -514,24 +708,24 @@ const CMReportForm = ({
           maxWidth: '1200px',
           margin: '0 auto',
           borderRadius: '16px',
-          padding: 4,
+          overflow: 'hidden',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
         }}>
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              marginBottom: 4,
-              color: '#2C3E50',
-              fontWeight: 700,
-              textAlign: 'center',
-              background: 'linear-gradient(45deg, #2C3E50, #3498DB)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}
-          >
-            Corrective Maintenance Information
-          </Typography>
+          <Box sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            padding: 4,
+            textAlign: 'center'
+          }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, marginBottom: 1 }}>
+              Corrective Maintenance Report
+            </Typography>
+            <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
+              Complete the form below with accurate maintenance information
+            </Typography>
+          </Box>
+          
+          <Box sx={{ padding: 4 }}>
           
           {/* Basic Information Summary Section */}
           <Paper sx={{
@@ -912,6 +1106,238 @@ const CMReportForm = ({
             </Box>
           </Paper>
           
+          {/* Material Used Section */}
+          <Paper sx={sectionContainerStyle}>
+            <Typography variant="h5" sx={sectionHeaderStyle}>
+              <Settings sx={{ marginRight: 1, verticalAlign: 'middle' }} />
+              Material Used Information
+            </Typography>
+            
+            {/* Action Buttons */}
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2, 
+              marginTop: 2, 
+              marginBottom: 2,
+              flexWrap: 'wrap'
+            }}>
+              <Button
+                startIcon={<AddIcon />}
+                onClick={handleAddMaterialUsedRow}
+                variant="contained"
+                sx={{
+                  background: RMSTheme.components.button.primary.background,
+                  color: RMSTheme.components.button.primary.text,
+                  '&:hover': {
+                    background: RMSTheme.components.button.primary.hover
+                  }
+                }}
+              >
+                Add Material Used Row
+              </Button>
+              
+              <Button
+                onClick={handleMaterialUsedClearValuesConfirm}
+                disabled={materialUsedData.length === 0 && materialUsedOldSerialImages.length === 0 && materialUsedNewSerialImages.length === 0}
+                variant="contained"
+                sx={{
+                  background: '#f39c12',
+                  color: '#FFFFFF',
+                  '&:hover': {
+                    background: '#e67e22'
+                  },
+                  '&:disabled': {
+                    background: '#cccccc',
+                    color: '#666666'
+                  }
+                }}
+              >
+                Clear Values
+              </Button>
+            </Box>
+            
+            <Box sx={{ marginTop: 2 }}>
+              <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e0e0' }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
+                      <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>Item Description</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>New Serial No</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>Old Serial No</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>Remark</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {materialUsedData.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} sx={{ textAlign: 'center', padding: '24px', color: '#6c757d' }}>
+                          No material used data added yet. Click "Add Material Used Row" to get started.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      materialUsedData.map((row, index) => (
+                        <TableRow 
+                          key={index} 
+                          sx={{ 
+                            '&:hover': { backgroundColor: '#f5f5f5' }
+                          }}
+                        >
+                          {/* Item Description */}
+                          <TableCell>
+                            <TextField
+                              size="small"
+                              value={row.ItemDescription}
+                              onChange={(e) => handleMaterialUsedChange(index, 'ItemDescription', e.target.value)}
+                              placeholder="Enter item description"
+                              sx={{
+                                minWidth: '200px',
+                                '& .MuiOutlinedInput-root': {
+                                  backgroundColor: '#fafafa',
+                                  '& fieldset': {
+                                    borderColor: '#d0d0d0'
+                                  },
+                                  '&:hover fieldset': {
+                                    borderColor: '#2C3E50'
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: '#3498DB'
+                                  }
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          
+                          {/* New Serial No */}
+                          <TableCell>
+                            <TextField
+                              size="small"
+                              value={row.NewSerialNo}
+                              onChange={(e) => handleMaterialUsedChange(index, 'NewSerialNo', e.target.value)}
+                              placeholder="Enter new serial no"
+                              sx={{
+                                minWidth: '150px',
+                                '& .MuiOutlinedInput-root': {
+                                  backgroundColor: '#fafafa',
+                                  '& fieldset': {
+                                    borderColor: '#d0d0d0'
+                                  },
+                                  '&:hover fieldset': {
+                                    borderColor: '#2C3E50'
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: '#3498DB'
+                                  }
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          
+                          {/* Old Serial No */}
+                          <TableCell>
+                            <TextField
+                              size="small"
+                              value={row.OldSerialNo}
+                              onChange={(e) => handleMaterialUsedChange(index, 'OldSerialNo', e.target.value)}
+                              placeholder="Enter old serial no"
+                              sx={{
+                                minWidth: '150px',
+                                '& .MuiOutlinedInput-root': {
+                                  backgroundColor: '#fafafa',
+                                  '& fieldset': {
+                                    borderColor: '#d0d0d0'
+                                  },
+                                  '&:hover fieldset': {
+                                    borderColor: '#2C3E50'
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: '#3498DB'
+                                  }
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          
+                          {/* Remark */}
+                          <TableCell>
+                            <TextField
+                              size="small"
+                              value={row.Remark}
+                              onChange={(e) => handleMaterialUsedChange(index, 'Remark', e.target.value)}
+                              placeholder="Enter remark"
+                              sx={{
+                                minWidth: '200px',
+                                '& .MuiOutlinedInput-root': {
+                                  backgroundColor: '#fafafa',
+                                  '& fieldset': {
+                                    borderColor: '#d0d0d0'
+                                  },
+                                  '&:hover fieldset': {
+                                    borderColor: '#2C3E50'
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: '#3498DB'
+                                  }
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          
+                          {/* Actions */}
+                          <TableCell>
+                            <IconButton
+                              onClick={() => handleRemoveMaterialUsedRow(index)}
+                              size="small"
+                              sx={{
+                                color: '#e74c3c',
+                                '&:hover': {
+                                  backgroundColor: '#fdf2f2'
+                                }
+                              }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+
+            {/* Material Used Images Upload - Two Sections */}
+            <Box sx={{ marginTop: 3 }}>
+              <Grid container spacing={3}>
+                {/* Old Serial No Images */}
+                <Grid item xs={12} md={6}>
+                  <MultipleImageUploadField 
+                    field="materialUsedOldSerialImages"
+                    label="Old Serial No Images"
+                    images={materialUsedOldSerialImages}
+                    previews={materialUsedOldSerialPreviews}
+                    onUpload={handleMaterialUsedOldSerialUpload}
+                    onRemove={handleRemoveMaterialUsedOldSerial}
+                    icon={Settings}
+                  />
+                </Grid>
+                
+                {/* New Serial No Images */}
+                <Grid item xs={12} md={6}>
+                  <MultipleImageUploadField 
+                    field="materialUsedNewSerialImages"
+                    label="New Serial No Images"
+                    images={materialUsedNewSerialImages}
+                    previews={materialUsedNewSerialPreviews}
+                    onUpload={handleMaterialUsedNewSerialUpload}
+                    onRemove={handleRemoveMaterialUsedNewSerial}
+                    icon={Settings}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          </Paper>
+          
           {/* Remark Section */}
           <Paper sx={{
             ...sectionContainerStyle,
@@ -979,6 +1405,39 @@ const CMReportForm = ({
               </Button>
             </Box>
           </Paper>
+          
+          {/* Material Used Clear Values Confirmation Modal */}
+          <Dialog
+            open={showMaterialUsedClearConfirm}
+            onClose={() => setShowMaterialUsedClearConfirm(false)}
+            aria-labelledby="material-used-clear-dialog-title"
+            aria-describedby="material-used-clear-dialog-description"
+          >
+            <DialogTitle id="material-used-clear-dialog-title">
+              Clear Material Used Values
+            </DialogTitle>
+            <DialogContent>
+              <DialogContentText id="material-used-clear-dialog-description">
+                Are you sure you want to clear all values in the Material Used table? This action will keep the table structure but remove all entered data.
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button 
+                onClick={() => setShowMaterialUsedClearConfirm(false)} 
+                color="primary"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleMaterialUsedClearValuesExecute} 
+                color="warning" 
+                variant="contained"
+              >
+                Clear Values
+              </Button>
+            </DialogActions>
+          </Dialog>
+          </Box>
         </Paper>
       </Box>
     </LocalizationProvider>

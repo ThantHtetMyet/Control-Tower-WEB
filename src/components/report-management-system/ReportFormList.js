@@ -184,6 +184,8 @@ const ReportFormList = () => {
                   // Check if it's an RTU PM report
                   if (form.specificReportTypeName === 'RTU') {
                     navigate(`/report-management-system/report-forms/rtu-pm-details/${form.id}`);
+                  } else if (form.reportFormTypeName === 'Corrective Maintenance') {
+                    navigate(`/report-management-system/report-forms/cm-details/${form.id}`);
                   } else {
                     navigate(`/report-management-system/report-forms/details/${form.id}`);
                   }
@@ -243,7 +245,15 @@ const ReportFormList = () => {
                     <Tooltip title="View Details">
                       <IconButton
                         size="small"
-                        onClick={() => navigate(`/report-management-system/report-forms/details/${form.id}`)}
+                        onClick={() => {
+                          if (form.specificReportTypeName === 'RTU') {
+                            navigate(`/report-management-system/report-forms/rtu-pm-details/${form.id}`);
+                          } else if (form.reportFormTypeName === 'Corrective Maintenance') {
+                            navigate(`/report-management-system/report-forms/cm-details/${form.id}`);
+                          } else {
+                            navigate(`/report-management-system/report-forms/details/${form.id}`);
+                          }
+                        }}
                         sx={{
                           color: RMSTheme.status.info,
                           '&:hover': {

@@ -9,7 +9,13 @@ import {
   Chip,
   Divider,
   Button,
-  Alert
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material';
 import {
   CheckCircle,
@@ -20,14 +26,25 @@ import {
   Assignment,
   Info,
   ArrowBack,
-  ArrowForward
+  ArrowForward,
+  Inventory
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import moment from 'moment';
 import RMSTheme from '../../theme-resource/RMSTheme';
 
-const CMReviewReportForm = ({ formData, reportFormTypes, onNext, onBack, loading, error }) => {
+const CMReviewReportForm = ({ 
+  formData, 
+  reportFormTypes, 
+  onNext, 
+  onBack, 
+  loading, 
+  error,
+  materialUsedData = [],
+  materialUsedOldSerialImages = [],
+  materialUsedNewSerialImages = []
+}) => {
   const sectionContainerStyle = {
     backgroundColor: '#ffffff',
     borderRadius: '12px',
@@ -332,6 +349,67 @@ const CMReviewReportForm = ({ formData, reportFormTypes, onNext, onBack, loading
                 title="After Action Images"
                 icon={Build}
               />
+            </Box>
+          </Paper>
+          
+          {/* Material Used Section */}
+          <Paper sx={sectionContainerStyle}>
+            <Typography variant="h5" sx={sectionHeaderStyle}>
+              <Inventory sx={{ mr: 1 }} />
+              Material Used Information
+            </Typography>
+            
+            <Box sx={{ marginTop: 2 }}>
+              {/* Material Used Table */}
+              {materialUsedData && materialUsedData.length > 0 ? (
+                <TableContainer component={Paper} sx={{ marginBottom: 3 }}>
+                  <Table>
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Item Description</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>New Serial No</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Old Serial No</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Remark</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {materialUsedData.map((row, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{row.itemDescription || 'Not specified'}</TableCell>
+                          <TableCell>{row.newSerialNo || 'Not specified'}</TableCell>
+                          <TableCell>{row.oldSerialNo || 'Not specified'}</TableCell>
+                          <TableCell>{row.remark || 'Not specified'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Box sx={{ ...fieldStyle, textAlign: 'center', py: 3 }}>
+                  <Inventory sx={{ fontSize: 48, color: '#bdc3c7', mb: 1 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    No material used data recorded
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Material Used Images */}
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <ImagePreviewSection 
+                    images={materialUsedOldSerialImages}
+                    title="Old Serial Number Images"
+                    icon={PhotoCamera}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <ImagePreviewSection 
+                    images={materialUsedNewSerialImages}
+                    title="New Serial Number Images"
+                    icon={PhotoCamera}
+                  />
+                </Grid>
+              </Grid>
             </Box>
           </Paper>
           
