@@ -94,7 +94,7 @@ const DepartmentForm = () => {
       if (response.ok) {
         showNotification('Department created successfully!', 'success');
         setTimeout(() => {
-          navigate('/employee-management/departments');
+          navigate('/employee-management-system/departments');
         }, 1500);
       } else {
         const errorText = await response.text();
@@ -109,7 +109,7 @@ const DepartmentForm = () => {
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/departments');
+    navigate('/employee-management-system/departments');
   };
 
   return (
@@ -128,7 +128,7 @@ const DepartmentForm = () => {
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Button
-              onClick={() => navigate('/employee-management/departments')}
+              onClick={() => navigate('/employee-management-system/departments')}
               sx={{
                 color: 'white',
                 minWidth: 'auto',

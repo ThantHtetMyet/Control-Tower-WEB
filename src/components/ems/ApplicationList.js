@@ -115,7 +115,7 @@ function ApplicationList() {
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => navigate('/employee-management/applications/new')}
+            onClick={() => navigate('/employee-management-system/applications/new')}
             sx={{
               background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%) !important',
               color: 'white !important',
@@ -173,7 +173,7 @@ function ApplicationList() {
               {applications.map((application) => (
                 <TableRow 
                   key={application.id}
-                  onDoubleClick={() => navigate(`/employee-management/applications/details/${application.id}`)}
+                  onDoubleClick={() => navigate(`/employee-management-system/applications/details/${application.id}`)}
                   sx={{
                     '&:hover': {
                       bgcolor: '#F8FDF8',
@@ -223,7 +223,7 @@ function ApplicationList() {
                   <TableCell>
                     <Tooltip title="View Details">
                       <IconButton 
-                        onClick={() => navigate(`/employee-management/applications/details/${application.id}`)}
+                        onClick={() => navigate(`/employee-management-system/applications/details/${application.id}`)}
                         sx={{ color: '#34C759' }}
                       >
                         <Visibility />
@@ -231,7 +231,7 @@ function ApplicationList() {
                     </Tooltip>
                     <Tooltip title="Edit Application">
                       <IconButton 
-                        onClick={() => navigate(`/employee-management/applications/edit/${application.id}`)}
+                        onClick={() => navigate(`/employee-management-system/applications/edit/${application.id}`)}
                         sx={{ color: '#34C759' }}
                       >
                         <Edit />

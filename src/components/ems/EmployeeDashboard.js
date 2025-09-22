@@ -399,7 +399,7 @@ function EmployeeDashboard() {
                 />
                 <Button
                   variant="text"
-                  onClick={() => navigate('/employee-management/employees')}
+                  onClick={() => navigate('/employee-management-system/employees')}
                   sx={{ color: '#34C759', fontWeight: 'medium' }}
                 >
                   View All
@@ -436,7 +436,7 @@ function EmployeeDashboard() {
                           cursor: 'pointer'
                         }
                       }}
-                      onDoubleClick={() => navigate(`/employee-management/employees/details/${employee.id}`)}
+                      onDoubleClick={() => navigate(`/employee-management-system/employees/details/${employee.id}`)}
                     >
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -463,7 +463,7 @@ function EmployeeDashboard() {
                           <Tooltip title="View Details">
                             <IconButton
                               size="small"
-                              onClick={() => navigate(`/employee-management/employees/details/${employee.id}`)}
+                              onClick={() => navigate(`/employee-management-system/employees/details/${employee.id}`)}
                               sx={{ color: '#34C759' }}
                             >
                               <VisibilityIcon />
@@ -472,7 +472,7 @@ function EmployeeDashboard() {
                           <Tooltip title="Edit Employee">
                             <IconButton
                               size="small"
-                              onClick={() => navigate(`/employee-management/employees/edit/${employee.id}`)}
+                              onClick={() => navigate(`/employee-management-system/employees/edit/${employee.id}`)}
                               sx={{ color: '#FF9800' }}
                             >
                               <EditIcon />
@@ -499,7 +499,7 @@ function EmployeeDashboard() {
                   <Button
                     variant="contained"
                     startIcon={<PersonAddIcon />}
-                    onClick={() => navigate('/employee-management/employees/new')}
+                    onClick={() => navigate('/employee-management-system/employees/new')}
                     sx={{
                       background: 'linear-gradient(45deg, #34C759 30%, #28A745 90%)',
                       color: 'white',

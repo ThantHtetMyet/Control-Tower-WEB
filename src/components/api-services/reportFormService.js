@@ -92,8 +92,9 @@ export const createCMReportForm = async (cmReportFormData) => {
   return response.data;
 };
 
+// Get CM Report Form with all related data
 export const getCMReportForm = async (id) => {
-  const response = await api.get(`/cmreportform/${id}`);
+  const response = await api.get(`/reportform/CMReportForm/${id}`);
   return response.data;
 };
 
@@ -234,7 +235,7 @@ export const submitCMReportForm = async (formData, beforeIssueImages, afterActio
         reportForm.id,                    // reportFormId
         imageFile,                       // imageFile
         beforeImageType.id,              // reportFormImageTypeId (GUID)
-        'BeforeIssue'                    // Use "BeforeIssue" as folder name
+        'CMBeforeIssueImage'             // Use "CMBeforeIssueImage" as folder name
       );
     });
     
@@ -244,7 +245,7 @@ export const submitCMReportForm = async (formData, beforeIssueImages, afterActio
         reportForm.id,                    // reportFormId
         imageFile,                       // imageFile
         afterImageType.id,               // reportFormImageTypeId (GUID)
-        'AfterAction'                    // Use "AfterAction" as folder name
+        'CMAfterIssueImage'              // Use "CMAfterIssueImage" as folder name
       );
     });
     
@@ -254,7 +255,7 @@ export const submitCMReportForm = async (formData, beforeIssueImages, afterActio
         reportForm.id,                           // reportFormId
         imageFile,                              // imageFile
         materialUsedOldSerialImageType.id,      // reportFormImageTypeId (GUID)
-        'OldSerialNo'                           // Use "OldSerialNo" as folder name
+        'CMMaterialUsedOldSerialNo'             // Use "CMMaterialUsedOldSerialNo" as folder name
       );
     });
     
@@ -264,7 +265,7 @@ export const submitCMReportForm = async (formData, beforeIssueImages, afterActio
         reportForm.id,                           // reportFormId
         imageFile,                              // imageFile
         materialUsedNewSerialImageType.id,      // reportFormImageTypeId (GUID)
-        'NewSerialNo'                           // Use "NewSerialNo" as folder name
+        'CMMaterialUsedNewSerialNo'             // Use "CMMaterialUsedNewSerialNo" as folder name
       );
     });
     
@@ -541,6 +542,169 @@ export const getRTUPMReportForm = async (id) => {
   return response.data;
 };
 
+// Update RTU PM Report Form
+export const updateRTUPMReportForm = async (id, updateData) => {
+  const response = await api.put(`/reportform/RTUPMReportForm/${id}`, updateData);
+  return response.data;
+};
+
+// Individual PM Controller Update Functions
+export const updatePMReportFormRTU = async (id, pmReportFormRTUData) => {
+  const response = await api.put(`/pmreportformrtu/${id}`, pmReportFormRTUData);
+  return response.data;
+};
+
+export const updatePMMainRtuCabinet = async (pmReportFormRTUID, pmMainRtuCabinetData) => {
+  console.log("PMReportFormRTUID", pmReportFormRTUID);
+  
+  const updatePromises = pmMainRtuCabinetData.map(async (record) => {
+    console.log("RecordID : ", record.ID);
+    
+    const recordData = {
+      PMReportFormRTUID: pmReportFormRTUID,
+      RTUCabinet: record.RTUCabinet || record.rtuCabinet,
+      EquipmentRack: record.EquipmentRack || record.equipmentRack,
+      Monitor: record.Monitor || record.monitor,
+      MouseKeyboard: record.MouseKeyboard || record.mouseKeyboard,
+      CPU6000Card: record.CPU6000Card || record.cpU6000Card,
+      InputCard: record.InputCard || record.inputCard,
+      MegapopNTU: record.MegapopNTU || record.megapopNTU,
+      NetworkRouter: record.NetworkRouter || record.networkRouter,
+      NetworkSwitch: record.NetworkSwitch || record.networkSwitch,
+      DigitalVideoRecorder: record.DigitalVideoRecorder || record.digitalVideoRecorder,
+      RTUDoorContact: record.RTUDoorContact || record.rtuDoorContact,
+      PowerSupplyUnit: record.PowerSupplyUnit || record.powerSupplyUnit,
+      UPSTakingOverTest: record.UPSTakingOverTest || record.upsTakingOverTest,
+      UPSBattery: record.UPSBattery || record.upsBattery,
+      Remarks: record.Remarks || record.remarks
+    };
+    
+    if (record.ID && record.ID !== null) {
+      // Update existing record using its ID - FIXED: Use correct endpoint
+      console.log('Updating existing PMMainRtuCabinet record with ID:', record.ID);
+      const response = await api.put(`/pmmainrtucabinet/${record.ID}`, recordData);
+      return response.data;
+    } else {
+      // Create new record
+      console.log('Creating new PMMainRtuCabinet record:', recordData);
+      const response = await api.post('/pmmainrtucabinet', recordData);
+      return response.data;
+    }
+  });
+
+  const results = await Promise.all(updatePromises);
+  return results;
+};
+
+export const updatePMChamberMagneticContact = async (pmReportFormRTUID, pmChamberData) => {
+  const updatePromises = pmChamberData.map(async (record) => {
+    const recordData = {
+      PMReportFormRTUID: pmReportFormRTUID,
+      ChamberNumber: record.ChamberNumber || record.chamberNumber,
+      ChamberOGBox: record.ChamberOGBox || record.chamberOGBox,
+      ChamberContact1: record.ChamberContact1 || record.chamberContact1,
+      ChamberContact2: record.ChamberContact2 || record.chamberContact2,
+      ChamberContact3: record.ChamberContact3 || record.chamberContact3,
+      Remarks: record.Remarks || record.remarks
+    };
+
+    if (record.ID && record.ID !== null) {
+      // Update existing record using its ID
+      console.log('Updating existing PMChamberMagneticContact record with ID:', record.ID);
+      const response = await api.put(`/pmchambermagneticcontact/${record.ID}`, recordData);
+      return response.data;
+    } else {
+      // Create new record
+      console.log('Creating new PMChamberMagneticContact record:', recordData);
+      const response = await api.post('/pmchambermagneticcontact', recordData);
+      return response.data;
+    }
+  });
+
+  const results = await Promise.all(updatePromises);
+  return results;
+};
+
+export const updatePMRTUCabinetCooling = async (pmReportFormRTUID, pmCoolingData) => {
+  const updatePromises = pmCoolingData.map(async (record) => {
+    const recordData = {
+      PMReportFormRTUID: pmReportFormRTUID,
+      FanNumber: record.FanNumber || record.fanNumber,
+      FunctionalStatus: record.FunctionalStatus || record.functionalStatus,
+      Remarks: record.Remarks || record.remarks
+    };
+
+    if (record.ID && record.ID !== null) {
+      // Update existing record using its ID
+      console.log('Updating existing PMRTUCabinetCooling record with ID:', record.ID);
+      const response = await api.put(`/pmrtucabinetcooling/${record.ID}`, recordData);
+      return response.data;
+    } else {
+      // Create new record
+      console.log('Creating new PMRTUCabinetCooling record:', recordData);
+      const response = await api.post('/pmrtucabinetcooling', recordData);
+      return response.data;
+    }
+  });
+
+  const results = await Promise.all(updatePromises);
+  return results;
+};
+
+export const updatePMDVREquipment = async (pmReportFormRTUID, pmDVRData) => {
+  const updatePromises = pmDVRData.map(async (record) => {
+    const recordData = {
+      PMReportFormRTUID: pmReportFormRTUID,
+      DVRComm: record.DVRComm || record.dvrComm,
+      DVRRAIDComm: record.DVRRAIDComm || record.dvrraidComm,
+      TimeSyncNTPServer: record.TimeSyncNTPServer || record.timeSyncNTPServer,
+      Recording24x7: record.Recording24x7 || record.recording24x7,
+      Remarks: record.Remarks || record.remarks
+    };
+
+    if (record.ID && record.ID !== null) {
+      // Update existing record using its ID
+      console.log('Updating existing PMDVREquipment record with ID:', record.ID);
+      const response = await api.put(`/pmdvrequipment/${record.ID}`, recordData);
+      return response.data;
+    } else {
+      // Create new record
+      console.log('Creating new PMDVREquipment record:', recordData);
+      const response = await api.post('/pmdvrequipment', recordData);
+      return response.data;
+    }
+  });
+
+  const results = await Promise.all(updatePromises);
+  return results;
+};
+
+// Get individual PM data functions
+export const getPMReportFormRTU = async (id) => {
+  const response = await api.get(`/pmreportformrtu/${id}`);
+  return response.data;
+};
+
+export const getPMMainRtuCabinet = async (pmReportFormRTUID) => {
+  const response = await api.get(`/pmmainrtucabinet/bypmreportform/${pmReportFormRTUID}`);
+  return response.data;
+};
+
+export const getPMChamberMagneticContact = async (pmReportFormRTUID) => {
+  const response = await api.get(`/pmchambermagneticcontact/bypmreportform/${pmReportFormRTUID}`);
+  return response.data;
+};
+
+export const getPMRTUCabinetCooling = async (pmReportFormRTUID) => {
+  const response = await api.get(`/pmrtucabinetcooling/bypmreportform/${pmReportFormRTUID}`);
+  return response.data;
+};
+
+export const getPMDVREquipment = async (pmReportFormRTUID) => {
+  const response = await api.get(`/pmdvrequipment/bypmreportform/${pmReportFormRTUID}`);
+  return response.data;
+};
+
 // Future: Add Server PM Report functions
 // export const submitServerPMReportForm = async (formData, serverPMData, user) => {
 //   // Implementation for Server PM reports
@@ -556,4 +720,44 @@ export const createCMMaterialUsed = async (materialUsedData) => {
 export const getCMMaterialUsed = async (cmReportFormId) => {
   const response = await api.get(`/CMMaterialUsed/bycmreportform/${cmReportFormId}`);
   return response.data;
+};
+
+export const deletePMMainRtuCabinet = async (id) => {
+  try {
+    const response = await api.delete(`/PMMainRtuCabinet/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting PM Main RTU Cabinet:', error);
+    throw error;
+  }
+};
+
+export const deletePMChamberMagneticContact = async (id) => {
+  try {
+    const response = await api.delete(`/PMChamberMagneticContact/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting PM Chamber Magnetic Contact:', error);
+    throw error;
+  }
+};
+
+export const deletePMRTUCabinetCooling = async (id) => {
+  try {
+    const response = await api.delete(`/PMRTUCabinetCooling/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting PM RTU Cabinet Cooling:', error);
+    throw error;
+  }
+};
+
+export const deletePMDVREquipment = async (id) => {
+  try {
+    const response = await api.delete(`/PMDVREquipment/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting PM DVR Equipment:', error);
+    throw error;
+  }
 };

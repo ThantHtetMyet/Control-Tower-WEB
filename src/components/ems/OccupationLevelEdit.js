@@ -140,7 +140,7 @@ const OccupationLevelEdit = () => {
 
       showNotification('Occupation Level updated successfully!');
       setTimeout(() => {
-        navigate('/employee-management/occupation-levels');
+        navigate('/employee-management-system/occupation-levels');
       }, 2000);
     } catch (err) {
       showNotification('Error updating occupation level: ' + err.message, 'error');
@@ -150,7 +150,7 @@ const OccupationLevelEdit = () => {
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/occupation-levels');
+    navigate('/employee-management-system/occupation-levels');
   };
 
   if (fetchLoading) {
@@ -180,7 +180,7 @@ const OccupationLevelEdit = () => {
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Button
-              onClick={() => navigate('/employee-management/occupation-levels')}
+              onClick={() => navigate('/employee-management-system/occupation-levels')}
               sx={{
                 color: 'white',
                 minWidth: 'auto',

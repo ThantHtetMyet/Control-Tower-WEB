@@ -75,7 +75,7 @@ const SubDepartmentEdit = () => {
     } catch (error) {
       console.error('Error fetching sub-department:', error);
       showNotification('Error loading sub-department data', 'error');
-      navigate('/employee-management/sub-departments');
+      navigate('/employee-management-system/sub-departments');
     } finally {
       setInitialLoading(false);
     }
@@ -146,7 +146,7 @@ const SubDepartmentEdit = () => {
       await updateSubDepartment(id, submitData);
       showNotification('Sub-department updated successfully!', 'success');
       setTimeout(() => {
-        navigate('/employee-management/sub-departments');
+        navigate('/employee-management-system/sub-departments');
       }, 1500);
     } catch (error) {
       console.error('Error updating sub-department:', error);
@@ -157,7 +157,7 @@ const SubDepartmentEdit = () => {
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/sub-departments');
+    navigate('/employee-management-system/sub-departments');
   };
 
   if (initialLoading) {
@@ -189,7 +189,7 @@ const SubDepartmentEdit = () => {
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Button
-              onClick={() => navigate('/employee-management/sub-departments')}
+              onClick={() => navigate('/employee-management-system/sub-departments')}
               sx={{
                 color: 'white',
                 minWidth: 'auto',

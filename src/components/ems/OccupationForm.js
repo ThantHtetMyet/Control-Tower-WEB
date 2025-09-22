@@ -127,7 +127,7 @@ const OccupationForm = () => {
       if (response.ok) {
         showNotification('Occupation created successfully!', 'success');
         setTimeout(() => {
-          navigate('/employee-management/occupations');
+          navigate('/employee-management-system/occupations');
         }, 1500);
       } else {
         const errorText = await response.text();
@@ -142,7 +142,7 @@ const OccupationForm = () => {
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/occupations');
+    navigate('/employee-management-system/occupations');
   };
 
   return (
@@ -161,7 +161,7 @@ const OccupationForm = () => {
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Button
-              onClick={() => navigate('/employee-management/occupations')}
+              onClick={() => navigate('/employee-management-system/occupations')}
               sx={{
                 color: 'white',
                 minWidth: 'auto',

@@ -165,7 +165,7 @@ const ApplicationDetails = () => {
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
               <Button
                 startIcon={<ArrowBack />}
-                onClick={() => navigate('/employee-management/applications')}
+                onClick={() => navigate('/employee-management-system/applications')}
                 sx={{
                   color: 'white',
                   bgcolor: 'rgba(255,255,255,0.2)',
@@ -180,7 +180,7 @@ const ApplicationDetails = () => {
               <Button
                 startIcon={<Edit />}
                 variant="contained"
-                onClick={() => navigate(`/employee-management/applications/edit/${application.id}`)}
+                onClick={() => navigate(`/employee-management-system/applications/edit/${application.id}`)}
                 sx={{
                   background: 'rgba(255,255,255,0.2)',
                   color: 'white',

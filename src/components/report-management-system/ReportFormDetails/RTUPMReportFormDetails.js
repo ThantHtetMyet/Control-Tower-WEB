@@ -350,7 +350,6 @@ const RTUPMReportFormDetails = () => {
         setLoading(true);
         // Use the new RTU PM specific API
         const response = await getRTUPMReportForm(id);
-        console.log('API Response:', response); // Debug log
         setFormData(response);
         
         // Structure the RTU PM data from the new API response
@@ -381,7 +380,6 @@ const RTUPMReportFormDetails = () => {
           })),
           pmDVREquipmentData: response.pmdvrEquipment || []
         };
-        console.log('Structured RTU Data:', rtuData); // Debug log
         setRtuPMData(rtuData);
       } catch (err) {
         setError('Failed to load RTU PM report details');
@@ -532,7 +530,7 @@ const RTUPMReportFormDetails = () => {
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant="contained"
-              onClick={() => navigate(`/report-management-system/report-forms/edit/${id}`)}
+              onClick={() => navigate(`/report-management-system/rtu-pm-edit/${id}`)}
               sx={{
                 background: RMSTheme.components.button.primary.background,
                 color: RMSTheme.components.button.primary.text,
@@ -580,25 +578,25 @@ const RTUPMReportFormDetails = () => {
           <Grid item xs={12} md={6}>
             <Box sx={fieldContainer}>
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>System Description</Typography>
-              <Typography variant="body1">{formData.systemDescription || 'Not specified'}</Typography>
+              <Typography variant="body1">{formData.systemNameWarehouseName || 'Not specified'}</Typography>
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>
             <Box sx={fieldContainer}>
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Station Name</Typography>
-              <Typography variant="body1">{formData.stationName || 'Not specified'}</Typography>
+              <Typography variant="body1">{formData.stationNameWarehouseName || 'Not specified'}</Typography>
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>
             <Box sx={fieldContainer}>
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Project No</Typography>
-              <Typography variant="body1">{formData.projectNo || 'Not specified'}</Typography>
+              <Typography variant="body1">{formData.pmReportFormRTU.projectNo || 'Not specified'}</Typography>
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>
             <Box sx={fieldContainer}>
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Customer</Typography>
-              <Typography variant="body1">{formData.customer || 'Not specified'}</Typography>
+              <Typography variant="body1">{formData.pmReportFormRTU.customer || 'Not specified'}</Typography>
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>

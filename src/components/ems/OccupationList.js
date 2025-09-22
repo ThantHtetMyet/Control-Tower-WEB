@@ -108,7 +108,7 @@ const OccupationList = () => {
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => navigate('/employee-management/occupations/new')}
+            onClick={() => navigate('/employee-management-system/occupations/new')}
             sx={{
               background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%) !important',
               color: 'white !important',
@@ -139,7 +139,7 @@ const OccupationList = () => {
             <Button
               variant="contained"
               startIcon={<Add />}
-              onClick={() => navigate('/employee-management/occupations/new')}
+              onClick={() => navigate('/employee-management-system/occupations/new')}
               sx={{
                 background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
                 '&:hover': {
@@ -185,7 +185,7 @@ const OccupationList = () => {
                 {occupations.map((occupation) => (
                   <TableRow 
                     key={occupation.id}
-                    onDoubleClick={() => navigate(`/employee-management/occupations/details/${occupation.id}`)}
+                    onDoubleClick={() => navigate(`/employee-management-system/occupations/details/${occupation.id}`)}
                     sx={{
                       '&:hover': {
                         bgcolor: '#F8FDF8',
@@ -245,7 +245,7 @@ const OccupationList = () => {
                     <TableCell>
                       <Tooltip title="View Details">
                         <IconButton 
-                          onClick={() => navigate(`/employee-management/occupations/details/${occupation.id}`)}
+                          onClick={() => navigate(`/employee-management-system/occupations/details/${occupation.id}`)}
                           sx={{ color: '#34C759' }}
                         >
                           <Visibility />
@@ -253,7 +253,7 @@ const OccupationList = () => {
                       </Tooltip>
                       <Tooltip title="Edit Occupation">
                         <IconButton 
-                          onClick={() => navigate(`/employee-management/occupations/edit/${occupation.id}`)}
+                          onClick={() => navigate(`/employee-management-system/occupations/edit/${occupation.id}`)}
                           sx={{ color: '#34C759' }}
                         >
                           <Edit />

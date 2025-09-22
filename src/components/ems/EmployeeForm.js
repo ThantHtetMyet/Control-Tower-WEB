@@ -253,7 +253,7 @@ const EmployeeForm = () => {
               }
               
               setSuccessMessage('Employee created successfully!');
-              setTimeout(() => navigate('/employee-management/employees'), 2000);
+              setTimeout(() => navigate('/employee-management-system/employees'), 2000);
           } else {
               const errorData = await response.text();
               throw new Error(errorData || 'Failed to create employee');
@@ -859,7 +859,7 @@ const EmployeeForm = () => {
                 <Button
                   variant="outlined"
                   startIcon={<Cancel />}
-                  onClick={() => navigate('/employee-management/employees')}
+                  onClick={() => navigate('/employee-management-system/employees')}
                   sx={{
                     borderColor: '#6c757d',
                     color: '#6c757d',

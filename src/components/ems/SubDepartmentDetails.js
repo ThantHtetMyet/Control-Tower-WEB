@@ -174,7 +174,7 @@ const SubDepartmentDetails = () => {
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
               <Button
                 startIcon={<ArrowBack />}
-                onClick={() => navigate('/employee-management/sub-departments')}
+                onClick={() => navigate('/employee-management-system/sub-departments')}
                 sx={{
                   color: 'white',
                   bgcolor: 'rgba(255,255,255,0.2)',
@@ -189,7 +189,7 @@ const SubDepartmentDetails = () => {
               <Button
                 startIcon={<Edit />}
                 variant="contained"
-                onClick={() => navigate(`/employee-management/sub-departments/${subDepartment.id}/edit`)}
+                onClick={() => navigate(`/employee-management-system/sub-departments/${subDepartment.id}/edit`)}
                 sx={{
                   background: 'rgba(255,255,255,0.2)',
                   color: 'white',

@@ -108,7 +108,7 @@ const CompanyForm = () => {
 
       showNotification('Company created successfully!');
       setTimeout(() => {
-        navigate('/employee-management/companies');
+        navigate('/employee-management-system/companies');
       }, 2000);
     } catch (err) {
       showNotification('Error creating company: ' + err.message, 'error');
@@ -118,7 +118,7 @@ const CompanyForm = () => {
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/companies');
+    navigate('/employee-management-system/companies');
   };
 
   return (
@@ -137,7 +137,7 @@ const CompanyForm = () => {
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Button
-              onClick={() => navigate('/employee-management/companies')}
+              onClick={() => navigate('/employee-management-system/companies')}
               sx={{
                 color: 'white',
                 minWidth: 'auto',

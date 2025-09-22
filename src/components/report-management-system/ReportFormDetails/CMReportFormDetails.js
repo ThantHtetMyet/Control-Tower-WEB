@@ -34,10 +34,10 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import RMSTheme from '../../theme-resource/RMSTheme';
-import { getCMReportFormByReportFormId, getReportFormImages, getCMMaterialUsed } from '../../api-services/reportFormService';
+import { getCMReportForm } from '../../api-services/reportFormService';
 import { API_BASE_URL } from '../../../config/apiConfig';
 
-// Styling constants matching RTUPMReportFormDetails
+// Styling constants
 const sectionContainer = {
   marginBottom: 4,
   padding: 3,
@@ -86,7 +86,7 @@ const getStatusChip = (status) => {
   
   const statusStr = status.toString();
   
-  if (statusStr === 'Acceptable') {
+  if (statusStr === 'Acceptable' || statusStr === 'DONE' || statusStr === 'Completed') {
     return (
       <Chip
         icon={<CheckCircleIcon />}
@@ -96,17 +96,7 @@ const getStatusChip = (status) => {
         size="small"
       />
     );
-  } else if (statusStr === 'DONE') {
-    return (
-      <Chip
-        icon={<CheckCircleIcon />}
-        label={statusStr}
-        color="success"
-        variant="filled"
-        size="small"
-      />
-    );
-  } else if (statusStr === 'Not Acceptable') {
+  } else if (statusStr === 'Not Acceptable' || statusStr === 'Failed') {
     return (
       <Chip
         icon={<CancelIcon />}
@@ -133,8 +123,8 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon, r
   const [selectedImage, setSelectedImage] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const handleImageClick = (image) => {
-    setSelectedImage(image);
+  const handleImageDoubleClick = (imageUrl) => {
+    setSelectedImage(imageUrl);
     setModalOpen(true);
   };
 
@@ -145,13 +135,7 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon, r
 
   if (!images || images.length === 0) {
     return (
-      <Box sx={{ 
-        textAlign: 'center', 
-        py: 4, 
-        backgroundColor: '#f9f9f9', 
-        borderRadius: 2,
-        border: '2px dashed #ddd'
-      }}>
+      <Box sx={{ textAlign: 'center', py: 3, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
         <IconComponent sx={{ fontSize: 48, color: '#bdc3c7', mb: 1 }} />
         <Typography variant="body2" color="text.secondary">
           No {title.toLowerCase()} uploaded
@@ -161,78 +145,89 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon, r
   }
 
   return (
-    <Box>
-      <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-        <IconComponent sx={{ mr: 1 }} />
+    <Box sx={{ marginTop: 2 }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', marginBottom: 1 }}>
         {title} ({images.length})
       </Typography>
-      
       <Grid container spacing={2}>
-        {images.map((image, index) => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
-            <Card 
-              sx={{ 
-                cursor: 'pointer',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'scale(1.02)',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.12)'
-                }
-              }}
-              onClick={() => handleImageClick(image)}
-            >
-              <Box sx={{ position: 'relative', paddingTop: '75%' }}>
+        {images.map((image, index) => {
+          // Handle different image data structures - following News system pattern
+          let imageUrl;
+          
+          if (image instanceof File) {
+            // For File objects (during upload)
+            imageUrl = URL.createObjectURL(image);
+          } else if (typeof image === 'string') {
+            // For direct URL strings
+            imageUrl = image;
+          } else if (image.imageUrl) {
+            // For pre-constructed URLs (following News system pattern)
+            imageUrl = image.imageUrl;
+          } else if (image.imageName && reportFormId) {
+            // Fallback: construct URL using imageName (camelCase)
+            imageUrl = `${API_BASE_URL}/api/ReportFormImage/image/${reportFormId}/${image.imageName}`;
+          } else if (image.ImageName && reportFormId) {
+            // Fallback: construct URL using ImageName (PascalCase)
+            imageUrl = `${API_BASE_URL}/api/ReportFormImage/image/${reportFormId}/${image.ImageName}`;
+          } else if (image.url) {
+            // For objects with url property
+            imageUrl = image.url;
+          } else if (image.preview) {
+            // For objects with preview property
+            imageUrl = image.preview;
+          } else {
+            // Fallback - skip this image
+            console.warn('Unable to determine image URL for:', image);
+            return null;
+          }
+          
+          return (
+            <Grid item xs={6} sm={4} md={3} key={index}>
+              <Card 
+                sx={{ 
+                  position: 'relative',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'scale(1.15)',
+                    boxShadow: '0 12px 24px rgba(0,0,0,0.3)',
+                    zIndex: 1
+                  }
+                }}
+                onDoubleClick={() => handleImageDoubleClick(imageUrl)}
+              >
                 <img
-                  src={image.imageUrl || `${API_BASE_URL}/api/ReportFormImage/image/${reportFormId}/${image.imageName}`}
-                  alt={image.originalFileName || image.imageName}
+                  src={imageUrl}
+                  alt={`${title} ${index + 1}`}
                   style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
                     width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
+                    height: '120px',
+                    objectFit: 'cover',
+                    borderRadius: '8px'
                   }}
                   onError={(e) => {
+                    console.error('Failed to load image:', imageUrl);
                     e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
                   }}
                 />
-                <Box
+                <Typography 
+                  variant="caption" 
                   sx={{
                     position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    display: 'none',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: '#f5f5f5',
-                    color: '#999'
+                    bottom: 4,
+                    left: 4,
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    color: 'white',
+                    padding: '2px 6px',
+                    borderRadius: '4px'
                   }}
                 >
-                  <Typography variant="body2">Image not available</Typography>
-                </Box>
-              </Box>
-              <CardContent sx={{ p: 1 }}>
-                <Typography variant="caption" sx={{ 
-                  display: 'block',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
-                  {image.originalFileName || image.imageName}
+                  {index + 1}
                 </Typography>
-                {image.uploadedDate && (
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                    {formatDate(image.uploadedDate)}
-                  </Typography>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
+              </Card>
+            </Grid>
+          );
+        })}
       </Grid>
 
       {/* Image Modal */}
@@ -242,28 +237,28 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon, r
         sx={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          p: 2
         }}
       >
-        <Box sx={{
-          position: 'relative',
-          maxWidth: '90vw',
-          maxHeight: '90vh',
-          backgroundColor: 'white',
-          borderRadius: 2,
-          boxShadow: 24,
-          p: 2
-        }}>
+        <Box
+          sx={{
+            position: 'relative',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            outline: 'none'
+          }}
+        >
           <IconButton
             onClick={handleCloseModal}
             sx={{
               position: 'absolute',
-              top: 8,
-              right: 8,
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              color: 'white',
+              top: -40,
+              right: -40,
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              color: 'black',
               '&:hover': {
-                backgroundColor: 'rgba(0,0,0,0.7)'
+                backgroundColor: 'rgba(255, 255, 255, 1)'
               }
             }}
           >
@@ -271,12 +266,14 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon, r
           </IconButton>
           {selectedImage && (
             <img
-              src={selectedImage.imageUrl || `${API_BASE_URL}/api/ReportFormImage/image/${reportFormId}/${selectedImage.imageName}`}
-              alt={selectedImage.originalFileName || selectedImage.imageName}
+              src={selectedImage}
+              alt="Enlarged view"
               style={{
                 maxWidth: '100%',
-                maxHeight: '80vh',
-                objectFit: 'contain'
+                maxHeight: '100%',
+                objectFit: 'contain',
+                borderRadius: '8px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
               }}
             />
           )}
@@ -290,8 +287,6 @@ const CMReportFormDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [formData, setFormData] = useState(null);
-  const [cmData, setCmData] = useState({});
-  const [materialUsedData, setMaterialUsedData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -300,52 +295,73 @@ const CMReportFormDetails = () => {
       try {
         setLoading(true);
         
-        // Fetch CM Report Form data by ReportForm ID
-        const cmReportForms = await getCMReportFormByReportFormId(id);
-        console.log('CM API Response:', cmReportForms);
+        // Use the new CM specific API from ReportFormController
+        const response = await getCMReportForm(id);
         
-        // The API returns an array, so take the first one
-        const cmReportForm = cmReportForms[0];
-        if (!cmReportForm) {
-          throw new Error('CM Report Form not found');
-        }
-        
-        setFormData(cmReportForm);
-        
-        // Fetch images using the ReportForm ID
-        const images = await getReportFormImages(id);
-        console.log('Images Response:', images);
-        
-        // Process images and organize by section
-        const processedImages = images.map(img => ({
-          ...img,
-          imageUrl: `${API_BASE_URL}/api/ReportFormImage/image/${cmReportForm.reportFormID}/${img.imageName}`,
-          originalFileName: img.imageName,
-          uploadedDate: img.uploadedDate,
-          sectionName: img.storedDirectory ? img.storedDirectory.split('\\').pop() || img.storedDirectory.split('/').pop() : null
-        }));
-        
-        const organizedImages = {
-          beforeIssue: processedImages.filter(img => img.sectionName === 'BeforeIssue'),
-          afterAction: processedImages.filter(img => img.sectionName === 'AfterAction'),
-          oldSerialNo: processedImages.filter(img => img.sectionName === 'OldSerialNo'),
-          newSerialNo: processedImages.filter(img => img.sectionName === 'NewSerialNo')
+        // Structure the data from the new API response
+        const structuredData = {
+          // Basic Report Form information
+          id: response.id,
+          reportFormTypeID: response.reportFormTypeID,
+          reportFormTypeName: response.reportFormTypeName,
+          jobNo: response.jobNo,
+          systemNameWarehouseID: response.systemNameWarehouseID,
+          systemNameWarehouseName: response.systemNameWarehouseName,
+          stationNameWarehouseID: response.stationNameWarehouseID,
+          stationNameWarehouseName: response.stationNameWarehouseName,
+          uploadStatus: response.uploadStatus,
+          uploadHostname: response.uploadHostname,
+          uploadIPAddress: response.uploadIPAddress,
+          formStatus: response.formStatus,
+          createdDate: response.createdDate,
+          updatedDate: response.updatedDate,
+          createdBy: response.createdBy,
+          createdByUserName: response.createdByUserName,
+          updatedBy: response.updatedBy,
+          updatedByUserName: response.updatedByUserName,
+
+          // CM Report Form specific data
+          reportFormID: response.cmReportForm.reportFormID,
+          furtherActionTakenID: response.cmReportForm.furtherActionTakenID,
+          furtherActionTakenName: response.cmReportForm.furtherActionTakenName,
+          formstatusID: response.cmReportForm.formstatusID,
+          formStatusName: response.cmReportForm.formStatusName,
+          customer: response.cmReportForm.customer,
+          projectNo: response.cmReportForm.projectNo,
+          issueReportedDescription: response.cmReportForm.issueReportedDescription,
+          issueFoundDescription: response.cmReportForm.issueFoundDescription,
+          actionTakenDescription: response.cmReportForm.actionTakenDescription,
+          failureDetectedDate: response.cmReportForm.failureDetectedDate,
+          responseDate: response.cmReportForm.responseDate,
+          arrivalDate: response.cmReportForm.arrivalDate,
+          completionDate: response.cmReportForm.completionDate,
+          attendedBy: response.cmReportForm.attendedBy,
+          approvedBy: response.cmReportForm.approvedBy,
+          remark: response.cmReportForm.remark,
+
+          // Material Used data
+          materialUsed: response.materialUsed || [],
+
+          // Images with constructed URLs
+          beforeIssueImages: (response.beforeIssueImages || []).map(image => ({
+            ...image,
+            imageUrl: image.imageName ? `${API_BASE_URL}/api/ReportFormImage/image/${id}/${image.imageName}` : null
+          })),
+          afterActionImages: (response.afterActionImages || []).map(image => ({
+            ...image,
+            imageUrl: image.imageName ? `${API_BASE_URL}/api/ReportFormImage/image/${id}/${image.imageName}` : null
+          })),
+          materialUsedOldSerialImages: (response.materialUsedOldSerialImages || []).map(image => ({
+            ...image,
+            imageUrl: image.imageName ? `${API_BASE_URL}/api/ReportFormImage/image/${id}/${image.imageName}` : null
+          })),
+          materialUsedNewSerialImages: (response.materialUsedNewSerialImages || []).map(image => ({
+            ...image,
+            imageUrl: image.imageName ? `${API_BASE_URL}/api/ReportFormImage/image/${id}/${image.imageName}` : null
+          }))
         };
-        
-        // Fetch material used data
-        let materialUsed = [];
-        try {
-          materialUsed = await getCMMaterialUsed(cmReportForm.id);
-          console.log('Material Used Response:', materialUsed);
-        } catch (materialError) {
-          console.warn('No material used data found:', materialError);
-        }
-        
-        setCmData({
-          ...cmReportForm,
-          images: organizedImages
-        });
-        setMaterialUsedData(materialUsed);
+
+        setFormData(structuredData);
         
       } catch (err) {
         setError('Failed to load CM report details');
@@ -550,13 +566,13 @@ const CMReportFormDetails = () => {
           <Grid item xs={12} md={6}>
             <Box sx={fieldContainer}>
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Station Name</Typography>
-              <Typography variant="body1">{formData.stationName || 'Not specified'}</Typography>
+              <Typography variant="body1">{formData.stationNameWarehouseName || 'Not specified'}</Typography>
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>
             <Box sx={fieldContainer}>
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>System Description</Typography>
-              <Typography variant="body1">{formData.systemDescription || 'Not specified'}</Typography>
+              <Typography variant="body1">{formData.systemNameWarehouseName || 'Not specified'}</Typography>
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>
@@ -617,10 +633,10 @@ const CMReportFormDetails = () => {
         
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
           <ImagePreviewSection 
-            images={cmData.images?.beforeIssue || []} 
+            images={formData.beforeIssueImages || []} 
             title="Before Issue Images" 
             icon={PhotoCameraIcon}
-            reportFormId={formData.reportFormID}
+            reportFormId={id}
           />
           
           <Box sx={fieldContainer}>
@@ -654,10 +670,10 @@ const CMReportFormDetails = () => {
           </Box>
           
           <ImagePreviewSection 
-            images={cmData.images?.afterAction || []} 
+            images={formData.afterActionImages || []} 
             title="After Action Images" 
             icon={BuildIcon}
-            reportFormId={formData.reportFormID}
+            reportFormId={id}
           />
         </Box>
       </Paper>
@@ -671,24 +687,24 @@ const CMReportFormDetails = () => {
         
         <Box sx={{ marginTop: 2 }}>
           {/* Material Used Table */}
-          {materialUsedData && materialUsedData.length > 0 ? (
+          {formData.materialUsed && formData.materialUsed.length > 0 ? (
             <TableContainer component={Paper} sx={{ marginBottom: 3 }}>
               <Table>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Item Description</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>New Serial No</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Material Description</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Old Serial No</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Remark</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>New Serial No</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {materialUsedData.map((row, index) => (
+                  {formData.materialUsed.map((row, index) => (
                     <TableRow key={index}>
-                      <TableCell>{row.itemDescription || 'Not specified'}</TableCell>
-                      <TableCell>{row.newSerialNo || 'Not specified'}</TableCell>
+                      <TableCell>{row.materialDescription || 'Not specified'}</TableCell>
                       <TableCell>{row.oldSerialNo || 'Not specified'}</TableCell>
-                      <TableCell>{row.remark || 'Not specified'}</TableCell>
+                      <TableCell>{row.newSerialNo || 'Not specified'}</TableCell>
+                      <TableCell>{row.remarks || 'Not specified'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -707,18 +723,18 @@ const CMReportFormDetails = () => {
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <ImagePreviewSection 
-                images={cmData.images?.oldSerialNo || []} 
+                images={formData.materialUsedOldSerialImages || []} 
                 title="Old Serial No Images" 
                 icon={RemoveCircleIcon}
-                reportFormId={formData.reportFormID}
+                reportFormId={id}
               />
             </Grid>
             <Grid item xs={12} md={6}>
               <ImagePreviewSection 
-                images={cmData.images?.newSerialNo || []} 
+                images={formData.materialUsedNewSerialImages || []} 
                 title="New Serial No Images" 
                 icon={CheckCircleIcon}
-                reportFormId={formData.reportFormID}
+                reportFormId={id}
               />
             </Grid>
           </Grid>
@@ -751,6 +767,34 @@ const CMReportFormDetails = () => {
               </Box>
             </Grid>
           )}
+        </Grid>
+      </Paper>
+
+      {/* Status Information Section */}
+      <Paper sx={sectionContainer}>
+        <Typography variant="h5" sx={sectionHeader}>
+          📊 Status Information
+        </Typography>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Box sx={fieldContainer}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Further Action Taken</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                <SettingsIcon sx={{ mr: 1, color: '#1976d2' }} />
+                <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                  {formData.furtherActionTakenName || 'Not specified'}
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Box sx={fieldContainer}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Form Status</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                {getStatusChip(formData.formStatusName)}
+              </Box>
+            </Box>
+          </Grid>
         </Grid>
       </Paper>
     </Box>

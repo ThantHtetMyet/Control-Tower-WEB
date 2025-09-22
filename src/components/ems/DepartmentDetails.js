@@ -209,7 +209,7 @@ const DepartmentDetails = () => {
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
               <Button
                 startIcon={<ArrowBack />}
-                onClick={() => navigate('/employee-management/departments')}
+                onClick={() => navigate('/employee-management-system/departments')}
                 sx={{
                   color: 'white',
                   bgcolor: 'rgba(255,255,255,0.2)',
@@ -224,7 +224,7 @@ const DepartmentDetails = () => {
               <Button
                 startIcon={<Edit />}
                 variant="contained"
-                onClick={() => navigate(`/employee-management/departments/edit/${department.id}`)}
+                onClick={() => navigate(`/employee-management-system/departments/edit/${department.id}`)}
                 sx={{
                   background: 'rgba(255,255,255,0.2)',
                   color: 'white',
@@ -458,7 +458,7 @@ const DepartmentDetails = () => {
                           <Button
                             size="small"
                             startIcon={<Person />}
-                            onClick={() => navigate(`/employee-management/employees/details/${employee.id}`)}
+                            onClick={() => navigate(`/employee-management-system/employees/details/${employee.id}`)}
                             sx={{ 
                               color: '#34C759',
                               '&:hover': {

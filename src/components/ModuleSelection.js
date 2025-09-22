@@ -314,7 +314,7 @@ const ModuleSelection = () => {
     if (module.id === 'report-management-system') {
       navigate('/report-management-system');
     } else if (module.id === 'user-management-system') {
-      navigate('/employee-management');
+      navigate('/employee-management-system');
     } else if (module.id === 'news-portal-system') {
       navigate('/news-portal-system');
     } else if (module.id === 'room-booking-system') {

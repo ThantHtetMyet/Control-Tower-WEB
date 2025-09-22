@@ -9,14 +9,7 @@ import SignIn from './components/auth/SignIn';
 import SignUp from './components/auth/SignUp';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
-import ServiceReportList from './components/service-report/ServiceReportList';
-import ServiceReportForm from './components/service-report/ServiceReportForm';
-import ServiceReportEdit from './components/service-report/ServiceReportEdit';
-import ServiceReportImport from './components/service-report/ServiceReportImport';
-import NavBar from './components/service-report/ServiceReportNavBar';
 import { Box } from '@mui/material';
-import Dashboard from './components/service-report/ServiceReportDashboard';
-import ServiceReportDetails from './components/service-report/ServiceReportDetails';
 import ModuleSelection from './components/ModuleSelection';
 // Remove this line:
 // import ApplicationDashboard from './employeemanagementsystem/ApplicationDashboard';
@@ -92,634 +85,615 @@ import RoomBookingCalendar from './components/room-booking-system/RoomBookingCal
 import ReportFormNavBar from './components/report-management-system/ReportFormNavBar';
 import ReportFormList from './components/report-management-system/ReportFormList';
 import ReportFormForm from './components/report-management-system/ReportFormForm/ReportFormForm';
-import ReportFormEdit from './components/report-management-system/ReportFormEdit';
 import RTUPMReportFormDetails from './components/report-management-system/ReportFormDetails/RTUPMReportFormDetails';
 import CMReportFormDetails from './components/report-management-system/ReportFormDetails/CMReportFormDetails';
+// Add RTU PM Edit imports
+import RTUPMReportFormEdit from './components/report-management-system/ReportFormEdit/RTUPMReportFormEdit';
+import RTUPMReviewReportFormEdit from './components/report-management-system/ReportFormEdit/RTUPMReviewReportFormEdit';
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <LocalizationProvider dateAdapter={AdapterMoment}>
+      <LocalizationProvider dateAdapter={AdapterMoment}>
+        <AuthProvider>
           <Router>
-            <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/signin" element={<SignIn />} />
-                <Route path="/signup" element={<SignUp />} />
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/signin" element={<SignIn />} />
+              <Route path="/signup" element={<SignUp />} />
 
-                {/* Protected Routes */}
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <Navigate to="/modules" replace />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/modules"
-                  element={
-                    <ProtectedRoute>
-                      <ModuleSelection />
-                    </ProtectedRoute>
-                  }
-                />
-                
-                {/* Employee Management System Routes */}
-                <Route
-                  path="/employee-management"
-                  element={
-                    <ProtectedRoute>
-                      <EmployeeDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/employee-management/departments"
-                  element={
-                    <ProtectedRoute>
-                      <DepartmentList />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/employee-management/departments/new"
-                  element={
-                    <ProtectedRoute>
-                      <DepartmentForm />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/employee-management/departments/edit/:id"
-                  element={
-                    <ProtectedRoute>
-                      <DepartmentEdit />
-                    </ProtectedRoute>
-                  }
-                />
-                {/* SubDepartment Routes */}
-                <Route path="/employee-management/sub-departments" element={
+              {/* Protected Routes */}
+              <Route
+                path="/modules"
+                element={
+                  <ProtectedRoute>
+                    <ModuleSelection />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Employee Management System Routes */}
+              <Route
+                path="/employee-management-system"
+                element={
+                  <ProtectedRoute>
+                    <EmployeeDashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Department Routes */}
+              <Route
+                path="/employee-management-system/departments"
+                element={
+                  <HRProtectedRoute>
+                    <DepartmentList />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/departments/new"
+                element={
+                  <HRProtectedRoute>
+                    <DepartmentForm />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/departments/edit/:id"
+                element={
+                  <HRProtectedRoute>
+                    <DepartmentEdit />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/departments/details/:id"
+                element={
+                  <HRProtectedRoute>
+                    <DepartmentDetails />
+                  </HRProtectedRoute>
+                }
+              />
+
+              {/* SubDepartment Routes */}
+              <Route
+                path="/employee-management-system/subdepartments"
+                element={
                   <HRProtectedRoute>
                     <SubDepartmentList />
                   </HRProtectedRoute>
-                } />
-                <Route path="/employee-management/sub-departments/new" element={
+                }
+              />
+              <Route
+                path="/employee-management-system/subdepartments/new"
+                element={
                   <HRProtectedRoute>
                     <SubDepartmentForm />
                   </HRProtectedRoute>
-                } />
-                <Route path="/employee-management/sub-departments/:id" element={
-                  <HRProtectedRoute>
-                    <SubDepartmentDetails />
-                  </HRProtectedRoute>
-                } />
-                <Route path="/employee-management/sub-departments/:id/edit" element={
+                }
+              />
+              <Route
+                path="/employee-management-system/subdepartments/edit/:id"
+                element={
                   <HRProtectedRoute>
                     <SubDepartmentEdit />
                   </HRProtectedRoute>
-                } />
-                
-                {/* Employee Routes */}
-                <Route
-                  path="/employee-management/employees"
-                  element={
-                    <ProtectedRoute>
-                      <EmployeeList />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/employee-management/employees/new"
-                  element={
-                    <ProtectedRoute>
-                      <EmployeeForm />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/employee-management/employees/details/:id"
-                  element={
-                    <ProtectedRoute>
-                      <EmployeeDetails />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/employee-management/employees/edit/:id"
-                  element={
-                    <ProtectedRoute>
-                      <EmployeeEdit />
-                    </ProtectedRoute>
-                  }
-                />
+                }
+              />
+              <Route
+                path="/employee-management-system/subdepartments/details/:id"
+                element={
+                  <HRProtectedRoute>
+                    <SubDepartmentDetails />
+                  </HRProtectedRoute>
+                }
+              />
 
-                {/* Occupation Routes */}
-                <Route 
-                  path="/employee-management/occupations" 
-                  element={
-                    <ProtectedRoute>
-                      <OccupationList />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/employee-management/occupations/new" 
-                  element={
-                    <ProtectedRoute>
-                      <OccupationForm />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/employee-management/occupations/details/:id" 
-                  element={
-                    <ProtectedRoute>
-                      <OccupationDetails />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/employee-management/occupations/edit/:id" 
-                  element={
-                    <ProtectedRoute>
-                      <OccupationEdit />
-                    </ProtectedRoute>
-                  } 
-                />
+              {/* Employee Routes */}
+              <Route
+                path="/employee-management-system/employees"
+                element={
+                  <HRProtectedRoute>
+                    <EmployeeList />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/employees/new"
+                element={
+                  <HRProtectedRoute>
+                    <EmployeeForm />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/employees/edit/:id"
+                element={
+                  <HRProtectedRoute>
+                    <EmployeeEdit />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/employees/details/:id"
+                element={
+                  <HRProtectedRoute>
+                    <EmployeeDetails />
+                  </HRProtectedRoute>
+                }
+              />
 
-                {/* OccupationLevel Routes */}
-                <Route 
-                  path="/employee-management/occupation-levels" 
-                  element={
-                    <ProtectedRoute>
-                      <OccupationLevelList />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/employee-management/occupation-levels/new" 
-                  element={
-                    <ProtectedRoute>
-                      <OccupationLevelForm />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/employee-management/occupation-levels/details/:id" 
-                  element={
-                    <ProtectedRoute>
-                      <OccupationLevelDetails />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/employee-management/occupation-levels/edit/:id" 
-                  element={
-                    <ProtectedRoute>
-                      <OccupationLevelEdit />
-                    </ProtectedRoute>
-                  } 
-                />
+              {/* Occupation Routes */}
+              <Route
+                path="/employee-management-system/occupations"
+                element={
+                  <HRProtectedRoute>
+                    <OccupationList />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/occupations/new"
+                element={
+                  <HRProtectedRoute>
+                    <OccupationForm />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/occupations/edit/:id"
+                element={
+                  <HRProtectedRoute>
+                    <OccupationEdit />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/occupations/details/:id"
+                element={
+                  <HRProtectedRoute>
+                    <OccupationDetails />
+                  </HRProtectedRoute>
+                }
+              />
 
-                {/* Application Routes */}
-                <Route
-                  path="/employee-management/applications"
-                  element={
-                    <ProtectedRoute>
-                      <ApplicationList />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/employee-management/applications/new"
-                  element={
-                    <ProtectedRoute>
-                      <ApplicationForm />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/employee-management/applications/edit/:id"
-                  element={
-                    <ProtectedRoute>
-                      <ApplicationEdit />
-                    </ProtectedRoute>
-                  }
-                />
-                {/* Add the missing ApplicationDetails route */}
-                <Route
-                  path="/employee-management/applications/details/:id"
-                  element={
-                    <ProtectedRoute>
-                      <ApplicationDetails />
-                    </ProtectedRoute>
-                  }
-                />
+              {/* OccupationLevel Routes */}
+              <Route
+                path="/employee-management-system/occupation-levels"
+                element={
+                  <HRProtectedRoute>
+                    <OccupationLevelList />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/occupation-levels/new"
+                element={
+                  <HRProtectedRoute>
+                    <OccupationLevelForm />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/occupation-levels/edit/:id"
+                element={
+                  <HRProtectedRoute>
+                    <OccupationLevelEdit />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/occupation-levels/details/:id"
+                element={
+                  <HRProtectedRoute>
+                    <OccupationLevelDetails />
+                  </HRProtectedRoute>
+                }
+              />
 
-                {/* Company Routes */}
-                <Route
-                  path="/employee-management/companies"
-                  element={
-                    <ProtectedRoute>
-                      <CompanyList />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/employee-management/companies/new"
-                  element={
-                    <ProtectedRoute>
-                      <CompanyForm />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/employee-management/companies/details/:id"
-                  element={
-                    <ProtectedRoute>
-                      <CompanyDetails />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/employee-management/companies/edit/:id"
-                  element={
-                    <ProtectedRoute>
-                      <CompanyEdit />
-                    </ProtectedRoute>
-                  }
-                />
+              {/* Application Routes */}
+              <Route
+                path="/employee-management-system/applications"
+                element={
+                  <HRProtectedRoute>
+                    <ApplicationList />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/applications/new"
+                element={
+                  <HRProtectedRoute>
+                    <ApplicationForm />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/applications/edit/:id"
+                element={
+                  <HRProtectedRoute>
+                    <ApplicationEdit />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/applications/details/:id"
+                element={
+                  <HRProtectedRoute>
+                    <ApplicationDetails />
+                  </HRProtectedRoute>
+                }
+              />
 
-                {/* Service Report System Routes */}
-                <Route
-                  path="/service-report-system/dashboard"
-                  element={
-                    <ProtectedRoute>
-                      <NavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <Dashboard />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/service-report-system"
-                  element={
-                    <ProtectedRoute>
-                      <NavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <ServiceReportList />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/service-report/new"
-                  element={
-                    <ProtectedRoute>
-                      <NavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <ServiceReportForm />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/service-report/edit/:id"
-                  element={
-                    <ProtectedRoute>
-                      <NavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <ServiceReportEdit />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/service-report/details/:id"
-                  element={
-                    <ProtectedRoute>
-                      <NavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <ServiceReportDetails />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/service-report-system/import"
-                  element={
-                    <ProtectedRoute>
-                      <NavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <ServiceReportImport />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                
-                {/* News Portal System Routes - Updated Structure */}
-                <Route
-                  path="/news-portal-system"
-                  element={
-                    <ProtectedRoute>
-                      <NewsPortalLayout />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route index element={<NewsDisplay />} />
-                  {/* Add this route for individual news details */}
-                  <Route path="news/:id" element={<NewsDetail />} />
-                  {/* Admin-only routes */}
-                  <Route 
-                    path="news" 
-                    element={
-                      <ProtectedRoute requireNewsPortalAdmin={true}>
-                        <NewsList />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="news/new" 
-                    element={
-                      <ProtectedRoute requireNewsPortalAdmin={true}>
-                        <NewsForm />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route path="news/edit/:id" element={<NewsEdit />} />
-                  <Route 
-                    path="categories" 
-                    element={
-                      <ProtectedRoute requireNewsPortalAdmin={true}>
-                        <NewsCategoryList />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="categories/new" 
-                    element={
-                      <ProtectedRoute requireNewsPortalAdmin={true}>
-                        <NewsCategoryForm />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="categories/edit/:id" 
-                    element={
-                      <ProtectedRoute requireNewsPortalAdmin={true}>
-                        <NewsCategoryEdit />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  {/* Add other admin-only routes for comments and images */}
-                </Route>
-                {/* Add this route after the existing department routes */}
-                <Route
-                  path="/employee-management/departments/details/:id"
-                  element={
-                    <ProtectedRoute>
-                      <DepartmentDetails />
-                    </ProtectedRoute>
-                  }
-                />
-              </Routes>
+              {/* Company Routes */}
+              <Route
+                path="/employee-management-system/companies"
+                element={
+                  <HRProtectedRoute>
+                    <CompanyList />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/companies/new"
+                element={
+                  <HRProtectedRoute>
+                    <CompanyForm />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/companies/edit/:id"
+                element={
+                  <HRProtectedRoute>
+                    <CompanyEdit />
+                  </HRProtectedRoute>
+                }
+              />
+              <Route
+                path="/employee-management-system/companies/details/:id"
+                element={
+                  <HRProtectedRoute>
+                    <CompanyDetails />
+                  </HRProtectedRoute>
+                }
+              />
+
+              {/* News Portal System Routes */}
+              <Route
+                path="/news-portal-system"
+                element={
+                  <ProtectedRoute>
+                    <NewsPortalLayout />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/news-portal-system/news"
+                element={
+                  <ProtectedRoute>
+                    <NewsPortalLayout>
+                      <NewsList />
+                    </NewsPortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/news-portal-system/news/new"
+                element={
+                  <ProtectedRoute>
+                    <NewsPortalLayout>
+                      <NewsForm />
+                    </NewsPortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/news-portal-system/news/edit/:id"
+                element={
+                  <ProtectedRoute>
+                    <NewsPortalLayout>
+                      <NewsEdit />
+                    </NewsPortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/news-portal-system/news/details/:id"
+                element={
+                  <ProtectedRoute>
+                    <NewsPortalLayout>
+                      <NewsDetail />
+                    </NewsPortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/news-portal-system/categories"
+                element={
+                  <ProtectedRoute>
+                    <NewsPortalLayout>
+                      <NewsCategoryList />
+                    </NewsPortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/news-portal-system/categories/new"
+                element={
+                  <ProtectedRoute>
+                    <NewsPortalLayout>
+                      <NewsCategoryForm />
+                    </NewsPortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/news-portal-system/categories/edit/:id"
+                element={
+                  <ProtectedRoute>
+                    <NewsPortalLayout>
+                      <NewsCategoryEdit />
+                    </NewsPortalLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/news-portal-system/display"
+                element={
+                  <ProtectedRoute>
+                    <NewsDisplay />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Room Booking System Routes */}
-              <Routes>
-                {/* Add this route */}
-                <Route
-                  path="/room-booking-system/calendar"
-                  element={
-                    <ProtectedRoute>
-                      <RoomBookingNavBar />
-                      <Box sx={{ flexGrow: 1 }}>
-                        <RoomBookingCalendar />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                // For the buildings route
-                <Route
-                  path="/room-booking-system/buildings"
-                  element={
-                    <ProtectedRoute>
-                      <RoomBookingNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <HRProtectedRoute>
-                          <BuildingList />
-                        </HRProtectedRoute>
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                
-                // Similar changes for other building-related routes and room routes
-                <Route
-                  path="/room-booking-system/buildings/new"
-                  element={
-                    <ProtectedRoute>
-                      <RoomBookingNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <BuildingForm />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                {/* Add these new routes */}
-                <Route
-                  path="/room-booking-system/buildings/details/:id"
-                  element={
-                    <ProtectedRoute>
-                      <RoomBookingNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <BuildingDetails />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/room-booking-system/buildings/edit/:id"
-                  element={
-                    <ProtectedRoute>
-                      <RoomBookingNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <BuildingEdit />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                {/* Room Routes */}
-                <Route
-                  path="/room-booking-system/rooms"
-                  element={
-                    <ProtectedRoute>
-                      <RoomBookingNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <RoomList />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/room-booking-system/rooms/new"
-                  element={
-                    <ProtectedRoute>
-                      <RoomBookingNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <RoomForm />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/room-booking-system/rooms/details/:id"
-                  element={
-                    <ProtectedRoute>
-                      <RoomBookingNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <RoomDetails />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/room-booking-system/rooms/edit/:id"
-                  element={
-                    <ProtectedRoute>
-                      <RoomBookingNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <RoomEdit />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                
-                {/* Room Booking Routes */}
-                <Route
-                  path="/room-booking-system/bookings"
-                  element={
-                    <ProtectedRoute>
-                      <RoomBookingNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <RoomBookingList />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/room-booking-system/bookings/new"
-                  element={
-                    <ProtectedRoute>
-                      <RoomBookingNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <RoomBookingForm />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/room-booking-system/bookings/details/:id"
-                  element={
-                    <ProtectedRoute>
-                      <RoomBookingNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <RoomBookingDetailsRouter />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/room-booking-system/bookings/edit/:id"
-                  element={
-                    <ProtectedRoute>
-                      <RoomBookingNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <RoomBookingEdit />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/room-booking-system"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <BuildingList />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room-booking-system/buildings"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <BuildingList />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room-booking-system/buildings/new"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <BuildingForm />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room-booking-system/buildings/details/:id"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <BuildingDetails />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room-booking-system/buildings/edit/:id"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <BuildingEdit />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room-booking-system/rooms"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <RoomList />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room-booking-system/rooms/new"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <RoomForm />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room-booking-system/rooms/details/:id"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <RoomDetails />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room-booking-system/rooms/edit/:id"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <RoomEdit />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room-booking-system/bookings"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <RoomBookingList />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room-booking-system/bookings/new"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <RoomBookingForm />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room-booking-system/bookings/calendar"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <RoomBookingCalendar />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room-booking-system/bookings/details/:id"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <RoomBookingDetailsRouter />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room-booking-system/bookings/edit/:id"
+                element={
+                  <ProtectedRoute>
+                    <RoomBookingNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <RoomBookingEdit />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
 
-                
-                {/* Report Management System Routes */}
-                <Route
-                  path="/report-management-system"
-                  element={
-                    <ProtectedRoute>
-                      <ReportFormNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <ReportFormList />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/report-management-system/report-forms"
-                  element={
-                    <ProtectedRoute>
-                      <ReportFormNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <ReportFormList />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/report-management-system/report-forms/new"
-                  element={
-                    <ProtectedRoute>
-                      <ReportFormNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <ReportFormForm />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/report-management-system/report-forms/edit/:id"
-                  element={
-                    <ProtectedRoute>
-                      <ReportFormNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <ReportFormEdit />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                
-                <Route
-                  path="/report-management-system/report-forms/rtu-pm-details/:id"
-                  element={
-                    <ProtectedRoute>
-                      <ReportFormNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <RTUPMReportFormDetails />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-                
-                <Route
-                  path="/report-management-system/report-forms/cm-details/:id"
-                  element={
-                    <ProtectedRoute>
-                      <ReportFormNavBar />
-                      <Box sx={{ flexGrow: 1, p: 3 }}>
-                        <CMReportFormDetails />
-                      </Box>
-                    </ProtectedRoute>
-                  }
-                />
-              </Routes>
-            </Box>
+              
+              {/* Report Management System Routes */}
+              <Route
+                path="/report-management-system"
+                element={
+                  <ProtectedRoute>
+                    <ReportFormNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <ReportFormList />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/report-management-system/report-forms"
+                element={
+                  <ProtectedRoute>
+                    <ReportFormNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <ReportFormList />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/report-management-system/report-forms/new"
+                element={
+                  <ProtectedRoute>
+                    <ReportFormNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <ReportFormForm />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              
+              <Route
+                path="/report-management-system/report-forms/rtu-pm-details/:id"
+                element={
+                  <ProtectedRoute>
+                    <ReportFormNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <RTUPMReportFormDetails />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              
+              <Route
+                path="/report-management-system/report-forms/cm-details/:id"
+                element={
+                  <ProtectedRoute>
+                    <ReportFormNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <CMReportFormDetails />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* RTU PM Edit Route */}
+              <Route
+                path="/report-management-system/rtu-pm-edit/:id"
+                element={
+                  <ProtectedRoute>
+                    <ReportFormNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <RTUPMReportFormEdit />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* RTU PM Review Edit Route */}
+              <Route
+                path="/report-management-system/rtu-pm-report-review-edit/:id"
+                element={
+                  <ProtectedRoute>
+                    <ReportFormNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <RTUPMReviewReportFormEdit />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
           </Router>
-        </LocalizationProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </LocalizationProvider>
     </ThemeProvider>
   );
 }

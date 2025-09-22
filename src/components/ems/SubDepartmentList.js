@@ -112,7 +112,7 @@ const SubDepartmentList = () => {
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => navigate('/employee-management/sub-departments/new')}
+            onClick={() => navigate('/employee-management-system/sub-departments/new')}
             sx={{
               background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%) !important',
               color: 'white !important',
@@ -190,7 +190,7 @@ const SubDepartmentList = () => {
               {subDepartments.map((subDepartment, index) => (
                 <TableRow 
                   key={subDepartment.id}
-                  onDoubleClick={() => navigate(`/employee-management/sub-departments/${subDepartment.id}`)}
+                  onDoubleClick={() => navigate(`/employee-management-system/sub-departments/${subDepartment.id}`)}
                   sx={{
                     cursor: 'pointer',
                     '&:hover': {
@@ -227,7 +227,7 @@ const SubDepartmentList = () => {
                     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
                       <Tooltip title="View Details">
                         <IconButton
-                          onClick={() => navigate(`/employee-management/sub-departments/${subDepartment.id}`)}
+                          onClick={() => navigate(`/employee-management-system/sub-departments/${subDepartment.id}`)}
                           sx={{ 
                             color: '#34C759',
                             '&:hover': { 
@@ -243,7 +243,7 @@ const SubDepartmentList = () => {
                       </Tooltip>
                       <Tooltip title="Edit">
                         <IconButton
-                          onClick={() => navigate(`/employee-management/sub-departments/${subDepartment.id}/edit`)}
+                          onClick={() => navigate(`/employee-management-system/sub-departments/${subDepartment.id}/edit`)}
                           sx={{ 
                             color: '#ff9800',
                             '&:hover': { 

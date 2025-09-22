@@ -114,7 +114,7 @@ const SubDepartmentForm = () => {
       await createSubDepartment(submitData);
       showNotification('Sub-department created successfully!', 'success');
       setTimeout(() => {
-        navigate('/employee-management/sub-departments');
+        navigate('/employee-management-system/sub-departments');
       }, 1500);
     } catch (error) {
       console.error('Error creating sub-department:', error);
@@ -125,7 +125,7 @@ const SubDepartmentForm = () => {
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/sub-departments');
+    navigate('/employee-management-system/sub-departments');
   };
 
   return (
@@ -144,7 +144,7 @@ const SubDepartmentForm = () => {
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Button
-              onClick={() => navigate('/employee-management/sub-departments')}
+              onClick={() => navigate('/employee-management-system/sub-departments')}
               sx={{
                 color: 'white',
                 minWidth: 'auto',

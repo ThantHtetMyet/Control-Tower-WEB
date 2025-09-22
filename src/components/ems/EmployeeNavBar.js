@@ -70,50 +70,50 @@ const EmployeeNavBar = () => {
             Home
           </Button>
           <Button 
-            onClick={() => navigate('/employee-management')}
-            sx={getButtonStyle('/employee-management')}
+            onClick={() => navigate('/employee-management-system')}
+            sx={getButtonStyle('/employee-management-system')}
           >
             Dashboard
           </Button>
           <Button 
-            onClick={() => navigate('/employee-management/companies')}
-            sx={getButtonStyle('/employee-management/companies')}
+            onClick={() => navigate('/employee-management-system/companies')}
+            sx={getButtonStyle('/employee-management-system/companies')}
           >
             Companies
           </Button>
           <Button 
-            onClick={() => navigate('/employee-management/departments')}
-            sx={getButtonStyle('/employee-management/departments')}
+            onClick={() => navigate('/employee-management-system/departments')}
+            sx={getButtonStyle('/employee-management-system/departments')}
           >
             Departments
           </Button>
           <Button 
-            onClick={() => navigate('/employee-management/sub-departments')}
-            sx={getButtonStyle('/employee-management/sub-departments')}
+            onClick={() => navigate('/employee-management-system/sub-departments')}
+            sx={getButtonStyle('/employee-management-system/sub-departments')}
           >
             Sub Departments
           </Button>
           <Button 
-            onClick={() => navigate('/employee-management/occupations')}
-            sx={getButtonStyle('/employee-management/occupations')}
+            onClick={() => navigate('/employee-management-system/occupations')}
+            sx={getButtonStyle('/employee-management-system/occupations')}
           >
             Occupations
           </Button>
           <Button 
-            onClick={() => navigate('/employee-management/occupation-levels')}
-            sx={getButtonStyle('/employee-management/occupation-levels')}
+            onClick={() => navigate('/employee-management-system/occupation-levels')}
+            sx={getButtonStyle('/employee-management-system/occupation-levels')}
           >
             Occupation Levels
           </Button>
           <Button 
-            onClick={() => navigate('/employee-management/applications')}
-            sx={getButtonStyle('/employee-management/applications')}
+            onClick={() => navigate('/employee-management-system/applications')}
+            sx={getButtonStyle('/employee-management-system/applications')}
           >
             Applications
           </Button>
           <Button 
-            onClick={() => navigate('/employee-management/employees')}
-            sx={getButtonStyle('/employee-management/employees')}
+            onClick={() => navigate('/employee-management-system/employees')}
+            sx={getButtonStyle('/employee-management-system/employees')}
           >
             Employees
           </Button>

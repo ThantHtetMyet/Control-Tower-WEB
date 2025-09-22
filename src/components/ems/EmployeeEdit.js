@@ -349,7 +349,7 @@ const EmployeeEdit = () => {
   
       setSuccessMessage('Employee updated successfully!');
       setTimeout(() => {
-        navigate('/employee-management/employees');
+        navigate('/employee-management-system/employees');
       }, 2000);
     } catch (err) {
       setError('Error updating employee: ' + err.message);
@@ -362,7 +362,7 @@ const EmployeeEdit = () => {
   // Remove these lines (around lines 305-309):
   // const handleSuccessModalClose = () => {
   //   setShowSuccessModal(false);
-  //   navigate('/employee-management/employees');
+  //   navigate('/employee-management-system/employees');
   // };
   
   // Remove the entire Dialog component (lines 903-946):
@@ -1054,7 +1054,7 @@ const EmployeeEdit = () => {
                 <Button
                   variant="outlined"
                   startIcon={<Cancel />}
-                  onClick={() => navigate('/employee-management/employees')}
+                  onClick={() => navigate('/employee-management-system/employees')}
                   sx={{
                     borderColor: '#6c757d',
                     color: '#6c757d',

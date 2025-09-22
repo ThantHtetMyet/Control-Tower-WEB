@@ -112,7 +112,7 @@ const ApplicationEdit = () => {
       
       // Navigate back after a short delay
       setTimeout(() => {
-        navigate('/employee-management/applications');
+        navigate('/employee-management-system/applications');
       }, 1500);
     } catch (error) {
       console.error('Error updating application:', error);
@@ -123,7 +123,7 @@ const ApplicationEdit = () => {
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/applications');
+    navigate('/employee-management-system/applications');
   };
 
   const handleCloseNotification = () => {
@@ -159,7 +159,7 @@ const ApplicationEdit = () => {
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Button
-              onClick={() => navigate('/employee-management/applications')}
+              onClick={() => navigate('/employee-management-system/applications')}
               sx={{
                 color: 'white',
                 minWidth: 'auto',

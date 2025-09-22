@@ -118,7 +118,7 @@ const EmployeeList = () => {
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => navigate('/employee-management/employees/new')}
+            onClick={() => navigate('/employee-management-system/employees/new')}
             sx={{
               background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%) !important',
               color: 'white !important',
@@ -179,7 +179,7 @@ const EmployeeList = () => {
               {employees.map((employee) => (
                 <TableRow 
                   key={employee.id}
-                  onDoubleClick={() => navigate(`/employee-management/employees/details/${employee.id}`)}
+                  onDoubleClick={() => navigate(`/employee-management-system/employees/details/${employee.id}`)}
                   sx={{
                     '&:hover': {
                       bgcolor: '#F8FDF8',
@@ -243,7 +243,7 @@ const EmployeeList = () => {
                   <TableCell>
                     <Tooltip title="View Details">
                       <IconButton
-                        onClick={() => navigate(`/employee-management/employees/details/${employee.id}`)}
+                        onClick={() => navigate(`/employee-management-system/employees/details/${employee.id}`)}
                         sx={{ color: '#34C759' }}
                       >
                         <Visibility />
@@ -251,7 +251,7 @@ const EmployeeList = () => {
                     </Tooltip>
                     <Tooltip title="Edit Employee">
                       <IconButton
-                        onClick={() => navigate(`/employee-management/employees/edit/${employee.id}`)}
+                        onClick={() => navigate(`/employee-management-system/employees/edit/${employee.id}`)}
                         sx={{ color: '#34C759' }}
                       >
                         <Edit />
@@ -290,7 +290,7 @@ const EmployeeList = () => {
             <Button
               variant="contained"
               startIcon={<Add />}
-              onClick={() => navigate('/employee-management/employees/new')}
+              onClick={() => navigate('/employee-management-system/employees/new')}
               sx={{
                 background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
                 '&:hover': {

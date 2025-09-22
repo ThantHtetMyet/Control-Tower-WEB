@@ -110,7 +110,7 @@ const DepartmentList = () => {
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => navigate('/employee-management/departments/new')}
+            onClick={() => navigate('/employee-management-system/departments/new')}
             sx={{
               background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%) !important',
               color: 'white !important',
@@ -162,7 +162,7 @@ const DepartmentList = () => {
               {departments.map((department) => (
                 <TableRow 
                   key={department.id}
-                  onDoubleClick={() => navigate(`/employee-management/departments/details/${department.id}`)}
+                  onDoubleClick={() => navigate(`/employee-management-system/departments/details/${department.id}`)}
                   sx={{
                     '&:hover': {
                       bgcolor: '#F8FDF8',
@@ -192,7 +192,7 @@ const DepartmentList = () => {
                   <TableCell>
                     <Tooltip title="View Details">
                       <IconButton 
-                        onClick={() => navigate(`/employee-management/departments/details/${department.id}`)}
+                        onClick={() => navigate(`/employee-management-system/departments/details/${department.id}`)}
                         sx={{ color: '#34C759' }}
                       >
                         <Visibility />
@@ -200,7 +200,7 @@ const DepartmentList = () => {
                     </Tooltip>
                     <Tooltip title="Edit Department">
                       <IconButton 
-                        onClick={() => navigate(`/employee-management/departments/edit/${department.id}`)}
+                        onClick={() => navigate(`/employee-management-system/departments/edit/${department.id}`)}
                         sx={{ color: '#34C759' }}
                       >
                         <Edit />

@@ -100,7 +100,7 @@ const OccupationLevelForm = () => {
       if (response.ok) {
         showNotification('Occupation level created successfully!', 'success');
         setTimeout(() => {
-          navigate('/employee-management/occupation-levels');
+          navigate('/employee-management-system/occupation-levels');
         }, 1500);
       } else {
         const errorText = await response.text();
@@ -115,7 +115,7 @@ const OccupationLevelForm = () => {
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/occupation-levels');
+    navigate('/employee-management-system/occupation-levels');
   };
 
   return (
@@ -134,7 +134,7 @@ const OccupationLevelForm = () => {
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Button
-              onClick={() => navigate('/employee-management/occupation-levels')}
+              onClick={() => navigate('/employee-management-system/occupation-levels')}
               sx={{
                 color: 'white',
                 minWidth: 'auto',

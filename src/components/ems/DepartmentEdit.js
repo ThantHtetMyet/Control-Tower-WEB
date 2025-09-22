@@ -70,12 +70,12 @@ const DepartmentEdit = () => {
         });
       } else {
         showNotification('Error fetching department details', 'error');
-        navigate('/employee-management/departments');
+        navigate('/employee-management-system/departments');
       }
     } catch (error) {
       console.error('Error fetching department:', error);
       showNotification('Error fetching department details', 'error');
-      navigate('/employee-management/departments');
+      navigate('/employee-management-system/departments');
     } finally {
       setInitialLoading(false);
     }
@@ -143,7 +143,7 @@ const DepartmentEdit = () => {
       if (response.ok) {
         showNotification('Department updated successfully!', 'success');
         setTimeout(() => {
-          navigate('/employee-management/departments');
+          navigate('/employee-management-system/departments');
         }, 1500);
       } else {
         const errorText = await response.text();
@@ -158,7 +158,7 @@ const DepartmentEdit = () => {
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/departments');
+    navigate('/employee-management-system/departments');
   };
 
   if (initialLoading) {
@@ -190,7 +190,7 @@ const DepartmentEdit = () => {
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Button
-              onClick={() => navigate('/employee-management/departments')}
+              onClick={() => navigate('/employee-management-system/departments')}
               sx={{
                 color: 'white',
                 minWidth: 'auto',

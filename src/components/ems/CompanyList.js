@@ -120,7 +120,7 @@ const CompanyList = () => {
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => navigate('/employee-management/companies/new')}
+            onClick={() => navigate('/employee-management-system/companies/new')}
             sx={{
               background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%) !important',
               color: 'white !important',
@@ -161,7 +161,7 @@ const CompanyList = () => {
                   <TableRow 
                     key={company.id} 
                     hover
-                    onDoubleClick={() => navigate(`/employee-management/companies/details/${company.id}`)}
+                    onDoubleClick={() => navigate(`/employee-management-system/companies/details/${company.id}`)}
                     sx={{ cursor: 'pointer' }}
                   >
                     <TableCell>
@@ -194,7 +194,7 @@ const CompanyList = () => {
                         <Tooltip title="View Details">
                           <IconButton
                             size="small"
-                            onClick={() => navigate(`/employee-management/companies/details/${company.id}`)}
+                            onClick={() => navigate(`/employee-management-system/companies/details/${company.id}`)}
                             sx={{ 
                               color: '#34C759',
                               '&:hover': {
@@ -209,7 +209,7 @@ const CompanyList = () => {
                         <Tooltip title="Edit">
                           <IconButton
                             size="small"
-                            onClick={() => navigate(`/employee-management/companies/edit/${company.id}`)}
+                            onClick={() => navigate(`/employee-management-system/companies/edit/${company.id}`)}
                             sx={{ 
                               color: '#FF9800',
                               '&:hover': {
@@ -256,7 +256,7 @@ const CompanyList = () => {
             <Button
               variant="contained"
               startIcon={<Add />}
-              onClick={() => navigate('/employee-management/companies/new')}
+              onClick={() => navigate('/employee-management-system/companies/new')}
               sx={{
                 background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
                 '&:hover': {

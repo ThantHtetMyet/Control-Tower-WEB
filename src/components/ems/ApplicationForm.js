@@ -77,7 +77,7 @@ function ApplicationForm() {
       
       setSuccessMessage(`Application ${isEdit ? 'updated' : 'created'} successfully!`);
       setTimeout(() => {
-        navigate('/employee-management/applications');
+        navigate('/employee-management-system/applications');
       }, 2000);
     } catch (err) {
       setError(isEdit ? 'Failed to update application' : 'Failed to create application');
@@ -88,7 +88,7 @@ function ApplicationForm() {
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/applications');
+    navigate('/employee-management-system/applications');
   };
 
   return (
@@ -107,7 +107,7 @@ function ApplicationForm() {
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Button
-              onClick={() => navigate('/employee-management/applications')}
+              onClick={() => navigate('/employee-management-system/applications')}
               sx={{
                 color: 'white',
                 minWidth: 'auto',

@@ -160,7 +160,7 @@ const CompanyDetails = () => {
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
               <Button
                 startIcon={<ArrowBack />}
-                onClick={() => navigate('/employee-management/companies')}
+                onClick={() => navigate('/employee-management-system/companies')}
                 sx={{
                   color: 'white',
                   bgcolor: 'rgba(255,255,255,0.2)',
@@ -175,7 +175,7 @@ const CompanyDetails = () => {
               <Button
                 startIcon={<Edit />}
                 variant="contained"
-                onClick={() => navigate(`/employee-management/companies/edit/${company.id}`)}
+                onClick={() => navigate(`/employee-management-system/companies/edit/${company.id}`)}
                 sx={{
                   background: 'rgba(255,255,255,0.2)',
                   color: 'white',

@@ -174,7 +174,7 @@ const OccupationLevelDetails = () => {
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
               <Button
                 startIcon={<ArrowBack />}
-                onClick={() => navigate('/employee-management/occupation-levels')}
+                onClick={() => navigate('/employee-management-system/occupation-levels')}
                 sx={{
                   color: 'white',
                   bgcolor: 'rgba(255,255,255,0.2)',
@@ -189,7 +189,7 @@ const OccupationLevelDetails = () => {
               <Button
                 startIcon={<Edit />}
                 variant="contained"
-                onClick={() => navigate(`/employee-management/occupation-levels/edit/${occupationLevel.id}`)}
+                onClick={() => navigate(`/employee-management-system/occupation-levels/edit/${occupationLevel.id}`)}
                 sx={{
                   background: 'rgba(255,255,255,0.2)',
                   color: 'white',

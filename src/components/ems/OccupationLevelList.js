@@ -135,7 +135,7 @@ const OccupationLevelList = () => {
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => navigate('/employee-management/occupation-levels/new')}
+            onClick={() => navigate('/employee-management-system/occupation-levels/new')}
             sx={{
               background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%) !important',
               color: 'white',
@@ -162,7 +162,7 @@ const OccupationLevelList = () => {
             <Button
               variant="contained"
               startIcon={<Add />}
-              onClick={() => navigate('/employee-management/occupation-levels/new')}
+              onClick={() => navigate('/employee-management-system/occupation-levels/new')}
               sx={{
                 background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
                 color: 'white',
@@ -200,7 +200,7 @@ const OccupationLevelList = () => {
                     <TableRow 
                       key={occupationLevel.id} 
                       hover
-                      onDoubleClick={() => navigate(`/employee-management/occupation-levels/details/${occupationLevel.id}`)}
+                      onDoubleClick={() => navigate(`/employee-management-system/occupation-levels/details/${occupationLevel.id}`)}
                       sx={{ cursor: 'pointer' }}
                     >
                       <TableCell>
@@ -235,7 +235,7 @@ const OccupationLevelList = () => {
                               size="small"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/employee-management/occupation-levels/details/${occupationLevel.id}`);
+                                navigate(`/employee-management-system/occupation-levels/details/${occupationLevel.id}`);
                               }}
                               sx={{
                                 color: '#34C759',
@@ -253,7 +253,7 @@ const OccupationLevelList = () => {
                               size="small"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/employee-management/occupation-levels/edit/${occupationLevel.id}`);
+                                navigate(`/employee-management-system/occupation-levels/edit/${occupationLevel.id}`);
                               }}
                               sx={{
                                 color: '#FF9800',

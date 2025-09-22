@@ -141,7 +141,7 @@ const EmployeeHierarchyModal = ({ open, onClose }) => {
 
     return (
       <Box
-        onClick={() => navigate(`/employee-management/employees/details/${emp.id}`)}
+        onClick={() => navigate(`/employee-management-system/employees/details/${emp.id}`)}
         sx={{
           p: 1.5,
           borderRadius: '12px',

@@ -61,12 +61,12 @@ const OccupationEdit = () => {
         });
       } else {
         showNotification('Failed to fetch occupation details', 'error');
-        navigate('/employee-management/occupations');
+        navigate('/employee-management-system/occupations');
       }
     } catch (error) {
       console.error('Error fetching occupation:', error);
       showNotification('Error fetching occupation details', 'error');
-      navigate('/employee-management/occupations');
+      navigate('/employee-management-system/occupations');
     } finally {
       setFetchLoading(false);
     }
@@ -156,7 +156,7 @@ const OccupationEdit = () => {
       if (response.ok) {
         showNotification('Occupation updated successfully!', 'success');
         setTimeout(() => {
-          navigate('/employee-management/occupations');
+          navigate('/employee-management-system/occupations');
         }, 1500);
       } else {
         const errorText = await response.text();
@@ -171,7 +171,7 @@ const OccupationEdit = () => {
   };
 
   const handleCancel = () => {
-    navigate('/employee-management/occupations');
+    navigate('/employee-management-system/occupations');
   };
 
   if (fetchLoading) {
@@ -209,7 +209,7 @@ const OccupationEdit = () => {
         }}>
           <Button
             startIcon={<ArrowBack />}
-            onClick={() => navigate('/employee-management/occupations')}
+            onClick={() => navigate('/employee-management-system/occupations')}
             sx={{
               color: 'white',
               bgcolor: 'rgba(255,255,255,0.2)',

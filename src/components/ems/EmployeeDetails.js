@@ -254,7 +254,7 @@ const EmployeeDetails = () => {
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
               <Button
                 startIcon={<ArrowBack />}
-                onClick={() => navigate('/employee-management/employees')}
+                onClick={() => navigate('/employee-management-system/employees')}
                 sx={{
                   color: 'white',
                   bgcolor: 'rgba(255,255,255,0.2)',
@@ -289,7 +289,7 @@ const EmployeeDetails = () => {
                 <Button
                   startIcon={<Edit />}
                   variant="contained"
-                  onClick={() => navigate(`/employee-management/employees/edit/${employee.id}`)}
+                  onClick={() => navigate(`/employee-management-system/employees/edit/${employee.id}`)}
                   sx={{
                     background: 'linear-gradient(135deg, #34C759 0%, #28A745 100%)',
                     color: 'white',
