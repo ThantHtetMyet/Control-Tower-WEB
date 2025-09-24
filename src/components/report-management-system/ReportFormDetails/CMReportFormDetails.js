@@ -507,7 +507,7 @@ const CMReportFormDetails = () => {
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant="contained"
-              onClick={() => navigate(`/report-management-system/report-forms/edit/${id}`)}
+              onClick={() => navigate(`/report-management-system/cm-edit/${id}`)}
               sx={{
                 background: RMSTheme.components.button.primary.background,
                 color: RMSTheme.components.button.primary.text,

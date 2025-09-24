@@ -47,29 +47,11 @@ import {
   deletePMChamberMagneticContact,
   deletePMRTUCabinetCooling,
   deletePMDVREquipment,
-  getReportFormTypes,
   createReportFormImage,
   deleteReportFormImage,
   getReportFormImageTypes
 } from '../../api-services/reportFormService';
 import { API_BASE_URL } from '../../../config/apiConfig';
-
-// Styling constants
-const sectionContainer = {
-  marginBottom: 4,
-  padding: 3,
-  border: '1px solid #e0e0e0',
-  borderRadius: 2,
-  backgroundColor: '#fafafa'
-};
-
-const sectionHeader = {
-  color: RMSTheme.primary.main,
-  fontWeight: 'bold',
-  marginBottom: 2,
-  paddingBottom: 1,
-  borderBottom: `2px solid ${RMSTheme.primary.main}`
-};
 
 const fieldContainer = {
   marginBottom: 2,
@@ -746,6 +728,11 @@ const RTUPMReviewReportFormEdit = () => {
     setNotification({ ...notification, open: false });
   };
 
+  // Handle cancel action
+  const handleCancel = () => {
+    navigate(`/report-management-system`);
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -1253,26 +1240,33 @@ const RTUPMReviewReportFormEdit = () => {
             bottom: 0,
             zIndex: 1000
           }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2 }}>
+              
               <Button
                 variant="outlined"
-                startIcon={<ArrowBack />}
-                onClick={handleBack}
+                startIcon={<CancelIcon />}
+                onClick={handleCancel}
                 disabled={saving}
                 sx={{
-                  color: RMSTheme.components.button.secondary.text,
-                  borderColor: RMSTheme.components.button.secondary.border,
+                  color: '#6c757d',
+                  borderColor: '#6c757d',
                   padding: '12px 32px',
                   borderRadius: RMSTheme.borderRadius?.small || '8px',
                   '&:hover': {
-                    background: RMSTheme.components.button.secondary?.hover || '#f8f9fa',
-                    borderColor: RMSTheme.components.button.secondary.border
+                    background: '#f8f9fa',
+                    borderColor: '#5a6268',
+                    color: '#5a6268'
+                  },
+                  '&:disabled': {
+                    background: '#e9ecef',
+                    color: '#6c757d',
+                    borderColor: '#dee2e6'
                   }
                 }}
               >
-                Back to Edit
+                Cancel
               </Button>
-              
+
               <Button
                 variant="contained"
                 startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}

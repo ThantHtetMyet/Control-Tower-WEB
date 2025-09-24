@@ -268,7 +268,7 @@ const ReportFormList = () => {
                     <Tooltip title="Edit">
                       <IconButton
                         size="small"
-                        onClick={() => navigate(`/report-management-system/report-forms/${form.id}/edit`)}
+                        onClick={() => navigate(`/report-management-system/rtu-pm-edit/${form.id}`)}
                         sx={{
                           color: RMSTheme.status.warning,
                           '&:hover': {
