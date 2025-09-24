@@ -31,6 +31,7 @@ import {
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
+  Restore as RestoreIcon,
   CloudUpload as CloudUploadIcon,
   Close as CloseIcon,
   ArrowBack as ArrowBackIcon,
@@ -44,7 +45,7 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import RMSTheme from '../../theme-resource/RMSTheme';
-import { getCMReportForm, updateCMReportForm, getCMMaterialUsed } from '../../api-services/reportFormService';
+import { getCMReportForm, updateCMReportForm, getCMMaterialUsed, deleteCMMaterialUsed } from '../../api-services/reportFormService';
 import warehouseService from '../../api-services/warehouseService';
 import { API_BASE_URL } from '../../../config/apiConfig';
 
@@ -207,6 +208,14 @@ const CMReportFormEdit = () => {
 
   // Add CM Report Form ID state
   const [cmReportFormId, setCmReportFormId] = useState(null);
+
+  // Add state to track original images for comparison
+  const [originalImages, setOriginalImages] = useState({
+    beforeIssueImages: [],
+    afterActionImages: [],
+    materialUsedOldSerialImages: [],
+    materialUsedNewSerialImages: []
+  });
 
   // Dropdown data states - Following RTU PM pattern
   const [systemNames, setSystemNames] = useState([]);
@@ -378,6 +387,7 @@ const CMReportFormEdit = () => {
               imageName: img.imageName
             }));
             setBeforeIssueImages(beforeImages);
+            setOriginalImages(prev => ({ ...prev, beforeIssueImages: [...beforeImages] }));
           }
 
           if (response.afterActionImages) {
@@ -387,6 +397,7 @@ const CMReportFormEdit = () => {
               imageName: img.imageName
             }));
             setAfterActionImages(afterImages);
+            setOriginalImages(prev => ({ ...prev, afterActionImages: [...afterImages] }));
           }
 
           if (response.materialUsedOldSerialImages) {
@@ -396,6 +407,7 @@ const CMReportFormEdit = () => {
               imageName: img.imageName
             }));
             setMaterialUsedOldSerialImages(oldSerialImages);
+            setOriginalImages(prev => ({ ...prev, materialUsedOldSerialImages: [...oldSerialImages] }));
           }
 
           if (response.materialUsedNewSerialImages) {
@@ -405,16 +417,25 @@ const CMReportFormEdit = () => {
               imageName: img.imageName
             }));
             setMaterialUsedNewSerialImages(newSerialImages);
+            setOriginalImages(prev => ({ ...prev, materialUsedNewSerialImages: [...newSerialImages] }));
           }
 
-          // Store the CM Report Form ID
-          setCmReportFormId(cmData.id);
-          
-          // Load material used data
+          // Load material used data from API
           if (cmData.id) {
+            setCmReportFormId(cmData.id);
             const materialUsedResponse = await getCMMaterialUsed(cmData.id);
+            console.log('Material Used Response:', materialUsedResponse);
+            
             if (materialUsedResponse && materialUsedResponse.length > 0) {
-              setMaterialUsedData(materialUsedResponse);
+              const formattedMaterialUsed = materialUsedResponse.map(item => ({
+                id: item.id,
+                itemDescription: item.itemDescription,
+                newSerialNo: item.newSerialNo,
+                oldSerialNo: item.oldSerialNo,
+                remark: item.remark,
+                isDeleted: false // Initialize as not deleted for editing
+              }));
+              setMaterialUsedData(formattedMaterialUsed);
             }
           }
         }
@@ -461,14 +482,17 @@ const CMReportFormEdit = () => {
     }));
   };
 
-  // Handle material used data changes
+    // Handle material used data changes
   const handleAddMaterialUsedRow = () => {
     setMaterialUsedData(prev => [...prev, {
-      id: Date.now(),
-      materialDescription: '',
-      quantity: '',
-      unit: '',
-      remark: ''
+      id: null, // Set to null for new records, backend will generate GUID
+      itemDescription: '', // Match field name used in review component
+      
+      serialNo: '', // Required by backend DTO
+      oldSerialNo: '', // Keep for UI compatibility
+      newSerialNo: '', // Keep for UI compatibility
+      remark: '',
+      isDeleted: false // Add isDeleted flag
     }]);
   };
 
@@ -479,7 +503,16 @@ const CMReportFormEdit = () => {
   };
 
   const handleRemoveMaterialUsedRow = (index) => {
-    setMaterialUsedData(prev => prev.filter((_, i) => i !== index));
+    // Instead of removing, mark as deleted (soft delete)
+    setMaterialUsedData(prev => prev.map((item, i) => 
+      i === index ? { ...item, isDeleted: true } : item
+    ));
+  };
+
+  const handleRestoreMaterialUsedRow = (index) => {
+    setMaterialUsedData(prev => prev.map((item, i) => 
+      i === index ? { ...item, isDeleted: false } : item
+    ));
   };
 
   const handleClearMaterialUsed = () => {
@@ -524,6 +557,14 @@ const CMReportFormEdit = () => {
       afterActionImages: afterActionImages,
       materialUsedOldSerialImages: materialUsedOldSerialImages,
       materialUsedNewSerialImages: materialUsedNewSerialImages,
+      
+      // Add original images for deletion tracking
+      originalImages: {
+        beforeIssueImages: originalImages.beforeIssueImages,
+        afterActionImages: originalImages.afterActionImages,
+        materialUsedOldSerialImages: originalImages.materialUsedOldSerialImages,
+        materialUsedNewSerialImages: originalImages.materialUsedNewSerialImages
+      },
       
       // Material used data
       materialUsedData: materialUsedData,
@@ -1157,15 +1198,23 @@ const CMReportFormEdit = () => {
               <TableHead>
                 <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                   <TableCell sx={{ fontWeight: 'bold' }}>Material Description</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Old Serial No</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>New Serial No</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Old Serial No</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>New Serial No</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {materialUsedData.length > 0 ? (
                   materialUsedData.map((row, index) => (
-                    <TableRow key={row.id || index}>
+                    <TableRow 
+                      key={row.id || index}
+                      sx={{
+                        backgroundColor: row.isDeleted ? '#ffebee' : 'inherit',
+                        opacity: row.isDeleted ? 0.6 : 1,
+                        textDecoration: row.isDeleted ? 'line-through' : 'none'
+                      }}
+                    >
                       <TableCell>
                         <TextField
                           fullWidth
@@ -1173,6 +1222,7 @@ const CMReportFormEdit = () => {
                           value={row.itemDescription || ''}
                           onChange={(e) => handleMaterialUsedChange(index, 'itemDescription', e.target.value)}
                           variant="outlined"
+                          disabled={row.isDeleted}
                         />
                       </TableCell>
                       <TableCell>
@@ -1182,6 +1232,7 @@ const CMReportFormEdit = () => {
                           value={row.oldSerialNo || ''}
                           onChange={(e) => handleMaterialUsedChange(index, 'oldSerialNo', e.target.value)}
                           variant="outlined"
+                          disabled={row.isDeleted}
                         />
                       </TableCell>
                       <TableCell>
@@ -1191,6 +1242,7 @@ const CMReportFormEdit = () => {
                           value={row.newSerialNo || ''}
                           onChange={(e) => handleMaterialUsedChange(index, 'newSerialNo', e.target.value)}
                           variant="outlined"
+                          disabled={row.isDeleted}
                         />
                       </TableCell>
                       <TableCell>
@@ -1200,16 +1252,29 @@ const CMReportFormEdit = () => {
                           value={row.remark || ''}
                           onChange={(e) => handleMaterialUsedChange(index, 'remark', e.target.value)}
                           variant="outlined"
+                          disabled={row.isDeleted}
                         />
                       </TableCell>
                       <TableCell>
-                        <IconButton
-                          onClick={() => handleRemoveMaterialUsedRow(index)}
-                          color="error"
-                          size="small"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
+                        {row.isDeleted ? (
+                          <IconButton
+                            onClick={() => handleRestoreMaterialUsedRow(index)}
+                            color="success"
+                            size="small"
+                            title="Restore row"
+                          >
+                            <RestoreIcon />
+                          </IconButton>
+                        ) : (
+                          <IconButton
+                            onClick={() => handleRemoveMaterialUsedRow(index)}
+                            color="error"
+                            size="small"
+                            title="Delete row"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

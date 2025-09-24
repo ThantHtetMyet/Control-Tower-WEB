@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   Box,
   Paper,
@@ -35,7 +36,7 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import RMSTheme from '../../theme-resource/RMSTheme';
-import { getCMReportForm, updateCMReportForm, getCMMaterialUsed, updateReportForm, createCMMaterialUsed, createReportFormImage, deleteReportFormImage, getReportFormImageTypes } from '../../api-services/reportFormService';
+import { getCMReportForm, updateCMReportForm, getCMMaterialUsed, updateCMMaterialUsed, deleteCMMaterialUsed, updateReportForm, createCMMaterialUsed, createReportFormImage, deleteReportFormImage, getReportFormImageTypes } from '../../api-services/reportFormService';
 import warehouseService from '../../api-services/warehouseService';
 import { API_BASE_URL } from '../../../config/apiConfig';
 
@@ -245,6 +246,7 @@ const CMReviewReportFormEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth(); // Add this line to get current user
   
   // Loading and error states
   const [loading, setLoading] = useState(true);
@@ -397,19 +399,24 @@ const CMReviewReportFormEdit = () => {
           // Set image data from passed data
           if (passedData.beforeIssueImages) {
             setBeforeIssueImages(passedData.beforeIssueImages);
-            setOriginalImages(prev => ({ ...prev, beforeIssueImages: [...passedData.beforeIssueImages] }));
+            // Use passed original images if available, otherwise use current as original
+            const originalBeforeImages = passedData.originalImages?.beforeIssueImages || passedData.beforeIssueImages;
+            setOriginalImages(prev => ({ ...prev, beforeIssueImages: [...originalBeforeImages] }));
           }
           if (passedData.afterActionImages) {
             setAfterActionImages(passedData.afterActionImages);
-            setOriginalImages(prev => ({ ...prev, afterActionImages: [...passedData.afterActionImages] }));
+            const originalAfterImages = passedData.originalImages?.afterActionImages || passedData.afterActionImages;
+            setOriginalImages(prev => ({ ...prev, afterActionImages: [...originalAfterImages] }));
           }
           if (passedData.materialUsedOldSerialImages) {
             setMaterialUsedOldSerialImages(passedData.materialUsedOldSerialImages);
-            setOriginalImages(prev => ({ ...prev, materialUsedOldSerialImages: [...passedData.materialUsedOldSerialImages] }));
+            const originalOldSerialImages = passedData.originalImages?.materialUsedOldSerialImages || passedData.materialUsedOldSerialImages;
+            setOriginalImages(prev => ({ ...prev, materialUsedOldSerialImages: [...originalOldSerialImages] }));
           }
           if (passedData.materialUsedNewSerialImages) {
             setMaterialUsedNewSerialImages(passedData.materialUsedNewSerialImages);
-            setOriginalImages(prev => ({ ...prev, materialUsedNewSerialImages: [...passedData.materialUsedNewSerialImages] }));
+            const originalNewSerialImages = passedData.originalImages?.materialUsedNewSerialImages || passedData.materialUsedNewSerialImages;
+            setOriginalImages(prev => ({ ...prev, materialUsedNewSerialImages: [...originalNewSerialImages] }));
           }
           if (passedData.materialUsedData) {
             setMaterialUsedData(passedData.materialUsedData);
@@ -536,25 +543,25 @@ const CMReviewReportFormEdit = () => {
           current: beforeIssueImages,
           original: originalImages.beforeIssueImages,
           typeName: 'CMBeforeIssueImage',
-          sectionName: 'BeforeIssue'
+          sectionName: 'CMBeforeIssueImage'
         },
         {
           current: afterActionImages,
           original: originalImages.afterActionImages,
           typeName: 'CMAfterIssueImage',
-          sectionName: 'AfterAction'
+          sectionName: 'CMAfterAction'
         },
         {
           current: materialUsedOldSerialImages,
           original: originalImages.materialUsedOldSerialImages,
           typeName: 'CMMaterialUsedOldSerialNo',
-          sectionName: 'MaterialUsedOldSerial'
+          sectionName: 'CMMaterialUsedOldSerialNo'
         },
         {
           current: materialUsedNewSerialImages,
           original: originalImages.materialUsedNewSerialImages,
           typeName: 'CMMaterialUsedNewSerialNo',
-          sectionName: 'MaterialUsedNewSerial'
+          sectionName: 'CMMaterialUsedNewSerialNo'
         }
       ];
 
@@ -666,37 +673,54 @@ const CMReviewReportFormEdit = () => {
       const cmReportFormResponse = await updateCMReportForm(cmReportFormId, cmReportFormData);
       console.log('Step 2 completed:', cmReportFormResponse);
 
-      // Step 3: Update CMMaterialUsed data
+      // Step 3: Handle Material Used deletions first
       if (materialUsedData && materialUsedData.length > 0) {
-        setSaveProgress('Updating Material Used data...');
+        setSaveProgress('Processing Material Used deletions...');
         
-        // For each material used item, create or update
-        for (const materialItem of materialUsedData) {
-          const materialUsedItemData = {
-            cmReportFormID: cmReportFormId,
-            description: materialItem.description,
-            partNo: materialItem.partNo,
-            oldSerialNo: materialItem.oldSerialNo,
-            newSerialNo: materialItem.newSerialNo,
-            quantity: materialItem.quantity,
-            remarks: materialItem.remarks
-          };
-          
+        // Delete material used records marked for deletion
+        const recordsToDelete = materialUsedData.filter(record => record.isDeleted && record.id);
+        if (recordsToDelete.length > 0) {
+          console.log('Deleting Material Used records:', recordsToDelete);
+          await Promise.all(recordsToDelete.map(record => deleteCMMaterialUsed(record.id)));
+        }
+
+        // Step 4: Update Material Used data (exclude deleted records)
+        setSaveProgress('Updating Material Used data...');
+        const activeRecords = materialUsedData.filter(record => !record.isDeleted);
+        
+        // For each active material used item, create or update
+        for (const materialItem of activeRecords) {
           if (materialItem.id) {
-            // Update existing material used item (if update API exists)
+            // Update existing material used item
+            const materialUsedItemData = {
+              cmReportFormID: cmReportFormId,
+              itemDescription: materialItem.itemDescription,
+              newSerialNo: materialItem.newSerialNo,
+              oldSerialNo: materialItem.oldSerialNo,
+              remark: materialItem.remark,
+              updatedBy: user?.id // Use current user's ID
+            };
             console.log('Updating material used item:', materialUsedItemData);
-            // Note: Add updateCMMaterialUsed API if it exists
+            await updateCMMaterialUsed(materialItem.id, materialUsedItemData);
           } else {
             // Create new material used item
+            const materialUsedItemData = {
+              cmReportFormID: cmReportFormId,
+              itemDescription: materialItem.itemDescription,
+              newSerialNo: materialItem.newSerialNo,
+              oldSerialNo: materialItem.oldSerialNo,
+              remark: materialItem.remark,
+              createdBy: user?.id // Use current user's ID
+            };
             console.log('Creating material used item:', materialUsedItemData);
             await createCMMaterialUsed(materialUsedItemData);
           }
         }
         
-        console.log('Step 3 completed: Material Used data updated');
+        console.log('Material Used data processing completed');
       }
 
-      // Step 4: Process image changes
+      // Step 5: Process image changes
       setSaveProgress('Processing image changes...');
       await processImageChanges(reportFormId);
 
@@ -1201,7 +1225,9 @@ const CMReviewReportFormEdit = () => {
                   </TableHead>
                   <TableBody>
                     {materialUsedData.length > 0 ? (
-                      materialUsedData.map((row, index) => (
+                      materialUsedData
+                        .filter(row => !row.isDeleted) // Only show non-deleted rows in read-only mode
+                        .map((row, index) => (
                         <TableRow key={row.id || index}>
                           <TableCell>{row.itemDescription || 'N/A'}</TableCell>
                           <TableCell>{row.newSerialNo || 'N/A'}</TableCell>

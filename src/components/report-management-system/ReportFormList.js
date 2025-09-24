@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Button, IconButton, Typography, Box, Chip, Tooltip, LinearProgress,
-  Alert, Snackbar, MenuItem, Select, FormControl, InputLabel
+  Alert, Snackbar, MenuItem, Select, FormControl, InputLabel,
+  Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText
 } from '@mui/material';
 import { Edit, Delete, Add, Visibility, Description } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -17,6 +18,8 @@ const ReportFormList = () => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedTypeId, setSelectedTypeId] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [selectedDeleteId, setSelectedDeleteId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -45,16 +48,28 @@ const ReportFormList = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this report form?')) {
+  const handleDelete = (id) => {
+    setSelectedDeleteId(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (selectedDeleteId) {
       try {
-        await deleteReportForm(id);
+        await deleteReportForm(selectedDeleteId);
         setSuccessMessage('Report form deleted successfully');
         fetchReportForms();
       } catch (err) {
         setError('Error deleting report form: ' + err.message);
       }
     }
+    setDeleteConfirmOpen(false);
+    setSelectedDeleteId(null);
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmOpen(false);
+    setSelectedDeleteId(null);
   };
 
   const getStatusChip = (status) => {
@@ -322,6 +337,86 @@ const ReportFormList = () => {
           {successMessage}
         </Alert>
       </Snackbar>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={handleDeleteCancel}
+        PaperProps={{
+          sx: {
+            background: RMSTheme.components.card.background,
+            backdropFilter: RMSTheme.components.card.backdrop,
+            border: `1px solid ${RMSTheme.components.card.border}`,
+            borderRadius: RMSTheme.borderRadius.medium,
+            boxShadow: RMSTheme.shadows.heavy,
+            minWidth: '400px'
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backgroundColor: RMSTheme.background.overlay,
+            backdropFilter: 'blur(8px)'
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: RMSTheme.gradients.navbar,
+            color: RMSTheme.text.onPrimary,
+            fontWeight: 'bold',
+            borderBottom: `1px solid ${RMSTheme.components.card.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}
+        >
+          <Delete sx={{ color: RMSTheme.status.error }} />
+          Confirm Delete
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <DialogContentText
+            sx={{
+              color: '#ffffff',
+              fontSize: '16px',
+              lineHeight: 1.6,
+              fontWeight: 'bold',
+            }}
+          >
+            Are you sure you want to delete this report form? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, gap: 2 }}>
+          <Button
+            onClick={handleDeleteCancel}
+            variant="outlined"
+            sx={{
+              color: 'white',
+              borderColor: RMSTheme.components.button.outlined.border,
+              '&:hover': {
+                backgroundColor: RMSTheme.components.button.outlined.hover,
+                borderColor: RMSTheme.primary.light
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            variant="contained"
+            sx={{
+              background: RMSTheme.components.button.danger.background,
+              color: RMSTheme.components.button.danger.text,
+              boxShadow: RMSTheme.components.button.danger.shadow,
+              '&:hover': {
+                background: RMSTheme.components.button.danger.hover,
+                boxShadow: RMSTheme.shadows.heavy
+              }
+            }}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

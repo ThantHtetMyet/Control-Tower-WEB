@@ -761,3 +761,14 @@ export const deletePMDVREquipment = async (id) => {
     throw error;
   }
 };
+// Add this function after getCMMaterialUsed
+export const updateCMMaterialUsed = async (id, materialUsedData) => {
+  const response = await api.put(`/CMMaterialUsed/${id}`, materialUsedData);
+  return response.data;
+};
+
+// Add this function to delete material used items
+export const deleteCMMaterialUsed = async (id) => {
+  const response = await api.delete(`/CMMaterialUsed/${id}`);
+  return response.data;
+};
