@@ -564,7 +564,7 @@ function App() {
                 }
               />
               <Route
-                path="/room-booking-system/bookings/new"
+                path="/room-booking-system/new"
                 element={
                   <ProtectedRoute>
                     <RoomBookingNavBar />
@@ -575,7 +575,7 @@ function App() {
                 }
               />
               <Route
-                path="/room-booking-system/bookings/calendar"
+                path="/room-booking-system/calendar"
                 element={
                   <ProtectedRoute>
                     <RoomBookingNavBar />
@@ -586,7 +586,7 @@ function App() {
                 }
               />
               <Route
-                path="/room-booking-system/bookings/details/:id"
+                path="/room-booking-system/details/:id"
                 element={
                   <ProtectedRoute>
                     <RoomBookingNavBar />
@@ -597,7 +597,7 @@ function App() {
                 }
               />
               <Route
-                path="/room-booking-system/bookings/edit/:id"
+                path="/room-booking-system/edit/:id"
                 element={
                   <ProtectedRoute>
                     <RoomBookingNavBar />

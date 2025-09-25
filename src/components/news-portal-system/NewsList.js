@@ -32,15 +32,25 @@ const NewsList = () => {
   });
   
   const navigate = useNavigate();
-  const { hasNewsPortalAdminAccess } = useAuth();
+  const { hasNewsPortalAdminAccess, user, newsPortalAccessLevel } = useAuth();
   const { categories } = useCategories();
   
+  // Debug logging for authentication
+  console.log('Auth Debug:', {
+    user: user,
+    newsPortalAccessLevel: newsPortalAccessLevel,
+    hasAdminAccess: hasNewsPortalAdminAccess(),
+    categories: categories
+  });
+  
   useEffect(() => {
+    console.log('NewsList useEffect triggered with:', { page, search, selectedCategory, publishFilter });
     fetchNews();
   }, [page, search, selectedCategory, publishFilter]);
   
   const fetchNews = async () => {
     try {
+      console.log('fetchNews called with params:', { page, search, selectedCategory, publishFilter });
       setLoading(true);
       const response = await getNews(
         page, 
@@ -49,9 +59,12 @@ const NewsList = () => {
         selectedCategory || null, 
         publishFilter === '' ? null : publishFilter === 'true'
       );
+      console.log('getNews response:', response);
       setNews(response.items || []);
       setTotalPages(response.totalPages || 1);
+      console.log('News state updated:', response.items || []);
     } catch (err) {
+      console.error('Error in fetchNews:', err);
       setError('Error fetching news: ' + err.message);
     } finally {
       setLoading(false);

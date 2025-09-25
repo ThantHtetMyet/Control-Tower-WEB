@@ -377,150 +377,174 @@ const ModuleSelection = () => {
       py: 4,
       position: 'relative'
     }}>
-      {/* Logout Button - Top Right */}
+      {/* Responsive Header Container */}
       <Box sx={{ 
         position: 'absolute', 
         top: 20, 
-        right: 20, 
-        zIndex: 10 
+        left: 20,
+        right: 20,
+        zIndex: 10,
+        display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
+        alignItems: { xs: 'stretch', sm: 'center' },
+        justifyContent: 'space-between',
+        gap: 2
       }}>
-        <Tooltip title="Logout" placement="left">
-          <IconButton
-            onClick={handleLogout}
+        {/* Date/Time Display */}
+        <Box sx={{ 
+          order: { xs: 2, sm: 1 },
+          flex: { xs: 'none', sm: '1' },
+          display: 'flex',
+          justifyContent: { xs: 'stretch', sm: 'flex-start' }
+        }}>
+          <Paper
+            elevation={0}
             sx={{
               background: 'rgba(255, 255, 255, 0.15)',
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              '&:hover': {
-                background: 'rgba(255, 255, 255, 0.25)',
-                transform: 'scale(1.05)'
-              },
-              transition: 'all 0.3s ease'
-            }}
-          >
-            <Logout />
-          </IconButton>
-        </Tooltip>
-      </Box>
-
-      {/* Date/Time Display - Top Left */}
-      <Box sx={{ 
-        position: 'absolute', 
-        top: 20, 
-        left: 20, 
-        zIndex: 10 
-      }}>
-        <Paper
-          elevation={0}
-          sx={{
-            background: 'rgba(255, 255, 255, 0.15)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: 3,
-            px: 3,
-            py: 1.5
-          }}
-        >
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              color: 'white',
-              fontWeight: 500,
-              textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-              fontSize: '0.9rem',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {formatDateTime(currentDateTime)}
-          </Typography>
-        </Paper>
-      </Box>
-
-      {/* Search Box - Top Center */}
-      <Box sx={{ 
-        position: 'absolute', 
-        top: 20, 
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 10 
-      }}>
-        <TextField
-          placeholder="Search applications..."
-          value={searchQuery}
-          onChange={handleSearchChange}
-          variant="outlined"
-          sx={{
-            width: 350,
-            '& .MuiOutlinedInput-root': {
-              background: 'rgba(255, 255, 255, 0.15)',
-              backdropFilter: 'blur(15px)',
-              WebkitBackdropFilter: 'blur(15px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
               borderRadius: 3,
-              color: 'white',
-              fontSize: '0.9rem',
+              px: 3,
+              py: 1.5,
               height: '40px',
-              '& fieldset': {
-                border: 'none'
+              display: 'flex',
+              alignItems: 'center',
+              width: { xs: '100%', sm: 'auto' },
+              minWidth: { sm: '200px' }
+            }}
+          >
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: 'white',
+                fontWeight: 500,
+                textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {formatDateTime(currentDateTime)}
+            </Typography>
+          </Paper>
+        </Box>
+
+        {/* Search Box - Center */}
+        <Box sx={{ 
+          order: { xs: 3, sm: 2 },
+          flex: { xs: 'none', sm: '1' },
+          display: 'flex',
+          justifyContent: 'center',
+          mx: { xs: 0, sm: 2 }
+        }}>
+          <TextField
+            placeholder="Search applications..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            variant="outlined"
+            sx={{
+              width: { xs: '100%', sm: '100%' },
+              maxWidth: { xs: '100%', sm: '400px' },
+              '& .MuiOutlinedInput-root': {
+                background: 'rgba(255, 255, 255, 0.15)',
+                backdropFilter: 'blur(15px)',
+                WebkitBackdropFilter: 'blur(15px)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: 3,
+                color: 'white',
+                fontSize: '0.9rem',
+                height: '40px',
+                '& fieldset': {
+                  border: 'none'
+                },
+                '&:hover': {
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  border: '1px solid rgba(255, 255, 255, 0.4)'
+                },
+                '&.Mui-focused': {
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  border: '1px solid rgba(255, 255, 255, 0.5)',
+                  boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)'
+                }
               },
-              '&:hover': {
-                background: 'rgba(255, 255, 255, 0.2)',
-                border: '1px solid rgba(255, 255, 255, 0.4)'
+              '& .MuiInputBase-input': {
+                color: 'white',
+                '&::placeholder': {
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  opacity: 1
+                }
               },
-              '&.Mui-focused': {
-                background: 'rgba(255, 255, 255, 0.2)',
-                border: '1px solid rgba(255, 255, 255, 0.5)',
-                boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)'
+              '& .MuiInputAdornment-root': {
+                color: 'rgba(255, 255, 255, 0.8)'
               }
-            },
-            '& .MuiInputBase-input': {
-              color: 'white',
-              '&::placeholder': {
-                color: 'rgba(255, 255, 255, 0.7)',
-                opacity: 1
-              }
-            },
-            '& .MuiInputAdornment-root': {
-              color: 'rgba(255, 255, 255, 0.8)'
-            }
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '1.2rem' }} />
-              </InputAdornment>
-            ),
-            endAdornment: searchQuery && (
-              <InputAdornment position="end">
-                <IconButton
-                  onClick={clearSearch}
-                  size="small"
-                  sx={{ 
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    '&:hover': {
-                      color: 'white',
-                      background: 'rgba(255, 255, 255, 0.1)'
-                    }
-                  }}
-                >
-                  <Clear fontSize="small" />
-                </IconButton>
-              </InputAdornment>
-            )
-          }}
-        />
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '1.2rem' }} />
+                </InputAdornment>
+              ),
+              endAdornment: searchQuery && (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={clearSearch}
+                    size="small"
+                    sx={{ 
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      '&:hover': {
+                        color: 'white',
+                        background: 'rgba(255, 255, 255, 0.1)'
+                      }
+                    }}
+                  >
+                    <Clear fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+          />
+        </Box>
+
+        {/* Logout Button */}
+        <Box sx={{ 
+          order: { xs: 1, sm: 3 },
+          flex: { xs: 'none', sm: '1' },
+          display: 'flex',
+          justifyContent: { xs: 'flex-end', sm: 'flex-end' }
+        }}>
+          <Tooltip title="Logout" placement="left">
+            <IconButton
+              onClick={handleLogout}
+              sx={{
+                background: 'rgba(255, 255, 255, 0.15)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                width: '40px',
+                height: '40px',
+                '&:hover': {
+                  background: 'rgba(255, 255, 255, 0.25)',
+                  transform: 'scale(1.05)'
+                },
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <Logout />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
 
-      {/* Main Content - Centered */}
+      {/* Main Content - Centered with responsive padding */}
       <Box sx={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        pt: 1, // Add top padding to account for search box
-        pb: 1
+        pt: { xs: 20, sm: 12 }, // Increased top padding for mobile to account for stacked header
+        pb: 1,
+        px: { xs: 2, sm: 4 }
       }}>
+
         <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
           {/* Glass Container for Applications */}
           <Paper

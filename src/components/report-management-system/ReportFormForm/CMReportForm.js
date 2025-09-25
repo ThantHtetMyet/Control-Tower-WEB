@@ -1008,104 +1008,6 @@ const CMReportForm = ({
             </Box>
           </Paper>
           
-          {/* Approval Information Section */}
-          <Paper sx={{
-            ...sectionContainerStyle,
-            background: '#ffffff'
-          }}>
-            <Typography variant="h5" sx={sectionHeaderStyle}>
-              ✅ Approval Information
-            </Typography>
-            
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-              <TextField
-                fullWidth
-                label="Attended By"
-                value={formData.attendedBy || ''}
-                onChange={(e) => handleInputChange('attendedBy', e.target.value)}
-                placeholder="Enter the name of the person who attended to this issue..."
-                sx={fieldStyle}
-              />
-              
-              <TextField
-                fullWidth
-                label="Approved By"
-                value={formData.approvedBy || ''}
-                onChange={(e) => handleInputChange('approvedBy', e.target.value)}
-                placeholder="Enter the name of the person who approved this report..."
-                sx={fieldStyle}
-              />
-            </Box>
-          </Paper>
-          
-          {/* Reference Information Section */}
-          <Paper sx={{
-            ...sectionContainerStyle,
-            background: '#ffffff'
-          }}>
-            <Typography variant="h5" sx={sectionHeaderStyle}>
-              🔗 Reference Information
-            </Typography>
-            
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-              <FormControl fullWidth sx={fieldStyle}>
-                <InputLabel id="further-action-taken-label">Further Action Taken</InputLabel>
-                <Select
-                  labelId="further-action-taken-label"
-                  value={formData.furtherActionTakenID || ''}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    const selectedOption = warehouseData.furtherActions.find(option => option.id === selectedId);
-                    handleInputChange('furtherActionTakenID', selectedId);
-                    handleInputChange('furtherActionTakenName', selectedOption ? (selectedOption.name || selectedOption.description || `Action ${selectedOption.id}`) : '');
-                  }}
-                  label="Further Action Taken"
-                  disabled={loading}
-                >
-                  <MenuItem value="">
-                    <em>Select Further Action Taken</em>
-                  </MenuItem>
-                  {warehouseData.furtherActions.map((option) => (
-                    <MenuItem key={option.id} value={option.id}>
-                      {option.name || option.description || `Action ${option.id}`}
-                    </MenuItem>
-                  ))}
-                </Select>
-                <FormHelperText>
-                  {loading ? 'Loading options...' : 'Select from FurtherActionTakenWarehouse'}
-                </FormHelperText>
-              </FormControl>
-              
-              <FormControl fullWidth sx={fieldStyle}>
-                <InputLabel id="form-status-label">Form Status</InputLabel>
-                <Select
-                  labelId="form-status-label"
-                  value={formData.formstatusID || ''}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    const selectedOption = warehouseData.formStatuses.find(option => option.id === selectedId);
-                    handleInputChange('formstatusID', selectedId);
-                    handleInputChange('formStatusName', selectedOption ? (selectedOption.status || selectedOption.name || `Status ${selectedOption.id}`) : '');
-                  }}
-                  label="Form Status"
-                  disabled={loading}
-                >
-                  <MenuItem value="">
-                    <em>Select Form Status</em>
-                  </MenuItem>
-                  {warehouseData.formStatuses.map((option) => (
-                    <MenuItem key={option.id} value={option.id}>
-                      {option.status || option.name || `Status ${option.id}`}
-                    </MenuItem>
-                  ))}
-                </Select>
-                <FormHelperText>
-                  {loading ? 'Loading options...' : 'Select from FormStatusWarehouse'}
-                </FormHelperText>
-              </FormControl>
-            </Box>
-          </Paper>
-          
           {/* Material Used Section */}
           <Paper sx={sectionContainerStyle}>
             <Typography variant="h5" sx={sectionHeaderStyle}>
@@ -1308,9 +1210,8 @@ const CMReportForm = ({
 
             {/* Material Used Images Upload - Two Sections */}
             <Box sx={{ marginTop: 3 }}>
-              <Grid container spacing={3}>
                 {/* Old Serial No Images */}
-                <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
                   <MultipleImageUploadField 
                     field="materialUsedOldSerialImages"
                     label="Old Serial No Images"
@@ -1320,10 +1221,10 @@ const CMReportForm = ({
                     onRemove={handleRemoveMaterialUsedOldSerial}
                     icon={Settings}
                   />
-                </Grid>
+                </Box>
                 
                 {/* New Serial No Images */}
-                <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
                   <MultipleImageUploadField 
                     field="materialUsedNewSerialImages"
                     label="New Serial No Images"
@@ -1333,8 +1234,7 @@ const CMReportForm = ({
                     onRemove={handleRemoveMaterialUsedNewSerial}
                     icon={Settings}
                   />
-                </Grid>
-              </Grid>
+                </Box>
             </Box>
           </Paper>
           
@@ -1361,6 +1261,104 @@ const CMReportForm = ({
             </Box>
           </Paper>
 
+          {/* Approval Information Section */}
+          <Paper sx={{
+            ...sectionContainerStyle,
+            background: '#ffffff'
+          }}>
+            <Typography variant="h5" sx={sectionHeaderStyle}>
+              ✅ Approval Information
+            </Typography>
+            
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+              <TextField
+                fullWidth
+                label="Attended By"
+                value={formData.attendedBy || ''}
+                onChange={(e) => handleInputChange('attendedBy', e.target.value)}
+                placeholder="Enter the name of the person who attended to this issue..."
+                sx={fieldStyle}
+              />
+              
+              <TextField
+                fullWidth
+                label="Approved By"
+                value={formData.approvedBy || ''}
+                onChange={(e) => handleInputChange('approvedBy', e.target.value)}
+                placeholder="Enter the name of the person who approved this report..."
+                sx={fieldStyle}
+              />
+            </Box>
+          </Paper>
+          
+          {/* Reference Information Section */}
+          <Paper sx={{
+            ...sectionContainerStyle,
+            background: '#ffffff'
+          }}>
+            <Typography variant="h5" sx={sectionHeaderStyle}>
+              🔗 Reference Information
+            </Typography>
+            
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+              <FormControl fullWidth sx={fieldStyle}>
+                <InputLabel id="further-action-taken-label">Further Action Taken</InputLabel>
+                <Select
+                  labelId="further-action-taken-label"
+                  value={formData.furtherActionTakenID || ''}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    const selectedOption = warehouseData.furtherActions.find(option => option.id === selectedId);
+                    handleInputChange('furtherActionTakenID', selectedId);
+                    handleInputChange('furtherActionTakenName', selectedOption ? (selectedOption.name || selectedOption.description || `Action ${selectedOption.id}`) : '');
+                  }}
+                  label="Further Action Taken"
+                  disabled={loading}
+                >
+                  <MenuItem value="">
+                    <em>Select Further Action Taken</em>
+                  </MenuItem>
+                  {warehouseData.furtherActions.map((option) => (
+                    <MenuItem key={option.id} value={option.id}>
+                      {option.name || option.description || `Action ${option.id}`}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>
+                  {loading ? 'Loading options...' : 'Select from FurtherActionTakenWarehouse'}
+                </FormHelperText>
+              </FormControl>
+              
+              <FormControl fullWidth sx={fieldStyle}>
+                <InputLabel id="form-status-label">Form Status</InputLabel>
+                <Select
+                  labelId="form-status-label"
+                  value={formData.formstatusID || ''}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    const selectedOption = warehouseData.formStatuses.find(option => option.id === selectedId);
+                    handleInputChange('formstatusID', selectedId);
+                    handleInputChange('formStatusName', selectedOption ? (selectedOption.status || selectedOption.name || `Status ${selectedOption.id}`) : '');
+                  }}
+                  label="Form Status"
+                  disabled={loading}
+                >
+                  <MenuItem value="">
+                    <em>Select Form Status</em>
+                  </MenuItem>
+                  {warehouseData.formStatuses.map((option) => (
+                    <MenuItem key={option.id} value={option.id}>
+                      {option.status || option.name || `Status ${option.id}`}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>
+                  {loading ? 'Loading options...' : 'Select from FormStatusWarehouse'}
+                </FormHelperText>
+              </FormControl>
+            </Box>
+          </Paper>
+          
           {/* Navigation Buttons Section */}
           <Paper sx={{
             ...sectionContainerStyle,

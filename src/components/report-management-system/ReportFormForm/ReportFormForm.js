@@ -40,6 +40,13 @@ const ReportFormForm = () => {
   // Add toast notification state
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   
+  // Add notification state for CM reports
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  
   // Add CM material used data state management
   const [materialUsedData, setMaterialUsedData] = useState([]);
   const [materialUsedOldSerialImages, setMaterialUsedOldSerialImages] = useState([]);
@@ -175,6 +182,20 @@ const ReportFormForm = () => {
           materialUsedNewSerialImages
         );
         console.log('CM Report Form submitted successfully:', result);
+        
+        // Show success toast for CM reports
+        setNotification({
+          open: true,
+          message: 'CM Report Form created successfully!',
+          severity: 'success'
+        });
+        
+        // Navigate after a short delay to show the toast
+        setTimeout(() => {
+          navigate('/report-management-system/report-forms');
+        }, 2000);
+        
+        return; // Exit early to avoid the generic success handling below
       } else if (isRTUPreventativeMaintenance) {
         console.log("RTU Preventative Maintenance is working");
         // Handle RTU PM report submission
@@ -246,6 +267,11 @@ const ReportFormForm = () => {
     setMaterialUsedData(materialData);
     setMaterialUsedOldSerialImages(oldSerialImages);
     setMaterialUsedNewSerialImages(newSerialImages);
+  };
+
+  // Handle close notification
+  const handleCloseNotification = () => {
+    setNotification(prev => ({ ...prev, open: false }));
   };
 
   const getStepContent = (step) => {
@@ -539,6 +565,29 @@ const ReportFormForm = () => {
         message="RTU Report Form created successfully!"
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
+
+      {/* CM Report Success Toast Notification */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notification.severity}
+          sx={{
+            width: '100%',
+            backgroundColor: notification.severity === 'success' ? '#d4edda' : '#f8d7da',
+            color: notification.severity === 'success' ? '#155724' : '#721c24',
+            '& .MuiAlert-icon': {
+              color: notification.severity === 'success' ? '#28a745' : '#dc3545'
+            }
+          }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
