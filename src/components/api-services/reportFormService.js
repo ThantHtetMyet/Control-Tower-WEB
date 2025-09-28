@@ -184,9 +184,11 @@ export const submitCMReportForm = async (formData, beforeIssueImages, afterActio
     // Step 2: Create CMReportForm entry
     const cmReportFormData = {
       reportFormID: reportForm.id,
+      cmReportFormTypeID: formData.cmReportFormTypeID,
       furtherActionTakenID: formData.furtherActionTakenID,
       formstatusID: formData.formstatusID,
       customer: formData.customer,
+      reportTitle: formData.reportTitle,
       projectNo: formData.projectNo,
       issueReportedDescription: formData.issueReportedDescription,
       issueFoundDescription: formData.issueFoundDescription,
@@ -298,6 +300,17 @@ export const getPMReportFormTypes = async () => {
 
 export const getPMReportFormType = async (id) => {
   const response = await api.get(`/pmreportformtype/${id}`);
+  return response.data;
+};
+
+// CM Report Form Types API calls
+export const getCMReportFormTypes = async () => {
+  const response = await api.get('/cmreportformtype');
+  return response.data;
+};
+
+export const getCMReportFormType = async (id) => {
+  const response = await api.get(`/cmreportformtype/${id}`);
   return response.data;
 };
 

@@ -322,11 +322,13 @@ const CMReportFormDetails = () => {
 
           // CM Report Form specific data
           reportFormID: response.cmReportForm.reportFormID,
+          cmReportFormTypeID: response.cmReportForm.cmReportFormTypeID,
           furtherActionTakenID: response.cmReportForm.furtherActionTakenID,
           furtherActionTakenName: response.cmReportForm.furtherActionTakenName,
           formstatusID: response.cmReportForm.formstatusID,
           formStatusName: response.cmReportForm.formStatusName,
           customer: response.cmReportForm.customer,
+          reportTitle: response.cmReportForm.reportTitle,
           projectNo: response.cmReportForm.projectNo,
           issueReportedDescription: response.cmReportForm.issueReportedDescription,
           issueFoundDescription: response.cmReportForm.issueFoundDescription,
@@ -430,7 +432,7 @@ const CMReportFormDetails = () => {
             fontWeight: 'bold' 
           }}
         >
-          Corrective Maintenance Report - Details
+          {formData.reportTitle ? `${formData.reportTitle}` : 'Corrective Maintenance Report - Details'}
         </Typography>
         
         {/* JobNo display in top right corner */}

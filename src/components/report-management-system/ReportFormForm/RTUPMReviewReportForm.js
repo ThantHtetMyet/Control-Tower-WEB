@@ -250,7 +250,7 @@ const RTUPMReviewReportForm = ({
   return (
     <Box sx={{ padding: 3 }}>
       <Typography variant="h4" sx={{ marginBottom: 3, color: '#1976d2', fontWeight: 'bold' }}>
-        RTU Preventive Maintenance Report - Review
+        {formData.reportTitle ? `${formData.reportTitle} - Review` : 'RTU Preventive Maintenance Report - Review'}
       </Typography>
 
       {error && (

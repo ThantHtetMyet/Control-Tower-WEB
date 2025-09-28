@@ -983,7 +983,7 @@ const RTUPMReportForm = ({
             textAlign: 'center'
           }}>
             <Typography variant="h4" sx={{ fontWeight: 700, marginBottom: 1 }}>
-              RTU Preventive Maintenance Report
+              {formData.reportTitle || 'RTU Preventive Maintenance Report'}
             </Typography>
             <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
               Complete the form below with accurate maintenance information

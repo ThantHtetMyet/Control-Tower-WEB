@@ -13,15 +13,17 @@ import {
 } from '@mui/material';
 import RMSTheme from '../../theme-resource/RMSTheme';
 import warehouseService from '../../api-services/warehouseService';
-import { getPMReportFormTypes } from '../../api-services/reportFormService';
+import { getPMReportFormTypes, getCMReportFormTypes } from '../../api-services/reportFormService';
 
 const FirstContainer = ({ formData, reportFormTypes, onInputChange, onNext }) => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [systemNames, setSystemNames] = useState([]);
   const [stationNames, setStationNames] = useState([]);
   const [pmReportFormTypes, setPMReportFormTypes] = useState([]);
+  const [cmReportFormTypes, setCMReportFormTypes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showPMTypeDropdown, setShowPMTypeDropdown] = useState(false);
+  const [showCMTypeDropdown, setShowCMTypeDropdown] = useState(false);
 
   // Fetch system names on component mount
   useEffect(() => {
@@ -83,30 +85,61 @@ const FirstContainer = ({ formData, reportFormTypes, onInputChange, onNext }) =>
     fetchPMReportFormTypes();
   }, []);
 
-  // Check if Preventative Maintenance is selected
+  // Fetch CM Report Form Types when component mounts
+  useEffect(() => {
+    const fetchCMReportFormTypes = async () => {
+      try {
+        const response = await getCMReportFormTypes();
+        setCMReportFormTypes(response || []);
+      } catch (error) {
+        console.error('Error fetching CM report form types:', error);
+        setCMReportFormTypes([]);
+      }
+    };
+
+    fetchCMReportFormTypes();
+  }, []);
+
+  // Check if Preventative Maintenance or Corrective Maintenance is selected
   useEffect(() => {
     if (formData.reportFormTypeID && reportFormTypes) {
       const selectedType = reportFormTypes.find(type => type.id === formData.reportFormTypeID);
       const isPreventativeMaintenance = selectedType?.name?.toLowerCase().includes('preventative') || 
                                        selectedType?.name?.toLowerCase().includes('preventive');
+      const isCorrectiveMaintenance = selectedType?.name?.toLowerCase().includes('corrective');
+      
       setShowPMTypeDropdown(isPreventativeMaintenance);
+      setShowCMTypeDropdown(isCorrectiveMaintenance);
       
       // Clear PM report form type if not preventative maintenance
       if (!isPreventativeMaintenance && formData.pmReportFormTypeID) {
         onInputChange('pmReportFormTypeID', '');
       }
+      
+      // Clear CM report form type if not corrective maintenance
+      if (!isCorrectiveMaintenance && formData.cmReportFormTypeID) {
+        onInputChange('cmReportFormTypeID', '');
+      }
     } else {
       setShowPMTypeDropdown(false);
+      setShowCMTypeDropdown(false);
     }
   }, [formData.reportFormTypeID, reportFormTypes]);
 
-  
-        // Add this new handler after handleStationChange
-        const handlePMReportFormTypeChange = (pmTypeId) => {
-        const selectedPMType = pmReportFormTypes.find(pmType => pmType.id === pmTypeId);
-        handleInputChange('pmReportFormTypeID', pmTypeId);  // Stores the ID
-        handleInputChange('pmReportFormTypeName', selectedPMType ? selectedPMType.name : '');  // Stores the name for routing
-        };
+    
+  // Add this new handler after handlePMReportFormTypeChange
+  const handleCMReportFormTypeChange = (cmTypeId) => {
+  const selectedCMType = cmReportFormTypes.find(cmType => cmType.id === cmTypeId);
+  handleInputChange('cmReportFormTypeID', cmTypeId);  // Stores the ID
+  handleInputChange('cmReportFormTypeName', selectedCMType ? selectedCMType.name : '');  // Stores the name for routing
+  };
+
+    // Add this new handler after handleStationChange
+    const handlePMReportFormTypeChange = (pmTypeId) => {
+    const selectedPMType = pmReportFormTypes.find(pmType => pmType.id === pmTypeId);
+    handleInputChange('pmReportFormTypeID', pmTypeId);  // Stores the ID
+    handleInputChange('pmReportFormTypeName', selectedPMType ? selectedPMType.name : '');  // Stores the name for routing
+    };
 
         
   const handleNext = () => {
@@ -132,11 +165,34 @@ const FirstContainer = ({ formData, reportFormTypes, onInputChange, onNext }) =>
     if (showPMTypeDropdown && !formData.pmReportFormTypeID) {
       errors.pmReportFormTypeID = 'PM Report Form Type is required';
     }
+    // Validate CM Report Form Type if Corrective Maintenance is selected
+    if (showCMTypeDropdown && !formData.cmReportFormTypeID) {
+      errors.cmReportFormTypeID = 'CM Report Form Type is required';
+    }
 
     setFieldErrors(errors);
     
     // If no errors, proceed to next step
     if (Object.keys(errors).length === 0) {
+      // Generate report title based on selected service type and report form type
+      const selectedServiceType = reportFormTypes?.find(type => type.id === formData.reportFormTypeID);
+      let reportTitle = '';
+      
+      if (selectedServiceType) {
+        if (showPMTypeDropdown && formData.pmReportFormTypeID) {
+          const selectedPMType = pmReportFormTypes?.find(type => type.id === formData.pmReportFormTypeID);
+          reportTitle = `${selectedServiceType.name} (${selectedPMType?.name || ''})`;
+        } else if (showCMTypeDropdown && formData.cmReportFormTypeID) {
+          const selectedCMType = cmReportFormTypes?.find(type => type.id === formData.cmReportFormTypeID);
+          reportTitle = `${selectedServiceType.name} (${selectedCMType?.name || ''})`;
+        } else {
+          reportTitle = selectedServiceType.name;
+        }
+      }
+      
+      // Store the report title in formData
+      onInputChange('reportTitle', reportTitle);
+      
       onNext();
     }
   };
@@ -510,6 +566,63 @@ const FirstContainer = ({ formData, reportFormTypes, onInputChange, onNext }) =>
             ))}
           </TextField>
         )}
+
+        {/* Conditional CM Report Form Type Dropdown */}
+        {showCMTypeDropdown && (
+          <TextField
+            fullWidth
+            select
+            label="CM Report Form Type"
+            value={formData.cmReportFormTypeID || ''}
+            onChange={(e) => handleCMReportFormTypeChange(e.target.value)}
+            required
+            variant="outlined"
+            error={!!fieldErrors.cmReportFormTypeID}
+            helperText={fieldErrors.cmReportFormTypeID}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'white',
+                '& fieldset': {
+                  borderColor: fieldErrors.cmReportFormTypeID ? '#E74C3C' : '#d0d0d0',
+                },
+                '&:hover fieldset': {
+                  borderColor: fieldErrors.cmReportFormTypeID ? '#E74C3C' : '#2C3E50',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: fieldErrors.cmReportFormTypeID ? '#E74C3C' : '#2C3E50',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: '#666666',
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: '#2C3E50',
+              },
+              '& .MuiSelect-select': {
+                color: '#2C3E50',
+              },
+              '& .MuiFormHelperText-root': {
+                color: '#E74C3C',
+              },
+            }}
+          >
+            {cmReportFormTypes.map((cmType) => (
+              <MenuItem 
+                key={cmType.id} 
+                value={cmType.id}
+                sx={{
+                  color: '#2C3E50',
+                  backgroundColor: 'white',
+                  '&:hover': {
+                    backgroundColor: '#f5f5f5'
+                  }
+                }}
+              >
+                {cmType.name}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
       </Box>
       
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
@@ -536,3 +649,4 @@ const FirstContainer = ({ formData, reportFormTypes, onInputChange, onNext }) =>
 };
 
 export default FirstContainer;
+

@@ -718,7 +718,7 @@ const CMReportForm = ({
             textAlign: 'center'
           }}>
             <Typography variant="h4" sx={{ fontWeight: 700, marginBottom: 1 }}>
-              Corrective Maintenance Report
+              {formData.reportTitle || 'Corrective Maintenance Report'}
             </Typography>
             <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
               Complete the form below with accurate maintenance information

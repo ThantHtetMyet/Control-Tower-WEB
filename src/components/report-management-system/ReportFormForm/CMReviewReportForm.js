@@ -195,7 +195,7 @@ const CMReviewReportForm = ({
               WebkitTextFillColor: 'transparent'
             }}
           >
-            📋 Review Corrective Maintenance Report
+            📋 Review {formData.reportTitle || 'Corrective Maintenance Report'}
           </Typography>
           
           {/* Basic Information Summary Section */}
