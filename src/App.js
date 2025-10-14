@@ -106,6 +106,9 @@ function App() {
               <Route path="/signin" element={<SignIn />} />
               <Route path="/signup" element={<SignUp />} />
 
+              {/* Root redirect */}
+              <Route path="/" element={<Navigate to="/signin" replace />} />
+
               {/* Protected Routes */}
               <Route
                 path="/modules"

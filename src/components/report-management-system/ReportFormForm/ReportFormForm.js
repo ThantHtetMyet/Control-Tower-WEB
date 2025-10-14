@@ -16,6 +16,7 @@ import RMSTheme from '../../theme-resource/RMSTheme';
 import FirstContainer from './FirstContainer';
 import CMReportForm from './CMReportForm';
 import RTUPMReportForm from './RTUPMReportForm'; // Updated import
+import ServerPMReportForm from './SERVERPMReportForm/ServerPMReportForm'; // Add Server PM import
 import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, getNextJobNumber } from '../../api-services/reportFormService';
 import CMReviewReportForm from './CMReviewReportForm';
 import RTUPMReviewReportForm from './RTUPMReviewReportForm'; 
@@ -269,6 +270,19 @@ const ReportFormForm = () => {
     setMaterialUsedNewSerialImages(newSerialImages);
   };
 
+// Add Server PM data state management
+const [serverPMData, setServerPMData] = useState({
+  serverHealthData: [{ serverName: '', result: '' }],
+  serverHealthImages: [],
+  serverHealthPreviews: [],
+  remarks: ''
+});
+
+// Add function to handle Server PM data update
+const handleServerPMDataUpdate = (data) => {
+  setServerPMData(data);
+};
+
   // Handle close notification
   const handleCloseNotification = () => {
     setNotification(prev => ({ ...prev, open: false }));
@@ -333,18 +347,15 @@ const ReportFormForm = () => {
         }
         if (isServerPreventativeMaintenance) {
           return (
-            <Box sx={{ padding: 4, textAlign: 'center' }}>
-              <Typography variant="h6" color="text.secondary">
-                Server PM Report Form - Coming Soon
-              </Typography>
-              <Button
-                variant="outlined"
-                onClick={handleBack}
-                sx={{ marginTop: 2 }}
-              >
-                Back
-              </Button>
-            </Box>
+            <ServerPMReportForm
+              formData={formData}
+              reportFormTypes={reportFormTypes}
+              onInputChange={handleInputChange}
+              onNext={handleNext}
+              onBack={handleBack}
+              onServerPMDataUpdate={handleServerPMDataUpdate}
+              initialServerPMData={serverPMData}
+            />
           );
         }
         if (isLVPreventativeMaintenance) {
