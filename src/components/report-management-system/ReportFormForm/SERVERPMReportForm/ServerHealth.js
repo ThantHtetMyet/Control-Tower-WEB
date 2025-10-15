@@ -21,7 +21,7 @@ import {
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
-  CheckCircle as CheckCircleIcon,
+  Computer as ComputerIcon,
 } from '@mui/icons-material';
 
 // Import the server health image
@@ -128,7 +128,7 @@ const ServerHealth = ({ data, onDataChange, onStatusChange }) => {
   return (
     <Paper sx={sectionContainerStyle}>
       <Typography variant="h5" sx={sectionHeaderStyle}>
-        <CheckCircleIcon /> Server Health Check
+        <ComputerIcon /> Server Health Check
       </Typography>
       
       {/* Server Health Check Instructions */}

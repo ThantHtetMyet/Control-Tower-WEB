@@ -18,87 +18,89 @@ import {
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
-  Storage as StorageIcon,
+  Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 
-// Import the yes/no status service
-import yesNoStatusService from '../../../api-services/yesNoStatusService';
+// Import the result status service
+import resultStatusService from '../../../api-services/resultStatusService';
 
-const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
-  const [monthlyDatabaseData, setMonthlyDatabaseData] = useState([]);
+const TimeSync = ({ data, onDataChange, onStatusChange }) => {
+  const [timeSyncData, setTimeSyncData] = useState([]);
   const [remarks, setRemarks] = useState('');
-  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
+  const [resultStatusOptions, setResultStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const isInitialized = useRef(false);
 
   // Initialize data from props only once
   useEffect(() => {
     if (data && !isInitialized.current) {
-      if (data.monthlyDatabaseData && data.monthlyDatabaseData.length > 0) {
-        setMonthlyDatabaseData(data.monthlyDatabaseData);
+      if (data.timeSyncData && data.timeSyncData.length > 0) {
+        setTimeSyncData(data.timeSyncData);
       }
+      
       if (data.remarks) {
         setRemarks(data.remarks);
       }
+      
       isInitialized.current = true;
     }
   }, [data]);
 
-  // Fetch YesNoStatus options on component mount
+  // Fetch ResultStatus options on component mount
   useEffect(() => {
-    const fetchYesNoStatuses = async () => {
+    const fetchResultStatuses = async () => {
       try {
         setLoading(true);
-        const response = await yesNoStatusService.getYesNoStatuses();
-        setYesNoStatusOptions(response || []);
+        const response = await resultStatusService.getResultStatuses();
+        setResultStatusOptions(response || []);
       } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
+        console.error('Error fetching result status options:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchYesNoStatuses();
+    fetchResultStatuses();
   }, []);
 
   // Update parent component when data changes (but not on initial load)
   useEffect(() => {
     if (isInitialized.current && onDataChange) {
       onDataChange({
-        monthlyDatabaseData,
+        timeSyncData,
         remarks
       });
     }
-  }, [monthlyDatabaseData, remarks]); // Remove onDataChange from dependency array
+  }, [timeSyncData, remarks]); // Remove onDataChange from dependency array
 
   // Calculate completion status
   useEffect(() => {
-    const hasMonthlyDatabaseData = monthlyDatabaseData.some(item => 
-      item.item.trim() !== '' && item.monthlyDBCreated !== ''
+    const hasTimeSyncData = timeSyncData.some(item => 
+      item.machineName && item.machineName.trim() !== '' && item.timeSyncResult !== ''
     );
-    const hasRemarks = remarks.trim() !== '';
+    const hasRemarks = remarks && remarks.trim() !== '';
     
-    const isCompleted = hasMonthlyDatabaseData && hasRemarks;
+    const isCompleted = hasTimeSyncData && hasRemarks;
     
     if (onStatusChange) {
-      onStatusChange('MonthlyDatabaseCreation', isCompleted);
+      onStatusChange('TimeSync', isCompleted);
     }
-  }, [monthlyDatabaseData, remarks]); // Remove onStatusChange from dependency array
+  }, [timeSyncData, remarks]); // Remove onStatusChange from dependency array
 
-  // Monthly Database Creation handlers
-  const handleMonthlyDatabaseChange = (index, field, value) => {
-    const updatedData = [...monthlyDatabaseData];
+  // Time Sync handlers
+  const handleTimeSyncChange = (index, field, value) => {
+    const updatedData = [...timeSyncData];
     updatedData[index] = { ...updatedData[index], [field]: value };
-    setMonthlyDatabaseData(updatedData);
+    setTimeSyncData(updatedData);
   };
 
-  const addMonthlyDatabaseRow = () => {
-    setMonthlyDatabaseData([...monthlyDatabaseData, { item: '', monthlyDBCreated: '' }]);
+  const addTimeSyncRow = () => {
+    setTimeSyncData([...timeSyncData, { machineName: '', timeSyncResult: '' }]);
   };
 
-  const removeMonthlyDatabaseRow = (index) => {
-    const updatedData = monthlyDatabaseData.filter((_, i) => i !== index);
-    setMonthlyDatabaseData(updatedData);
+  const removeTimeSyncRow = (index) => {
+    const updatedData = timeSyncData.filter((_, i) => i !== index);
+    setTimeSyncData(updatedData);
   };
 
   // Styling
@@ -123,17 +125,13 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
   return (
     <Paper sx={sectionContainerStyle}>
       <Typography variant="h5" sx={sectionHeaderStyle}>
-        <StorageIcon /> Historical Database
+        <ScheduleIcon /> SCADA & Historical Time Sync
       </Typography>
       
-      {/* Monthly Database Creation Instructions */}
+      {/* Time Sync Instructions */}
       <Box sx={{ marginBottom: 3 }}>
-        <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: 'bold' }}>
-          Monthly Database Creation
-        </Typography>
-        
         <Typography variant="body1" sx={{ marginBottom: 2 }}>
-          Willowlynx's historical DB uses monthly database. Check the MSSQL database and make sure the monthly databases are created for the next 6 months.
+          To check the time sync for SCADA server, Historical server, and HMIs by using command line w32tm /query /status. To be within 5 minutes tolerance
         </Typography>
       </Box>
 
@@ -141,32 +139,32 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
       <Button
         variant="outlined"
         startIcon={<AddIcon />}
-        onClick={addMonthlyDatabaseRow}
+        onClick={addTimeSyncRow}
         sx={{ marginBottom: 2 }}
       >
         Add Item
       </Button>
 
-      {/* Monthly Database Creation Table */}
+      {/* Time Sync Table */}
       <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
               <TableCell sx={{ fontWeight: 'bold' }}>S/N</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Item</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Monthly DB are Created</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Machine Name</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Time Sync Result</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {monthlyDatabaseData.length === 0 ? (
+            {timeSyncData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
                   No items added yet. Click "Add Item" to get started.
                 </TableCell>
               </TableRow>
             ) : (
-              monthlyDatabaseData.map((row, index) => (
+              timeSyncData.map((row, index) => (
                 <TableRow key={index}>
                   <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
@@ -177,9 +175,9 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={row.item}
-                      onChange={(e) => handleMonthlyDatabaseChange(index, 'item', e.target.value)}
-                      placeholder="Enter item description"
+                      value={row.machineName}
+                      onChange={(e) => handleTimeSyncChange(index, 'machineName', e.target.value)}
+                      placeholder="Enter machine name"
                       size="small"
                     />
                   </TableCell>
@@ -188,8 +186,8 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
                       fullWidth
                       select
                       variant="outlined"
-                      value={row.monthlyDBCreated}
-                      onChange={(e) => handleMonthlyDatabaseChange(index, 'monthlyDBCreated', e.target.value)}
+                      value={row.timeSyncResult}
+                      onChange={(e) => handleTimeSyncChange(index, 'timeSyncResult', e.target.value)}
                       size="small"
                       disabled={loading}
                       sx={{
@@ -210,7 +208,7 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
                           'Select Status'
                         )}
                       </MenuItem>
-                      {yesNoStatusOptions.map((option) => (
+                      {resultStatusOptions.map((option) => (
                         <MenuItem key={option.id} value={option.name}>
                           {option.name}
                         </MenuItem>
@@ -219,7 +217,7 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
                   </TableCell>
                   <TableCell>
                     <IconButton
-                      onClick={() => removeMonthlyDatabaseRow(index)}
+                      onClick={() => removeTimeSyncRow(index)}
                       color="error"
                     >
                       <DeleteIcon />
@@ -235,7 +233,7 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
       {/* Remarks Section */}
       <Box sx={{ marginTop: 3 }}>
         <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
-          📝 Remarkss
+          📝 Remarks
         </Typography>
         
         <TextField
@@ -258,4 +256,4 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
   );
 };
 
-export default MonthlyDatabaseCreation;
+export default TimeSync;

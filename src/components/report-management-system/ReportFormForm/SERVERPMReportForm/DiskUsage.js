@@ -204,23 +204,14 @@ const DiskUsage = ({ data = {}, onDataChange }) => {
       </Box>
 
       {/* Add Server Button */}
-      <Box sx={{ marginBottom: 3 }}>
-        <Button
-          variant="outlined"
-          startIcon={<AddIcon />}
-          onClick={addServer}
-          sx={{
-            color: '#1976d2',
-            borderColor: '#1976d2',
-            '&:hover': {
-              backgroundColor: '#e3f2fd',
-              borderColor: '#1976d2'
-            }
-          }}
-        >
-          Add Server
-        </Button>
-      </Box>
+      <Button
+        variant="outlined"
+        startIcon={<AddIcon />}
+        onClick={addServer}
+        sx={{ marginBottom: 2 }}
+      >
+        Add Server
+      </Button>
 
       {/* Servers List */}
       {servers.map((server, serverIndex) => (
@@ -280,7 +271,7 @@ const DiskUsage = ({ data = {}, onDataChange }) => {
                   <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                     <TableCell sx={{ fontWeight: 'bold' }}>Disk</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Capacity</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Capacity (GB)</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Free Space (GB)</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Usage %</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Check (Usage &lt; 50%)</TableCell>

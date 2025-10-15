@@ -39,15 +39,19 @@ const DatabaseBackup = ({ data, onDataChange, onStatusChange }) => {
       if (data.mssqlBackupData && data.mssqlBackupData.length > 0) {
         setMssqlBackupData(data.mssqlBackupData);
       }
+      
       if (data.scadaBackupData && data.scadaBackupData.length > 0) {
         setScadaBackupData(data.scadaBackupData);
       }
+      
       if (data.remarks) {
         setRemarks(data.remarks);
       }
+      
       if (data.latestBackupFileName) {
         setLatestBackupFileName(data.latestBackupFileName);
       }
+      
       isInitialized.current = true;
     }
   }, [data]);
@@ -79,25 +83,25 @@ const DatabaseBackup = ({ data, onDataChange, onStatusChange }) => {
         latestBackupFileName
       });
     }
-  }, [mssqlBackupData, scadaBackupData, remarks, latestBackupFileName, onDataChange]);
+  }, [mssqlBackupData, scadaBackupData, remarks, latestBackupFileName]); // Remove onDataChange from dependency array
 
   // Calculate completion status
   useEffect(() => {
-    const hasMssqlBackupData = mssqlBackupData.some(item => 
-      item.item.trim() !== '' && item.monthlyDBBackupCreated !== ''
+    const hasMssqlData = mssqlBackupData.some(item => 
+      item.item.trim() !== '' && item.result !== ''
     );
-    const hasScadaBackupData = scadaBackupData.some(item => 
-      item.item.trim() !== '' && item.monthlyDBBackupCreated !== ''
+    const hasScadaData = scadaBackupData.some(item => 
+      item.item.trim() !== '' && item.result !== ''
     );
     const hasRemarks = remarks.trim() !== '';
     const hasLatestBackupFileName = latestBackupFileName.trim() !== '';
     
-    const isCompleted = hasMssqlBackupData && hasScadaBackupData && hasRemarks && hasLatestBackupFileName;
+    const isCompleted = hasMssqlData && hasScadaData && hasRemarks && hasLatestBackupFileName;
     
     if (onStatusChange) {
       onStatusChange('DatabaseBackup', isCompleted);
     }
-  }, [mssqlBackupData, scadaBackupData, remarks, latestBackupFileName, onStatusChange]);
+  }, [mssqlBackupData, scadaBackupData, remarks, latestBackupFileName]); // Remove onStatusChange from dependency array
 
   // MSSQL Backup handlers
   const handleMssqlBackupChange = (index, field, value) => {
@@ -163,7 +167,7 @@ const DatabaseBackup = ({ data, onDataChange, onStatusChange }) => {
         </Typography>
         
         <Typography variant="body1" sx={{ marginBottom: 2 }}>
-          Check D:\MSSQLSERVER-BACKUP\Monthly make sure the database is backup in this directory.
+          Check <b> D:\MSSQLSERVER-BACKUP\Monthly </b> make sure the database is backup in this directory.
         </Typography>
       </Box>
 
@@ -256,7 +260,7 @@ const DatabaseBackup = ({ data, onDataChange, onStatusChange }) => {
       {/* SCADA Section */}
       <Box sx={{ marginTop: 4, marginBottom: 3 }}>
         <Typography variant="body1" sx={{ marginBottom: 2 }}>
-          Check D:\SCADA make sure the database is backup in this directory.
+          Check <b> D:\SCADA </b> make sure the database is backup in this directory.
         </Typography>
       </Box>
 

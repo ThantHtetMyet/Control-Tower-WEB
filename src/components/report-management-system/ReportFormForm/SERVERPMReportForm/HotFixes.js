@@ -12,30 +12,30 @@ import {
   TextField,
   Button,
   IconButton,
-  MenuItem,
-  CircularProgress
+  CircularProgress,
+  MenuItem
 } from '@mui/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
-  Storage as StorageIcon,
+  Build as BuildIcon,
 } from '@mui/icons-material';
 
-// Import the yes/no status service
-import yesNoStatusService from '../../../api-services/yesNoStatusService';
+// Import the result status service
+import resultStatusService from '../../../api-services/resultStatusService';
 
-const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
-  const [monthlyDatabaseData, setMonthlyDatabaseData] = useState([]);
+const HotFixes = ({ data, onDataChange, onStatusChange }) => {
+  const [hotFixesData, setHotFixesData] = useState([]);
   const [remarks, setRemarks] = useState('');
-  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
+  const [resultStatusOptions, setResultStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const isInitialized = useRef(false);
 
   // Initialize data from props only once
   useEffect(() => {
     if (data && !isInitialized.current) {
-      if (data.monthlyDatabaseData && data.monthlyDatabaseData.length > 0) {
-        setMonthlyDatabaseData(data.monthlyDatabaseData);
+      if (data.hotFixesData && data.hotFixesData.length > 0) {
+        setHotFixesData(data.hotFixesData);
       }
       if (data.remarks) {
         setRemarks(data.remarks);
@@ -44,61 +44,77 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
     }
   }, [data]);
 
-  // Fetch YesNoStatus options on component mount
+  // Fetch ResultStatus options on component mount
   useEffect(() => {
-    const fetchYesNoStatuses = async () => {
+    const fetchResultStatuses = async () => {
       try {
         setLoading(true);
-        const response = await yesNoStatusService.getYesNoStatuses();
-        setYesNoStatusOptions(response || []);
+        const response = await resultStatusService.getResultStatuses();
+        setResultStatusOptions(response || []);
       } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
+        console.error('Error fetching result status options:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchYesNoStatuses();
+    fetchResultStatuses();
   }, []);
 
   // Update parent component when data changes (but not on initial load)
   useEffect(() => {
     if (isInitialized.current && onDataChange) {
       onDataChange({
-        monthlyDatabaseData,
+        hotFixesData,
         remarks
       });
     }
-  }, [monthlyDatabaseData, remarks]); // Remove onDataChange from dependency array
+  }, [hotFixesData, remarks, onDataChange]);
 
   // Calculate completion status
   useEffect(() => {
-    const hasMonthlyDatabaseData = monthlyDatabaseData.some(item => 
-      item.item.trim() !== '' && item.monthlyDBCreated !== ''
+    const hasHotFixesData = hotFixesData.some(item => 
+      item.machineName && item.machineName.trim() !== '' && 
+      item.latestHotfixesApplied && item.latestHotfixesApplied.trim() !== '' && 
+      item.done !== ''
     );
-    const hasRemarks = remarks.trim() !== '';
+    const hasRemarks = remarks && remarks.trim() !== '';
     
-    const isCompleted = hasMonthlyDatabaseData && hasRemarks;
+    const isCompleted = hasHotFixesData && hasRemarks;
     
     if (onStatusChange) {
-      onStatusChange('MonthlyDatabaseCreation', isCompleted);
+      onStatusChange('HotFixes', isCompleted);
     }
-  }, [monthlyDatabaseData, remarks]); // Remove onStatusChange from dependency array
+  }, [hotFixesData, remarks]);
 
-  // Monthly Database Creation handlers
-  const handleMonthlyDatabaseChange = (index, field, value) => {
-    const updatedData = [...monthlyDatabaseData];
+  // HotFixes handlers
+  const handleHotFixesChange = (index, field, value) => {
+    const updatedData = [...hotFixesData];
     updatedData[index] = { ...updatedData[index], [field]: value };
-    setMonthlyDatabaseData(updatedData);
+    setHotFixesData(updatedData);
   };
 
-  const addMonthlyDatabaseRow = () => {
-    setMonthlyDatabaseData([...monthlyDatabaseData, { item: '', monthlyDBCreated: '' }]);
+  const addHotFixesRow = () => {
+    setHotFixesData([...hotFixesData, { 
+      serialNumber: hotFixesData.length + 1,
+      machineName: '', 
+      latestHotfixesApplied: '', 
+      done: '' 
+    }]);
   };
 
-  const removeMonthlyDatabaseRow = (index) => {
-    const updatedData = monthlyDatabaseData.filter((_, i) => i !== index);
-    setMonthlyDatabaseData(updatedData);
+  const removeHotFixesRow = (index) => {
+    const updatedData = hotFixesData.filter((_, i) => i !== index);
+    // Update serial numbers
+    const reindexedData = updatedData.map((item, i) => ({
+      ...item,
+      serialNumber: i + 1
+    }));
+    setHotFixesData(reindexedData);
+  };
+
+  const handleRemarksChange = (e) => {
+    setRemarks(e.target.value);
   };
 
   // Styling
@@ -123,17 +139,13 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
   return (
     <Paper sx={sectionContainerStyle}>
       <Typography variant="h5" sx={sectionHeaderStyle}>
-        <StorageIcon /> Historical Database
+        <BuildIcon /> Hotfixes / Service Packs
       </Typography>
       
-      {/* Monthly Database Creation Instructions */}
+      {/* HotFixes Instructions */}
       <Box sx={{ marginBottom: 3 }}>
-        <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: 'bold' }}>
-          Monthly Database Creation
-        </Typography>
-        
         <Typography variant="body1" sx={{ marginBottom: 2 }}>
-          Willowlynx's historical DB uses monthly database. Check the MSSQL database and make sure the monthly databases are created for the next 6 months.
+          To review & apply the latest hotfixes, the service pack on all servers were applicable.
         </Typography>
       </Box>
 
@@ -141,45 +153,56 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
       <Button
         variant="outlined"
         startIcon={<AddIcon />}
-        onClick={addMonthlyDatabaseRow}
+        onClick={addHotFixesRow}
         sx={{ marginBottom: 2 }}
       >
         Add Item
       </Button>
 
-      {/* Monthly Database Creation Table */}
+      {/* HotFixes Table */}
       <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
               <TableCell sx={{ fontWeight: 'bold' }}>S/N</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Item</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Monthly DB are Created</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Machine Name</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Latest Hotfixes Applied (e.g., KB4022719)</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Done</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {monthlyDatabaseData.length === 0 ? (
+            {hotFixesData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
+                <TableCell colSpan={5} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
                   No items added yet. Click "Add Item" to get started.
                 </TableCell>
               </TableRow>
             ) : (
-              monthlyDatabaseData.map((row, index) => (
+              hotFixesData.map((row, index) => (
                 <TableRow key={index}>
                   <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {index + 1}
+                    <Typography variant="body2" sx={{ textAlign: 'center' }}>
+                      {row.serialNumber}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={row.item}
-                      onChange={(e) => handleMonthlyDatabaseChange(index, 'item', e.target.value)}
-                      placeholder="Enter item description"
+                      value={row.machineName}
+                      onChange={(e) => handleHotFixesChange(index, 'machineName', e.target.value)}
+                      placeholder="Enter machine name"
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      value={row.latestHotfixesApplied}
+                      onChange={(e) => handleHotFixesChange(index, 'latestHotfixesApplied', e.target.value)}
+                      placeholder="e.g., KB4022719"
                       size="small"
                     />
                   </TableCell>
@@ -188,8 +211,8 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
                       fullWidth
                       select
                       variant="outlined"
-                      value={row.monthlyDBCreated}
-                      onChange={(e) => handleMonthlyDatabaseChange(index, 'monthlyDBCreated', e.target.value)}
+                      value={row.done}
+                      onChange={(e) => handleHotFixesChange(index, 'done', e.target.value)}
                       size="small"
                       disabled={loading}
                       sx={{
@@ -210,7 +233,7 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
                           'Select Status'
                         )}
                       </MenuItem>
-                      {yesNoStatusOptions.map((option) => (
+                      {resultStatusOptions.map((option) => (
                         <MenuItem key={option.id} value={option.name}>
                           {option.name}
                         </MenuItem>
@@ -219,7 +242,7 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
                   </TableCell>
                   <TableCell>
                     <IconButton
-                      onClick={() => removeMonthlyDatabaseRow(index)}
+                      onClick={() => removeHotFixesRow(index)}
                       color="error"
                     >
                       <DeleteIcon />
@@ -235,7 +258,7 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
       {/* Remarks Section */}
       <Box sx={{ marginTop: 3 }}>
         <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
-          📝 Remarkss
+          📝 Remarks
         </Typography>
         
         <TextField
@@ -245,7 +268,7 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
           variant="outlined"
           label="Remarks"
           value={remarks}
-          onChange={(e) => setRemarks(e.target.value)}
+          onChange={handleRemarksChange}
           placeholder="Enter any additional remarks or observations..."
           sx={{
             '& .MuiOutlinedInput-root': {
@@ -258,4 +281,4 @@ const MonthlyDatabaseCreation = ({ data, onDataChange, onStatusChange }) => {
   );
 };
 
-export default MonthlyDatabaseCreation;
+export default HotFixes;
