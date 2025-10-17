@@ -64,9 +64,20 @@ const WillowlynxRTUStatus = ({ data, onDataChange, onStatusChange }) => {
   // Styles
   const sectionContainerStyle = {
     padding: 3,
-    backgroundColor: '#fff',
+    marginBottom: 3,
+    backgroundColor: '#ffffff',
     borderRadius: 2,
-    border: '1px solid #ccc',
+    border: '1px solid #e0e0e0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  };
+
+  const sectionHeaderStyle = {
+    color: '#1976d2',
+    fontWeight: 'bold',
+    marginBottom: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
   };
 
   const labelBox = {
@@ -86,11 +97,8 @@ const WillowlynxRTUStatus = ({ data, onDataChange, onStatusChange }) => {
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Paper sx={sectionContainerStyle}>
         {/* Header */}
-        <Typography
-          variant="h6"
-          sx={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: 1 }}
-        >
-          Willowlynx RTU Status Check
+        <Typography variant="h5" sx={sectionHeaderStyle}>
+          <RouterIcon /> Willowlynx RTU Status Check
         </Typography>
 
         {/* Instructions */}

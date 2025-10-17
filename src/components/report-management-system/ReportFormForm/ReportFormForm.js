@@ -19,7 +19,8 @@ import RTUPMReportForm from './RTUPMReportForm'; // Updated import
 import ServerPMReportForm from './SERVERPMReportForm/ServerPMReportForm'; // Add Server PM import
 import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, getNextJobNumber } from '../../api-services/reportFormService';
 import CMReviewReportForm from './CMReviewReportForm';
-import RTUPMReviewReportForm from './RTUPMReviewReportForm'; 
+import RTUPMReviewReportForm from './RTUPMReviewReportForm';
+import ServerPMReviewReportForm from './SERVERPMReportForm_Review/ServerPMReviewReportForm'; 
 
 const steps = [
   'Basic Information',
@@ -291,12 +292,12 @@ const handleServerPMDataUpdate = (data) => {
   const getStepContent = (step) => {
     const isCorrectiveMaintenance = formData.reportFormTypeID === 2 || 
       reportFormTypes.find(type => type.id === formData.reportFormTypeID)?.name?.toLowerCase().includes('corrective');
-    
+      
     const isRTUPreventativeMaintenance = formData.pmReportFormTypeName && 
       formData.pmReportFormTypeName.toLowerCase() === 'rtu';
     
     const isServerPreventativeMaintenance = formData.pmReportFormTypeName && 
-      formData.pmReportFormTypeName.toLowerCase() === 'server';
+      formData.pmReportFormTypeName.toLowerCase().includes('server');
     
     const isLVPreventativeMaintenance = formData.pmReportFormTypeName && 
       formData.pmReportFormTypeName.toLowerCase() === 'lv pm';
@@ -415,6 +416,19 @@ const handleServerPMDataUpdate = (data) => {
               loading={loading}
               error={error}
               rtuPMData={rtuPMData}
+            />
+          );
+        }
+        if (isServerPreventativeMaintenance) {
+          return (
+            <ServerPMReviewReportForm
+              formData={formData}
+              reportFormTypes={reportFormTypes}
+              onNext={handleSubmit}
+              onBack={handleBack}
+              loading={loading}
+              error={error}
+              serverPMData={formData}
             />
           );
         }

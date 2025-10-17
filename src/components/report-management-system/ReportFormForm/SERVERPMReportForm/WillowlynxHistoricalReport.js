@@ -59,9 +59,20 @@ const WillowlynxHistoricalReport = ({ data, onDataChange, onStatusChange }) => {
   // Styles
   const sectionContainerStyle = {
     padding: 3,
-    backgroundColor: '#fff',
+    marginBottom: 3,
+    backgroundColor: '#ffffff',
     borderRadius: 2,
-    border: '1px solid #ccc',
+    border: '1px solid #e0e0e0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  };
+
+  const sectionHeaderStyle = {
+    color: '#1976d2',
+    fontWeight: 'bold',
+    marginBottom: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
   };
 
   const inlineField = {
@@ -72,11 +83,8 @@ const WillowlynxHistoricalReport = ({ data, onDataChange, onStatusChange }) => {
   return (
     <Paper sx={sectionContainerStyle}>
       {/* Header */}
-      <Typography
-        variant="h6"
-        sx={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: 1 }}
-      >
-        Historical Report Check
+      <Typography variant="h5" sx={sectionHeaderStyle}>
+        <AssessmentIcon /> Willowlynx Historical Report Check
       </Typography>
 
       <Typography variant="body1" sx={{ ml: 2, mb: 2 }}>

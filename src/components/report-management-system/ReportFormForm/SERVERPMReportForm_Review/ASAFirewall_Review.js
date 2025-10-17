@@ -10,14 +10,10 @@ import {
   TableRow,
   Paper,
   TextField,
-  Button,
-  IconButton,
-  CircularProgress,
   MenuItem,
   Divider
 } from '@mui/material';
 import {
-  Delete as DeleteIcon,
   Security as SecurityIcon
 } from '@mui/icons-material';
 
@@ -25,7 +21,7 @@ import {
 import asaFirewallStatusService from '../../../api-services/asaFirewallStatusService';
 import resultStatusService from '../../../api-services/resultStatusService';
 
-const ASAFirewall = ({ data, onDataChange, onStatusChange }) => {
+const ASAFirewall_Review = ({ data, disabled = true }) => {
   const [asaFirewallData, setAsaFirewallData] = useState([]);
   const [remarks, setRemarks] = useState('');
   const [asaFirewallStatusOptions, setAsaFirewallStatusOptions] = useState([]);
@@ -39,7 +35,7 @@ const ASAFirewall = ({ data, onDataChange, onStatusChange }) => {
       if (data.asaFirewallData && data.asaFirewallData.length > 0) {
         setAsaFirewallData(data.asaFirewallData);
       } else {
-        // Initialize with default data
+        // Initialize with default data for display
         setAsaFirewallData([
           { 
             serialNumber: 1,
@@ -64,7 +60,7 @@ const ASAFirewall = ({ data, onDataChange, onStatusChange }) => {
     }
   }, [data]);
 
-  // Fetch ASA Firewall Status options
+  // Fetch ASA Firewall Status options for display
   useEffect(() => {
     const fetchAsaFirewallStatusOptions = async () => {
       try {
@@ -82,7 +78,7 @@ const ASAFirewall = ({ data, onDataChange, onStatusChange }) => {
     fetchAsaFirewallStatusOptions();
   }, []);
 
-  // Fetch Result Status options
+  // Fetch Result Status options for display
   useEffect(() => {
     const fetchResultStatusOptions = async () => {
       try {
@@ -100,77 +96,17 @@ const ASAFirewall = ({ data, onDataChange, onStatusChange }) => {
     fetchResultStatusOptions();
   }, []);
 
-  // Calculate status based on data completeness
-  useEffect(() => {
-    const calculateStatus = () => {
-      if (asaFirewallData.length === 0) return 'pending';
-      
-      const allFieldsFilled = asaFirewallData.every(item => 
-        item.commandInput && 
-        item.expectedResultId && 
-        item.doneId
-      );
-      
-      if (allFieldsFilled && remarks.trim()) {
-        return 'completed';
-      } else if (asaFirewallData.some(item => item.commandInput || item.expectedResultId || item.doneId) || remarks.trim()) {
-        return 'in-progress';
-      } else {
-        return 'pending';
+  const disabledFieldStyle = {
+    '& .MuiOutlinedInput-root': {
+      backgroundColor: '#f9f9f9',
+      '& fieldset': {
+        borderColor: '#e0e0e0'
       }
-    };
-
-    const status = calculateStatus();
-    if (onStatusChange) {
-      onStatusChange('asaFirewall', status);
+    },
+    '& .MuiInputBase-input.Mui-disabled': {
+      WebkitTextFillColor: '#666 !important',
+      color: '#666 !important'
     }
-  }, [asaFirewallData, remarks, onStatusChange]);
-
-  // Handle data changes and propagate to parent
-  useEffect(() => {
-    if (isInitialized.current && onDataChange) {
-      onDataChange({
-        asaFirewallData,
-        remarks
-      });
-    }
-  }, [asaFirewallData, remarks, onDataChange]);
-
-  // Add new row
-  // const handleAddRow = () => {
-  //   const newRow = {
-  //     serialNumber: asaFirewallData.length + 1,
-  //     commandInput: '',
-  //     expectedResultId: '',
-  //     doneId: ''
-  //   };
-  //   setAsaFirewallData([...asaFirewallData, newRow]);
-  // };
-
-  // Remove row
-  const handleRemoveRow = (index) => {
-    const updatedData = asaFirewallData.filter((_, i) => i !== index);
-    // Update serial numbers
-    const reNumberedData = updatedData.map((item, i) => ({
-      ...item,
-      serialNumber: i + 1
-    }));
-    setAsaFirewallData(reNumberedData);
-  };
-
-  // Handle input changes
-  const handleInputChange = (index, field, value) => {
-    const updatedData = [...asaFirewallData];
-    updatedData[index] = {
-      ...updatedData[index],
-      [field]: value
-    };
-    setAsaFirewallData(updatedData);
-  };
-
-  // Handle remarks change
-  const handleRemarksChange = (event) => {
-    setRemarks(event.target.value);
   };
 
   return (
@@ -212,10 +148,9 @@ const ASAFirewall = ({ data, onDataChange, onStatusChange }) => {
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
               <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>S/N</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>Command Input</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', width: '35%' }}>Command Input</TableCell>
               <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>Expected Result</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>Done</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>Actions</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', width: '25%' }}>Done</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -227,8 +162,9 @@ const ASAFirewall = ({ data, onDataChange, onStatusChange }) => {
                     fullWidth
                     size="small"
                     value={row.commandInput}
-                    onChange={(e) => handleInputChange(index, 'commandInput', e.target.value)}
+                    disabled={disabled}
                     placeholder="Enter command"
+                    sx={disabledFieldStyle}
                   />
                 </TableCell>
                 <TableCell>
@@ -237,8 +173,8 @@ const ASAFirewall = ({ data, onDataChange, onStatusChange }) => {
                     fullWidth
                     size="small"
                     value={row.expectedResultId}
-                    onChange={(e) => handleInputChange(index, 'expectedResultId', e.target.value)}
-                    disabled={loading}
+                    disabled={disabled || loading}
+                    sx={disabledFieldStyle}
                   >
                     {asaFirewallStatusOptions.map((option) => (
                       <MenuItem key={option.id} value={option.id}>
@@ -253,8 +189,8 @@ const ASAFirewall = ({ data, onDataChange, onStatusChange }) => {
                     fullWidth
                     size="small"
                     value={row.doneId}
-                    onChange={(e) => handleInputChange(index, 'doneId', e.target.value)}
-                    disabled={loading}
+                    disabled={disabled || loading}
+                    sx={disabledFieldStyle}
                   >
                     {resultStatusOptions.map((option) => (
                       <MenuItem key={option.id} value={option.id}>
@@ -262,16 +198,6 @@ const ASAFirewall = ({ data, onDataChange, onStatusChange }) => {
                       </MenuItem>
                     ))}
                   </TextField>
-                </TableCell>
-                <TableCell>
-                  <IconButton
-                    onClick={() => handleRemoveRow(index)}
-                    color="error"
-                    size="small"
-                    disabled
-                  >
-                    <DeleteIcon />
-                  </IconButton>
                 </TableCell>
               </TableRow>
             ))}
@@ -317,23 +243,13 @@ const ASAFirewall = ({ data, onDataChange, onStatusChange }) => {
           multiline
           rows={4}
           value={remarks}
-          onChange={handleRemarksChange}
+          disabled={disabled}
           placeholder="Enter any additional remarks or observations..."
-          sx={{ 
-            backgroundColor: '#ffffff',
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': {
-                borderColor: '#e0e0e0',
-              },
-              '&:hover fieldset': {
-                borderColor: '#1976d2',
-              },
-            }
-          }}
+          sx={disabledFieldStyle}
         />
       </Box>
     </Box>
   );
 };
 
-export default ASAFirewall;
+export default ASAFirewall_Review;

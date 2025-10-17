@@ -1,0 +1,624 @@
+import React from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  Grid,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  Chip,
+  Card,
+  CardContent,
+  CircularProgress,
+  Alert,
+  Divider,
+  TextField
+} from '@mui/material';
+import {
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  Computer as ComputerIcon,
+  Storage as StorageIcon,
+  Memory as MemoryIcon,
+  NetworkCheck as NetworkCheckIcon,
+  Settings as SettingsIcon,
+  TrendingUp as TrendingUpIcon,
+  Assessment as AssessmentIcon,
+  Videocam as VideocamIcon,
+  Schedule as ScheduleIcon,
+  Update as UpdateIcon,
+  SwapHoriz as SwapHorizIcon,
+  Security as SecurityIcon,
+  SystemUpdate as SystemUpdateIcon,
+  AccessTime
+} from '@mui/icons-material';
+
+// Import individual review components
+import ServerHealth_Review from './ServerHealth_Review';
+import HardDriveHealth_Review from './HardDriveHealth_Review';
+import DiskUsage_Review from './DiskUsage_Review';
+import CPUAndRamUsage_Review from './CPUAndRamUsage_Review';
+import NetworkHealth_Review from './NetworkHealth_Review';
+import WillowlynxProcessStatus_Review from './WillowlynxProcessStatus_Review';
+import WillowlynxNetworkStatus_Review from './WillowlynxNetworkStatus_Review';
+import WillowlynxRTUStatus_Review from './WillowlynxRTUStatus_Review';
+import WillowlynxHistorialTrend_Review from './WillowlynxHistorialTrend_Review';
+import WillowlynxHistoricalReport_Review from './WillowlynxHistoricalReport_Review';
+import WillowlynxSumpPitCCTVCamera_Review from './WillowlynxSumpPitCCTVCamera_Review';
+import MonthlyDatabaseCreation_Review from './MonthlyDatabaseCreation_Review';
+import DatabaseBackup_Review from './DatabaseBackup_Review';
+import TimeSync_Review from './TimeSync_Review';
+import HotFixes_Review from './HotFixes_Review';
+import AutoFailOver_Review from './AutoFailOver_Review';
+import ASAFirewall_Review from './ASAFirewall_Review';
+import SoftwarePatch_Review from './SoftwarePatch_Review';
+import { format } from 'date-fns';
+import RMSTheme from '../../../theme-resource/RMSTheme';
+
+// Styling constants
+const sectionContainer = {
+  marginBottom: 4,
+  padding: 3,
+  border: '1px solid #e0e0e0',
+  borderRadius: 2,
+  backgroundColor: '#fafafa'
+};
+
+const sectionHeader = {
+  color: '#1976d2',
+  fontWeight: 'bold',
+  marginBottom: 2,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 1,
+  paddingBottom: 1,
+  borderBottom: '2px solid #1976d2'
+};
+
+const fieldContainer = {
+  marginBottom: 2,
+  padding: 2,
+  backgroundColor: 'white',
+  borderRadius: 1,
+  border: '1px solid #e0e0e0'
+};
+
+// Helper functions
+const formatDate = (dateString) => {
+  if (!dateString) return 'Not specified';
+  try {
+    return format(new Date(dateString), 'dd/MM/yyyy HH:mm');
+  } catch (error) {
+    return 'Invalid date';
+  }
+};
+
+const getStatusChip = (status) => {
+  if (!status || status === '') {
+    return (
+      <Chip
+        label="Not specified"
+        color="default"
+        variant="outlined"
+        size="small"
+      />
+    );
+  }
+  
+  const statusStr = status.toString();
+  
+  if (statusStr === 'Yes' || statusStr === 'Acceptable' || statusStr === 'DONE' || statusStr === 'Pass') {
+    return (
+      <Chip
+        icon={<CheckCircleIcon />}
+        label={statusStr}
+        color="success"
+        variant="filled"
+        size="small"
+      />
+    );
+  } else if (statusStr === 'No' || statusStr === 'Not Acceptable' || statusStr === 'NOT DONE' || statusStr === 'Fail') {
+    return (
+      <Chip
+        icon={<CancelIcon />}
+        label={statusStr}
+        color="error"
+        variant="filled"
+        size="small"
+      />
+    );
+  } else {
+    return (
+      <Chip
+        label={statusStr}
+        color="primary"
+        variant="outlined"
+        size="small"
+      />
+    );
+  }
+};
+
+// Component for displaying table data
+const TableDataSection = ({ data, title, icon: IconComponent = SettingsIcon }) => {
+  if (!data || !Array.isArray(data) || data.length === 0 || !data[0] || typeof data[0] !== 'object') {
+    return (
+      <Box sx={sectionContainer}>
+        <Typography variant="h6" sx={sectionHeader}>
+          <IconComponent />
+          {title}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          No data available
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Get headers from the first row
+  const headers = Object.keys(data[0]);
+
+  return (
+    <Box sx={sectionContainer}>
+      <Typography variant="h6" sx={sectionHeader}>
+        <IconComponent />
+        {title}
+      </Typography>
+      <TableContainer component={Paper} sx={{ mt: 2 }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              {headers.map((header) => (
+                <TableCell key={header} sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>
+                  {header.charAt(0).toUpperCase() + header.slice(1).replace(/([A-Z])/g, ' $1')}
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {data.map((row, index) => (
+              <TableRow key={index}>
+                {headers.map((header) => (
+                  <TableCell key={header}>
+                    {header.toLowerCase().includes('status') || header.toLowerCase().includes('result') ? 
+                      getStatusChip(row[header]) : 
+                      row[header] || 'N/A'
+                    }
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+};
+
+// Component for displaying simple field data
+const FieldDataSection = ({ data, title, icon: IconComponent = SettingsIcon }) => {
+  if (!data || Object.keys(data).length === 0) {
+    return (
+      <Box sx={sectionContainer}>
+        <Typography variant="h6" sx={sectionHeader}>
+          <IconComponent />
+          {title}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          No data available
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={sectionContainer}>
+      <Typography variant="h6" sx={sectionHeader}>
+        <IconComponent />
+        {title}
+      </Typography>
+      <Grid container spacing={2} sx={{ mt: 1 }}>
+        {Object.entries(data).map(([key, value]) => {
+          if (key === 'remarks') return null; // Handle remarks separately
+          
+          return (
+            <Grid item xs={12} sm={6} md={4} key={key}>
+              <Box sx={fieldContainer}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+                </Typography>
+                <Typography variant="body1">
+                  {key.toLowerCase().includes('status') || key.toLowerCase().includes('result') ? 
+                    getStatusChip(value) : 
+                    value || 'Not specified'
+                  }
+                </Typography>
+              </Box>
+            </Grid>
+          );
+        })}
+      </Grid>
+      
+      {data.remarks && (
+        <Box sx={{ ...fieldContainer, mt: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Remarks
+          </Typography>
+          <Typography variant="body1">
+            {data.remarks}
+          </Typography>
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+// Component for displaying image data
+const ImagePreviewSection = ({ images, title, icon: IconComponent = SettingsIcon }) => {
+  if (!images || images.length === 0) {
+    return (
+      <Box sx={sectionContainer}>
+        <Typography variant="h6" sx={sectionHeader}>
+          <IconComponent />
+          {title}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          No images available
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={sectionContainer}>
+      <Typography variant="h6" sx={sectionHeader}>
+        <IconComponent />
+        {title}
+      </Typography>
+      <Grid container spacing={2} sx={{ mt: 1 }}>
+        {images.map((image, index) => (
+          <Grid item xs={12} sm={6} md={4} key={index}>
+            <Card>
+              <CardContent>
+                <img
+                  src={image.url || image}
+                  alt={`${title} ${index + 1}`}
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '200px',
+                    objectFit: 'contain',
+                    borderRadius: '4px'
+                  }}
+                />
+                {image.name && (
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    {image.name}
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+};
+
+const ServerPMReviewReportForm = ({ 
+  formData, 
+  reportFormTypes, 
+  onNext, 
+  onBack, 
+  loading, 
+  error,
+  serverPMData = {} 
+}) => {
+  // Debug: Log the formData to see its structure
+  console.log('ServerPMReviewReportForm - formData:', formData);
+  console.log('ServerPMReviewReportForm - serverPMData:', serverPMData);
+  
+  console.log('Debug - formData:', formData);
+  console.log('Debug - serverPMData:', serverPMData);
+  console.log('Debug - formData keys:', formData ? Object.keys(formData) : 'No formData');
+
+  // Component configuration matching ServerPMReportForm
+  const components = [
+    { key: 'serverHealth', title: 'Server Health Check', icon: ComputerIcon, Component: ServerHealth_Review, dataKey: 'serverHealthData' },
+    { key: 'hardDriveHealth', title: 'Hard Drive Health Check', icon: StorageIcon, Component: HardDriveHealth_Review, dataKey: 'hardDriveHealthData' },
+    { key: 'diskUsage', title: 'Disk Usage Check', icon: StorageIcon, Component: DiskUsage_Review, dataKey: 'diskUsageData' },
+    { key: 'cpuAndRamUsage', title: 'CPU and RAM Usage Check', icon: MemoryIcon, Component: CPUAndRamUsage_Review, dataKey: 'cpuAndRamUsageData' },
+    { key: 'networkHealth', title: 'Network Health Check', icon: NetworkCheckIcon, Component: NetworkHealth_Review, dataKey: 'networkHealthData' },
+    { key: 'willowlynxProcessStatus', title: 'Willowlynx Process Status Check', icon: SettingsIcon, Component: WillowlynxProcessStatus_Review, dataKey: 'willowlynxProcessStatusData' },
+    { key: 'willowlynxNetworkStatus', title: 'Willowlynx Network Status Check', icon: NetworkCheckIcon, Component: WillowlynxNetworkStatus_Review, dataKey: 'willowlynxNetworkStatusData' },
+    { key: 'willowlynxRTUStatus', title: 'Willowlynx RTU Status Check', icon: SettingsIcon, Component: WillowlynxRTUStatus_Review, dataKey: 'willowlynxRTUStatusData' },
+    { key: 'willowlynxHistorialTrend', title: 'Willowlynx Historical Trend Check', icon: TrendingUpIcon, Component: WillowlynxHistorialTrend_Review, dataKey: 'willowlynxHistorialTrendData' },
+    { key: 'willowlynxHistoricalReport', title: 'Willowlynx Historical Report Check', icon: AssessmentIcon, Component: WillowlynxHistoricalReport_Review, dataKey: 'willowlynxHistoricalReportData' },
+    { key: 'willowlynxSumpPitCCTVCamera', title: 'Willowlynx Sump Pit CCTV Camera Check', icon: VideocamIcon, Component: WillowlynxSumpPitCCTVCamera_Review, dataKey: 'willowlynxSumpPitCCTVCameraData' },
+    { key: 'monthlyDatabaseCreation', title: 'Monthly Database Creation Check', icon: StorageIcon, Component: MonthlyDatabaseCreation_Review, dataKey: 'monthlyDatabaseCreationData' },
+    { key: 'databaseBackup', title: 'Database Backup Check', icon: StorageIcon, Component: DatabaseBackup_Review, dataKey: 'databaseBackupData' },
+    { key: 'timeSync', title: 'SCADA & Historical Time Sync Check', icon: ScheduleIcon, Component: TimeSync_Review, dataKey: 'timeSyncData' },
+    { key: 'hotFixes', title: 'Hotfixes / Service Packs', icon: UpdateIcon, Component: HotFixes_Review, dataKey: 'hotFixesData' },
+    { key: 'autoFailOver', title: 'Auto failover of SCADA server', icon: SwapHorizIcon, Component: AutoFailOver_Review, dataKey: 'autoFailOverData' },
+    { key: 'asaFirewall', title: 'ASA Firewall Maintenance', icon: SecurityIcon, Component: ASAFirewall_Review, dataKey: 'asaFirewallData' },
+    { key: 'softwarePatch', title: 'Software Patch Summary', icon: SystemUpdateIcon, Component: SoftwarePatch_Review, dataKey: 'softwarePatchData' }
+  ];
+
+  // Styling
+  const sectionContainerStyle = {
+    padding: 3,
+    marginBottom: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+    border: '1px solid #e0e0e0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  };
+
+  const fieldStyle = {
+    '& .MuiOutlinedInput-root': {
+      backgroundColor: '#f5f5f5',
+      '& fieldset': {
+        borderColor: '#d0d0d0'
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ mb: 2 }}>
+        {error}
+      </Alert>
+    );
+  }
+
+  return (
+    <Box sx={{ 
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+      padding: 3
+    }}>
+      <Paper sx={{
+        maxWidth: '1200px',
+        margin: '0 auto',
+        borderRadius: '16px',
+        overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
+      }}>
+        {/* Header */}
+        <Box sx={{
+          background: 'linear-gradient(135deg, #2C3E50 0%, #34495E 50%, #1A252F 100%)',
+          color: 'white',
+          padding: 4,
+          textAlign: 'center'
+        }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, marginBottom: 1 }}>
+            {formData?.reportTitle || 'Server Preventive Maintenance Report - Review'}
+          </Typography>
+          <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
+            Review all completed maintenance information
+          </Typography>
+        </Box>
+
+        <Box sx={{ padding: 4 }}>
+          {/* Basic Information Summary */}
+          <Paper sx={{
+            ...sectionContainerStyle,
+            background: '#f8f9fa',
+            border: '2px solid #e9ecef'
+          }}>
+            <Typography variant="h5" sx={{ 
+              color: '#1976d2',
+              fontWeight: 'bold',
+              marginBottom: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}>
+              📋 Basic Information Summary
+            </Typography>
+            
+            <Grid container spacing={3} sx={{ marginTop: 1 }}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Job No"
+                  value={formData?.jobNo || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="System Description"
+                  value={formData?.systemDescription || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Station Name"
+                  value={formData?.stationName || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Customer"
+                  value={formData?.customer || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Project No"
+                  value={formData?.projectNo || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Report Type"
+                  value={formData?.pmReportFormTypeName || formData?.reportType || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Date Checked"
+                  value={formData?.dateChecked || formData?.checkDate || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="System Name"
+                  value={formData?.systemName || formData?.systemNameWarehouseID || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+              </Grid>
+            </Grid>
+          </Paper>
+
+          {/* All Component Sections */}
+          {components.map(({ key, title, icon: Icon, Component, dataKey }) => (
+            <Paper key={key} elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 2, 
+                mb: 3,
+                borderBottom: '2px solid #e0e0e0',
+                pb: 2
+              }}>
+                <Icon sx={{ color: '#1976d2', fontSize: 28 }} />
+                <Typography variant="h6" sx={{ 
+                  color: '#1976d2', 
+                  fontWeight: 'bold',
+                  flex: 1
+                }}>
+                  {title}
+                </Typography>
+                <Chip 
+                  label={formData?.[dataKey] ? 'Completed' : 'Not Filled'} 
+                  color={formData?.[dataKey] ? 'success' : 'default'}
+                  size="small"
+                />
+              </Box>
+              
+              {formData?.[dataKey] ? (
+                <Box sx={{ 
+                  '& .MuiTextField-root': {
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: '#f9f9f9',
+                      '& fieldset': {
+                        borderColor: '#e0e0e0'
+                      }
+                    }
+                  },
+                  '& .MuiFormControl-root': {
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: '#f9f9f9',
+                      '& fieldset': {
+                        borderColor: '#e0e0e0'
+                      }
+                    }
+                  },
+                  '& input': {
+                    cursor: 'default !important'
+                  },
+                  '& textarea': {
+                    cursor: 'default !important'
+                  },
+                  '& .MuiSelect-select': {
+                    cursor: 'default !important'
+                  },
+                  '& .MuiInputBase-input.Mui-disabled': {
+                    WebkitTextFillColor: '#666 !important',
+                    color: '#666 !important'
+                  },
+                  pointerEvents: 'none'
+                }}>
+                  <Component 
+                    data={formData[dataKey] || {}} 
+                    onDataChange={() => {}} // No-op function for review mode
+                    disabled={true}
+                  />
+                </Box>
+              ) : (
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 4, 
+                  color: '#999',
+                  backgroundColor: '#f5f5f5',
+                  borderRadius: 1,
+                  border: '1px dashed #ddd'
+                }}>
+                  <Typography variant="body1">
+                    This section was not completed during the maintenance process.
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
+          ))}
+
+          {/* Action Buttons */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4, pt: 3, borderTop: '1px solid #e0e0e0' }}>
+            <Button
+              variant="outlined"
+              onClick={onBack}
+              size="large"
+              sx={{ minWidth: 120 }}
+            >
+              Back
+            </Button>
+            <Button
+              variant="contained"
+              onClick={onNext}
+              size="large"
+              sx={{ minWidth: 120 }}
+              disabled={loading}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Submit Report'}
+            </Button>
+          </Box>
+        </Box>
+      </Paper>
+    </Box>
+  );
+};
+
+export default ServerPMReviewReportForm;

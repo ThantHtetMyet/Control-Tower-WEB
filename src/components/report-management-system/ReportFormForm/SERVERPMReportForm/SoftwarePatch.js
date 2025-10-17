@@ -226,7 +226,7 @@ const SoftwarePatch = ({ data, onDataChange, onStatusChange }) => {
                 <TableCell sx={tableCellStyle} align="center">
                   <IconButton
                     onClick={() => removeSoftwarePatchRow(index)}
-                    disabled={softwarePatchData.length === 1}
+                    disabled={softwarePatchData.length === 0}
                     size="small"
                     sx={{
                       color: '#d32f2f',

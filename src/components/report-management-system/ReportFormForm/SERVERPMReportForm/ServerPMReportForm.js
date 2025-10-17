@@ -213,10 +213,6 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
   };
 
   const renderProgressDots = () => {
-    console.log('Total steps:', steps.length);
-    console.log('Steps array:', steps);
-    console.log('Step titles:', stepTitles);
-    
     return (
       <Box sx={{ 
         display: 'flex', 
@@ -229,8 +225,7 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
         {steps.map((step, index) => {
           const isActive = currentStep === step;
           
-          console.log(`Rendering dot ${index + 1}: ${step}, title: ${stepTitles[step]}`);
-          return (
+           return (
             <Tooltip 
               key={step}
               title={`${index + 1}. ${stepTitles[step] || step}`}

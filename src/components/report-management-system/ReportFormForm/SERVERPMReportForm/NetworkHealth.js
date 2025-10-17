@@ -63,17 +63,29 @@ const NetworkHealth = ({ data, onDataChange, onStatusChange }) => {
   // Styles
   const sectionContainerStyle = {
     padding: 3,
-    backgroundColor: '#fff',
+    marginBottom: 3,
+    backgroundColor: '#ffffff',
     borderRadius: 2,
-    border: '1px solid #ccc',
+    border: '1px solid #e0e0e0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  };
+
+  const sectionHeaderStyle = {
+    color: '#1976d2',
+    fontWeight: 'bold',
+    marginBottom: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
   };
 
   const labelBox = {
     display: 'flex',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     marginBottom: 2,
+    flexWrap: 'wrap',
+    gap: 2,
   };
 
   const inlineField = {
@@ -85,11 +97,8 @@ const NetworkHealth = ({ data, onDataChange, onStatusChange }) => {
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Paper sx={sectionContainerStyle}>
         {/* Header */}
-        <Typography
-          variant="h6"
-          sx={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: 1 }}
-        >
-          Network Health Check
+        <Typography variant="h5" sx={sectionHeaderStyle}>
+          <NetworkCheckIcon /> Network Health Check
         </Typography>
 
         {/* Title with Date Checked inline */}

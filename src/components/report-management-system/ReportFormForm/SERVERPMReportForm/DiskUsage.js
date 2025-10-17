@@ -88,7 +88,7 @@ const DiskUsage = ({ data = {}, onDataChange }) => {
     const newServer = {
       id: Date.now(),
       serverName: '',
-      disks: [{ disk: '', status: '', capacity: '', freeSpace: '', usage: '', check: '' }]
+      disks: []
     };
     setServers([...servers, newServer]);
   };
@@ -279,7 +279,14 @@ const DiskUsage = ({ data = {}, onDataChange }) => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {server.disks.map((disk, diskIndex) => (
+                  {server.disks.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
+                        No disks added yet. Click "Add Disk" to get started.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    server.disks.map((disk, diskIndex) => (
                     <TableRow key={diskIndex}>
                       <TableCell>
                         <TextField
@@ -360,13 +367,14 @@ const DiskUsage = ({ data = {}, onDataChange }) => {
                         <IconButton
                           onClick={() => removeDisk(server.id, diskIndex)}
                           sx={{ color: '#d32f2f' }}
-                          disabled={server.disks.length === 1}
+                          disabled={server.disks.length === 0}
                         >
                           <DeleteIcon />
                         </IconButton>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ))
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
