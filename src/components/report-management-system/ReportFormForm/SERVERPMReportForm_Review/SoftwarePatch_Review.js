@@ -15,14 +15,9 @@ import {
   SystemUpdate as SystemUpdateIcon,
 } from '@mui/icons-material';
 
-// Import the yes/no status service
-import yesNoStatusService from '../../../api-services/yesNoStatusService';
-
 const SoftwarePatch_Review = ({ data }) => {
   const [softwarePatchData, setSoftwarePatchData] = useState([]);
   const [remarks, setRemarks] = useState('');
-  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
-  const [loading, setLoading] = useState(false);
 
   // Initialize data from props
   useEffect(() => {
@@ -36,30 +31,6 @@ const SoftwarePatch_Review = ({ data }) => {
       }
     }
   }, [data]);
-
-  // Fetch YesNoStatus options for display
-  useEffect(() => {
-    const fetchYesNoStatuses = async () => {
-      try {
-        setLoading(true);
-        const response = await yesNoStatusService.getYesNoStatuses();
-        setYesNoStatusOptions(response || []);
-      } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
-        setYesNoStatusOptions([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchYesNoStatuses();
-  }, []);
-
-  // Get yes/no status name by id
-  const getYesNoStatusName = (id) => {
-    const status = yesNoStatusOptions.find(option => option.id === id);
-    return status ? status.name : id;
-  };
 
   // Styling
   const sectionContainerStyle = {
@@ -89,101 +60,110 @@ const SoftwarePatch_Review = ({ data }) => {
       {/* Instructions */}
       <Box sx={{ marginBottom: 3 }}>
         <Typography variant="body1" sx={{ marginBottom: 2 }}>
-          Review and document software patches applied during the maintenance period.
+          Review software patches applied during the maintenance period.
         </Typography>
         
         <Box sx={{ 
           padding: 2, 
-          backgroundColor: '#f3e5f5', 
+          backgroundColor: '#fff3e0', 
           borderRadius: 1, 
-          border: '1px solid #9c27b0',
+          border: '1px solid #ff9800',
           marginBottom: 2
         }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#7b1fa2', marginBottom: 1 }}>
-            🔧 Patch Summary Items:
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#e65100', marginBottom: 1 }}>
+            📋 Important Notes:
           </Typography>
           <Typography variant="body2" sx={{ marginBottom: 1 }}>
-            • Operating system patches and updates
+            • Document all software patches applied to each machine
           </Typography>
           <Typography variant="body2" sx={{ marginBottom: 1 }}>
-            • SCADA software patches and upgrades
-          </Typography>
-          <Typography variant="body2" sx={{ marginBottom: 1 }}>
-            • Database software updates
+            • Include both previous and current patch versions
           </Typography>
           <Typography variant="body2">
-            • Security patches and vulnerability fixes
+            • Ensure all critical systems are updated appropriately
           </Typography>
         </Box>
       </Box>
 
-      {/* Software Patch Summary Table */}
+      {/* Software Patch Table */}
       <TableContainer component={Paper} sx={{ marginBottom: 3 }}>
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableCell sx={{ fontWeight: 'bold' }}>Software/System</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Patch Description</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Version/KB Number</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Installation Date</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }} align="center">S/N</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }} align="center">Machine Name</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }} align="center">Previous Patch</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }} align="center">Current Patch</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {softwarePatchData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
+                <TableCell colSpan={4} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
                   No software patch data available.
                 </TableCell>
               </TableRow>
             ) : (
               softwarePatchData.map((row, index) => (
                 <TableRow key={index}>
-                  <TableCell>
+                  <TableCell align="center">
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={row.software}
+                      value={row.serialNumber || index + 1}
                       disabled
                       size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={2}
-                      variant="outlined"
-                      value={row.patchDescription}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.version}
-                      disabled
-                      size="small"
+                      sx={{
+                        '& .MuiInputBase-input.Mui-disabled': {
+                          WebkitTextFillColor: '#000',
+                          backgroundColor: '#f5f5f5'
+                        }
+                      }}
                     />
                   </TableCell>
                   <TableCell>
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={row.installationDate}
+                      value={row.machineName || ''}
                       disabled
                       size="small"
+                      sx={{
+                        '& .MuiInputBase-input.Mui-disabled': {
+                          WebkitTextFillColor: '#000',
+                          backgroundColor: '#f5f5f5'
+                        }
+                      }}
                     />
                   </TableCell>
                   <TableCell>
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={loading ? 'Loading...' : getYesNoStatusName(row.status)}
+                      value={row.previousPatch || ''}
                       disabled
                       size="small"
+                      sx={{
+                        '& .MuiInputBase-input.Mui-disabled': {
+                          WebkitTextFillColor: '#000',
+                          backgroundColor: '#f5f5f5'
+                        }
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      value={row.currentPatch || ''}
+                      disabled
+                      size="small"
+                      sx={{
+                        '& .MuiInputBase-input.Mui-disabled': {
+                          WebkitTextFillColor: '#000',
+                          backgroundColor: '#f5f5f5'
+                        }
+                      }}
                     />
                   </TableCell>
                 </TableRow>

@@ -3,31 +3,56 @@ import {
   Box,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
 } from '@mui/material';
 import {
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 
+// Import the Willowlynx Process Status image
+import WillowlynxProcessStatusImage from '../../../resources/ServerPMReportForm/WillowlynxProcessStatus.png';
+
+// Import the yes/no status service
+import yesNoStatusService from '../../../api-services/yesNoStatusService';
+
 const WillowlynxProcessStatus_Review = ({ data = {} }) => {
-  const [processStatusData, setProcessStatusData] = useState([]);
+  const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
 
   // Initialize data from props
   useEffect(() => {
-    if (data.processStatusData && data.processStatusData.length > 0) {
-      setProcessStatusData(data.processStatusData);
+    console.log('WillowlynxProcessStatus_Review - Received data:', data);
+    
+    if (data.result) {
+      setResult(data.result);
     }
     if (data.remarks) {
       setRemarks(data.remarks);
     }
+    
+    console.log('Final process status data:', { result: data.result, remarks: data.remarks });
   }, [data]);
+
+  // Fetch YesNo Status options on component mount
+  useEffect(() => {
+    const fetchYesNoStatuses = async () => {
+      try {
+        const response = await yesNoStatusService.getYesNoStatuses();
+        setYesNoStatusOptions(response || []);
+      } catch (error) {
+        console.error('Error fetching yes/no status options:', error);
+      }
+    };
+
+    fetchYesNoStatuses();
+  }, []);
+
+  // Get status name by ID
+  const getStatusName = (id, options) => {
+    const status = options.find(option => option.ID === id || option.id === id);
+    return status ? (status.Name || status.name) : id;
+  };
 
   // Styling
   const sectionContainerStyle = {
@@ -48,90 +73,61 @@ const WillowlynxProcessStatus_Review = ({ data = {} }) => {
     gap: 1
   };
 
+  const inlineField = {
+    minWidth: 200,
+    '& .MuiOutlinedInput-root': { backgroundColor: '#f5f5f5' },
+    '& .MuiInputBase-input.Mui-disabled': {
+      WebkitTextFillColor: '#000000',
+    },
+  };
+
   return (
     <Paper sx={sectionContainerStyle}>
+      {/* Header */}
       <Typography variant="h5" sx={sectionHeaderStyle}>
         <SettingsIcon /> Willowlynx Process Status Check
       </Typography>
-      
-      <Typography variant="body1" sx={{ marginBottom: 3 }}>
-        Monitor Willowlynx process status and ensure all services are running properly.
+
+      {/* Process Status Section */}
+      <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+        Process Status
       </Typography>
 
-      {/* Process Status Table */}
-      <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableCell sx={{ fontWeight: 'bold' }}>Process Name</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>CPU Usage</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Memory Usage</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Check Result</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {processStatusData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
-                  No data available for this section.
-                </TableCell>
-              </TableRow>
-            ) : (
-              processStatusData.map((row, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.processName || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.status || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.cpuUsage || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.memoryUsage || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.checkResult || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Instructions */}
+      <Typography variant="body1" sx={{ mb: 2 }}>
+        Login into Willowlynx and navigate to "Server Status" page, as below:
+      </Typography>
 
+      {/* Screenshot */}
+      <Box sx={{ mb: 3, textAlign: 'center' }}>
+        <img
+          src={WillowlynxProcessStatusImage}
+          alt="Willowlynx Process Status Screenshot"
+          style={{
+            maxWidth: '100%',
+            height: 'auto',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+          }}
+        />
+      </Box>
+
+      {/* Result Section */}
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+          Result:
+        </Typography>
+        <Typography variant="body1">
+          All Process is online, either ACTIVE or STANDBY.
+        </Typography>
+        <TextField
+          size="small"
+          value={getStatusName(result, yesNoStatusOptions) || ''}
+          variant="outlined"
+          disabled
+          sx={inlineField}
+        />
+      </Box>
       {/* Remarks Section */}
       <Box sx={{ marginTop: 3 }}>
         <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
@@ -149,7 +145,10 @@ const WillowlynxProcessStatus_Review = ({ data = {} }) => {
           sx={{
             '& .MuiOutlinedInput-root': {
               backgroundColor: '#f5f5f5',
-            }
+            },
+            '& .MuiInputBase-input.Mui-disabled': {
+              WebkitTextFillColor: '#000000',
+            },
           }}
         />
       </Box>

@@ -18,50 +18,44 @@ import {
 // Import the result status service
 import resultStatusService from '../../../api-services/resultStatusService';
 
-const TimeSync_Review = ({ data }) => {
+const TimeSync_Review = ({ data = {} }) => {
   const [timeSyncData, setTimeSyncData] = useState([]);
   const [remarks, setRemarks] = useState('');
   const [resultStatusOptions, setResultStatusOptions] = useState([]);
-  const [loading, setLoading] = useState(false);
 
   // Initialize data from props
   useEffect(() => {
-    if (data) {
-      if (data.timeSyncData && data.timeSyncData.length > 0) {
-        setTimeSyncData(data.timeSyncData);
-      }
-      
-      if (data.remarks) {
-        setRemarks(data.remarks);
-      }
+    console.log('TimeSync_Review - Received data:', data);
+    
+    if (data.timeSyncData && data.timeSyncData.length > 0) {
+      setTimeSyncData(data.timeSyncData);
     }
+    
+    if (data.remarks) {
+      setRemarks(data.remarks);
+    }
+    
+    console.log('Final time sync data:', { timeSyncData: data.timeSyncData, remarks: data.remarks });
   }, [data]);
 
-  // Fetch ResultStatus options for display
+  // Fetch ResultStatus options on component mount
   useEffect(() => {
     const fetchResultStatuses = async () => {
       try {
-        setLoading(true);
         const response = await resultStatusService.getResultStatuses();
         setResultStatusOptions(response || []);
       } catch (error) {
         console.error('Error fetching result status options:', error);
-        setResultStatusOptions([
-          { id: 'pass', name: 'Pass' },
-          { id: 'fail', name: 'Fail' }
-        ]);
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchResultStatuses();
   }, []);
 
-  // Get result status name by id
-  const getResultStatusName = (id) => {
-    const status = resultStatusOptions.find(option => option.id === id);
-    return status ? status.name : id;
+  // Get status name by ID
+  const getStatusName = (id, options) => {
+    const status = options.find(option => option.ID === id || option.id === id);
+    return status ? (status.Name || status.name) : id;
   };
 
   // Styling
@@ -86,102 +80,67 @@ const TimeSync_Review = ({ data }) => {
   return (
     <Paper sx={sectionContainerStyle}>
       <Typography variant="h5" sx={sectionHeaderStyle}>
-        <ScheduleIcon /> SCADA & Historical Time Sync Check
+        <ScheduleIcon /> SCADA & Historical Time Sync
       </Typography>
       
-      {/* Instructions */}
+      {/* Time Sync Instructions */}
       <Box sx={{ marginBottom: 3 }}>
         <Typography variant="body1" sx={{ marginBottom: 2 }}>
-          Verify time synchronization between SCADA system and historical database servers.
+          To check the time sync for SCADA server, Historical server, and HMIs by using command line w32tm /query /status. To be within 5 minutes tolerance
         </Typography>
-        
-        <Box sx={{ 
-          padding: 2, 
-          backgroundColor: '#e8f5e8', 
-          borderRadius: 1, 
-          border: '1px solid #4caf50',
-          marginBottom: 2
-        }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#2e7d32', marginBottom: 1 }}>
-            🕐 Time Sync Check Points:
-          </Typography>
-          <Typography variant="body2" sx={{ marginBottom: 1 }}>
-            • Compare system time between SCADA and Historical servers
-          </Typography>
-          <Typography variant="body2" sx={{ marginBottom: 1 }}>
-            • Check NTP service status and configuration
-          </Typography>
-          <Typography variant="body2">
-            • Verify time difference is within acceptable range (±5 seconds)
-          </Typography>
-        </Box>
       </Box>
 
-      {/* Time Sync Check Table */}
-      <TableContainer component={Paper} sx={{ marginBottom: 3 }}>
+      {/* Time Sync Table */}
+      <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableCell sx={{ fontWeight: 'bold' }}>Server Name</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Current Time</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>NTP Source</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Time Difference</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Result</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>S/N</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Machine Name</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Time Sync Result</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {timeSyncData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
-                  No time sync data available.
+                <TableCell colSpan={3} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
+                  No data available for this section.
                 </TableCell>
               </TableRow>
             ) : (
               timeSyncData.map((row, index) => (
                 <TableRow key={index}>
                   <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {index + 1}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={row.serverName}
+                      value={row.machineName || ''}
                       disabled
                       size="small"
+                      sx={{
+                        '& .MuiInputBase-input.Mui-disabled': {
+                          WebkitTextFillColor: '#000000',
+                        },
+                      }}
                     />
                   </TableCell>
                   <TableCell>
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={row.currentTime}
+                      value={getStatusName(row.timeSyncResult, resultStatusOptions) || ''}
                       disabled
                       size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.ntpSource}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.timeDifference}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={loading ? 'Loading...' : getResultStatusName(row.result)}
-                      disabled
-                      size="small"
+                      sx={{
+                        '& .MuiInputBase-input.Mui-disabled': {
+                          WebkitTextFillColor: '#000000',
+                        },
+                      }}
                     />
                   </TableCell>
                 </TableRow>
@@ -205,11 +164,13 @@ const TimeSync_Review = ({ data }) => {
           label="Remarks"
           value={remarks}
           disabled
-          placeholder="No remarks provided"
           sx={{
             '& .MuiOutlinedInput-root': {
               backgroundColor: '#f5f5f5',
-            }
+            },
+            '& .MuiInputBase-input.Mui-disabled': {
+              WebkitTextFillColor: '#000000',
+            },
           }}
         />
       </Box>

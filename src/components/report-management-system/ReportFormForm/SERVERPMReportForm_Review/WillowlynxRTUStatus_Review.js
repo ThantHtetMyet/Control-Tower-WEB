@@ -3,31 +3,55 @@ import {
   Box,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
 } from '@mui/material';
 import {
-  Settings as SettingsIcon,
+  Router as RouterIcon,
 } from '@mui/icons-material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import WillowlynxRTUStatusImage from '../../../resources/ServerPMReportForm/WillowlynxRTUStatus.png';
+// Import the yes/no status service
+import yesNoStatusService from '../../../api-services/yesNoStatusService';
 
 const WillowlynxRTUStatus_Review = ({ data = {} }) => {
-  const [rtuStatusData, setRtuStatusData] = useState([]);
+  const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
 
   // Initialize data from props
   useEffect(() => {
-    if (data.rtuStatusData && data.rtuStatusData.length > 0) {
-      setRtuStatusData(data.rtuStatusData);
+    console.log('WillowlynxRTUStatus_Review - Received data:', data);
+    
+    if (data.result) {
+      setResult(data.result);
     }
     if (data.remarks) {
       setRemarks(data.remarks);
     }
+    
+    console.log('Final RTU status data:', { result: data.result, remarks: data.remarks });
   }, [data]);
+
+  // Fetch YesNo Status options on component mount
+  useEffect(() => {
+    const fetchYesNoStatuses = async () => {
+      try {
+        const response = await yesNoStatusService.getYesNoStatuses();
+        setYesNoStatusOptions(response || []);
+      } catch (error) {
+        console.error('Error fetching yes/no status options:', error);
+      }
+    };
+
+    fetchYesNoStatuses();
+  }, []);
+
+  // Get status name by ID
+  const getStatusName = (id, options) => {
+    const status = options.find(option => option.ID === id || option.id === id);
+    return status ? (status.Name || status.name) : id;
+  };
 
   // Styling
   const sectionContainerStyle = {
@@ -48,112 +72,86 @@ const WillowlynxRTUStatus_Review = ({ data = {} }) => {
     gap: 1
   };
 
+  const inlineField = {
+    minWidth: 200,
+    '& .MuiOutlinedInput-root': { backgroundColor: '#f5f5f5' },
+    '& .MuiInputBase-input.Mui-disabled': {
+      WebkitTextFillColor: '#000000',
+    },
+  };
+
   return (
-    <Paper sx={sectionContainerStyle}>
-      <Typography variant="h5" sx={sectionHeaderStyle}>
-        <SettingsIcon /> Willowlynx RTU Status Check
-      </Typography>
-      
-      <Typography variant="body1" sx={{ marginBottom: 3 }}>
-        Monitor Remote Terminal Unit (RTU) status and communication.
-      </Typography>
-
-      {/* RTU Status Table */}
-      <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableCell sx={{ fontWeight: 'bold' }}>RTU Name</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Communication</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Last Update</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Check Result</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rtuStatusData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
-                  No data available for this section.
-                </TableCell>
-              </TableRow>
-            ) : (
-              rtuStatusData.map((row, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.rtuName || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.status || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.communication || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.lastUpdate || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.checkResult || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Remarks Section */}
-      <Box sx={{ marginTop: 3 }}>
-        <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
-          📝 Remarks
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Paper sx={sectionContainerStyle}>
+        {/* Header */}
+        <Typography variant="h5" sx={sectionHeaderStyle}>
+          <RouterIcon /> Willowlynx RTU Status Check
         </Typography>
-        
-        <TextField
-          fullWidth
-          multiline
-          rows={4}
-          variant="outlined"
-          label="Remarks"
-          value={remarks}
-          disabled
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              backgroundColor: '#f5f5f5',
-            }
-          }}
-        />
-      </Box>
-    </Paper>
+
+        {/* Instructions */}
+        <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+          Instructions:
+        </Typography>
+        <Typography variant="body1" sx={{ ml: 2, mb: 2 }}>
+          Check the RTU Device Status page. RTU status and PLC status shall be green.
+        </Typography>
+
+        {/* Screenshot */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+          <img
+            src={WillowlynxRTUStatusImage}
+            alt="Willowlynx RTU Status Screenshot"
+            style={{
+              maxWidth: '100%',
+              height: 'auto',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+            }}
+          />
+        </Box>
+
+        {/* Result */}
+        <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+          Result:
+        </Typography>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, ml: 2, mb: 2 }}>
+          <Typography>RTU status and PLC status are green.</Typography>
+          <TextField
+            size="small"
+            value={getStatusName(result, yesNoStatusOptions) || ''}
+            variant="outlined"
+            disabled
+            sx={inlineField}
+          />
+        </Box>
+
+        {/* Remarks Section */}
+        <Box sx={{ marginTop: 3 }}>
+          <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+            📝 Remarks
+          </Typography>
+          
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            variant="outlined"
+            label="Remarks"
+            value={remarks}
+            disabled
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: '#f5f5f5',
+              },
+              '& .MuiInputBase-input.Mui-disabled': {
+                WebkitTextFillColor: '#000000',
+              },
+            }}
+          />
+        </Box>
+      </Paper>
+    </LocalizationProvider>
   );
 };
 

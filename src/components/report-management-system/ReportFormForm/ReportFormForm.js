@@ -17,7 +17,7 @@ import FirstContainer from './FirstContainer';
 import CMReportForm from './CMReportForm';
 import RTUPMReportForm from './RTUPMReportForm'; // Updated import
 import ServerPMReportForm from './SERVERPMReportForm/ServerPMReportForm'; // Add Server PM import
-import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, getNextJobNumber } from '../../api-services/reportFormService';
+import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, submitServerPMReportForm, getNextJobNumber } from '../../api-services/reportFormService';
 import CMReviewReportForm from './CMReviewReportForm';
 import RTUPMReviewReportForm from './RTUPMReviewReportForm';
 import ServerPMReviewReportForm from './SERVERPMReportForm_Review/ServerPMReviewReportForm'; 
@@ -166,6 +166,13 @@ const ReportFormForm = () => {
         // Fallback: check if we're in RTU PM context by checking if rtuPMData has content
         (rtuPMData.mainRTUCabinetData && rtuPMData.mainRTUCabinetData.length > 0)
       );
+
+      // More specific check for Server PM reports
+      const isServerPreventativeMaintenance = isPreventativeMaintenance && (
+        formData.pmReportFormTypeName?.toLowerCase() === 'server' ||
+        // Fallback: check if we're in Server PM context by checking if serverPMData has content
+        (formData.serverHealthData || formData.hardDriveHealthData || formData.diskUsageData)
+      );
             
       let result;
       
@@ -191,6 +198,21 @@ const ReportFormForm = () => {
           message: 'CM Report Form created successfully!',
           severity: 'success'
         });
+        
+        // Navigate after a short delay to show the toast
+        setTimeout(() => {
+          navigate('/report-management-system/report-forms');
+        }, 2000);
+        
+        return; // Exit early to avoid the generic success handling below
+      } else if (isServerPreventativeMaintenance) {
+        console.log("Server Preventative Maintenance is working");
+        // Handle Server PM report submission
+        result = await submitServerPMReportForm(formData, user);
+        console.log('Server PM Report Form submitted successfully:', result);
+        
+        // Show success toast for Server PM reports
+        setShowSuccessToast(true);
         
         // Navigate after a short delay to show the toast
         setTimeout(() => {

@@ -513,33 +513,164 @@ const ServerPMReviewReportForm = ({
             </Grid>
           </Paper>
 
-          {/* All Component Sections */}
-          {components.map(({ key, title, icon: Icon, Component, dataKey }) => (
-            <Paper key={key} elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 2, 
-                mb: 3,
-                borderBottom: '2px solid #e0e0e0',
-                pb: 2
-              }}>
-                <Icon sx={{ color: '#1976d2', fontSize: 28 }} />
-                <Typography variant="h6" sx={{ 
-                  color: '#1976d2', 
-                  fontWeight: 'bold',
-                  flex: 1
-                }}>
-                  {title}
-                </Typography>
-                <Chip 
-                  label={formData?.[dataKey] ? 'Completed' : 'Not Filled'} 
-                  color={formData?.[dataKey] ? 'success' : 'default'}
-                  size="small"
-                />
-              </Box>
+          {/* Helper function to check if component has data */}
+          {(() => {
+            // Helper function to check if ASA Firewall data is default
+            const isASAFirewallDefaultData = (dataArray) => {
+              if (!Array.isArray(dataArray) || dataArray.length === 0) return false;
               
-              {formData?.[dataKey] ? (
+              // Check if all items are default ASA Firewall commands with no user input
+              return dataArray.every(item => {
+                const hasDefaultCommand = item.commandInput === 'show cpu usage' || item.commandInput === 'show environment';
+                const hasNoUserInput = (!item.expectedResultId || item.expectedResultId === '') && 
+                                      (!item.doneId || item.doneId === '');
+                return hasDefaultCommand && hasNoUserInput;
+              });
+            };
+
+            // Helper function to check if Auto Failover data is default
+            const isAutoFailOverDefaultData = (dataArray) => {
+              if (!Array.isArray(dataArray) || dataArray.length === 0) return false;
+              
+              // Check if all items are default Auto Failover scenarios with no user input
+              return dataArray.every(item => {
+                const hasDefaultServers = (item.toServer === 'SCA-SR2' || item.toServer === 'SCA-SR1') && 
+                                         (item.fromServer === 'SCA-SR1' || item.fromServer === 'SCA-SR2');
+                const hasDefaultFailoverType = item.failoverType && item.failoverType.trim() !== '';
+                const hasDefaultExpectedResult = item.expectedResult && item.expectedResult.trim() !== '';
+                const hasNoUserInput = (!item.result || item.result === '');
+                
+                return hasDefaultServers && hasDefaultFailoverType && hasDefaultExpectedResult && hasNoUserInput;
+              });
+            };
+
+            const hasData = (data, dataKey) => {
+              if (!data || typeof data !== 'object') return false;
+              
+              // Debug logging to understand data structure
+              if (dataKey === 'diskUsageData') {
+                console.log('DiskUsage data:', data);
+              }
+              if (dataKey === 'hardDriveHealthData') {
+                console.log('HardDriveHealth data:', data);
+              }
+              
+              // Special handling for diskUsageData
+              if (dataKey === 'diskUsageData') {
+                const hasRemarks = data.remarks && data.remarks.trim() !== '';
+                const servers = data.servers || [];
+                const hasDetails = Array.isArray(servers) && servers.length > 0 && 
+                                 servers.some(server => 
+                                   server && 
+                                   server.serverName && 
+                                   server.serverName.trim() !== '' &&
+                                   Array.isArray(server.disks) && 
+                                   server.disks.length > 0 &&
+                                   server.disks.some(disk => 
+                                     disk && (
+                                       (disk.disk && disk.disk.trim() !== '') ||
+                                       (disk.status && disk.status.trim() !== '') ||
+                                       (disk.capacity && disk.capacity.trim() !== '') ||
+                                       (disk.freeSpace && disk.freeSpace.trim() !== '') ||
+                                       (disk.usage && disk.usage.trim() !== '') ||
+                                       (disk.check && disk.check.trim() !== '')
+                                     )
+                                   )
+                                 );
+                return hasRemarks || hasDetails;
+              }
+              
+              // Check if object has any non-empty values
+              const hasNonEmptyValues = Object.values(data).some(value => {
+                if (Array.isArray(value)) {
+                  // Special handling for ASA Firewall data
+                  if (dataKey === 'asaFirewallData' && isASAFirewallDefaultData(value)) {
+                    return false;
+                  }
+                  
+                  // Special handling for Auto Failover data
+                  if (dataKey === 'autoFailOverData' && isAutoFailOverDefaultData(value)) {
+                    return false;
+                  }
+                  
+                  return value.length > 0 && value.some(item => 
+                    item && typeof item === 'object' && Object.values(item).some(v => 
+                      v !== null && v !== undefined && v !== ''
+                    )
+                  );
+                }
+                return value !== null && value !== undefined && value !== '';
+              });
+
+              // For nested structure with remarks, check if there are meaningful remarks or details
+              if (data.remarks !== undefined) {
+                const hasRemarks = data.remarks && data.remarks.trim() !== '';
+                const dataArray = data[dataKey] || data.asaFirewallData || data.autoFailOverData || data.data || [];
+                
+                let hasDetails = Array.isArray(dataArray) && dataArray.length > 0 && 
+                                dataArray.some(item => item && Object.keys(item).length > 0);
+                
+                // Special check for ASA Firewall default data
+                if (dataKey === 'asaFirewallData' && isASAFirewallDefaultData(dataArray)) {
+                  hasDetails = false;
+                }
+                
+                // Special check for Auto Failover default data
+                if (dataKey === 'autoFailOverData' && isAutoFailOverDefaultData(dataArray)) {
+                  hasDetails = false;
+                }
+                
+                return hasRemarks || hasDetails;
+              }
+
+              return hasNonEmptyValues;
+            };
+
+            // Filter components that have data
+            const componentsWithData = components.filter(({ dataKey }) => 
+              hasData(formData[dataKey], dataKey)
+            );
+
+            if (componentsWithData.length === 0) {
+              return (
+                <Paper elevation={2} sx={{ p: 4, mb: 3, borderRadius: 2, textAlign: 'center' }}>
+                  <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                    📝 No Maintenance Data Available
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    No maintenance activities were completed during this session.
+                  </Typography>
+                </Paper>
+              );
+            }
+
+            return componentsWithData.map(({ key, title, icon: Icon, Component, dataKey }) => (
+              <Paper key={key} elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+                {/* Component Title Header */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1, 
+                  mb: 2,
+                  pb: 1,
+                  borderBottom: '2px solid #e0e0e0'
+                }}>
+                  <Icon sx={{ color: '#1976d2', fontSize: 24 }} />
+                  <Typography variant="h6" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                    {title}
+                  </Typography>
+                  <Chip 
+                    label="Completed" 
+                    size="small" 
+                    sx={{ 
+                      ml: 'auto',
+                      backgroundColor: '#4caf50', 
+                      color: 'white',
+                      fontWeight: 'bold'
+                    }} 
+                  />
+                </Box>
+                
                 <Box sx={{ 
                   '& .MuiTextField-root': {
                     '& .MuiOutlinedInput-root': {
@@ -578,42 +709,69 @@ const ServerPMReviewReportForm = ({
                     disabled={true}
                   />
                 </Box>
-              ) : (
-                <Box sx={{ 
-                  textAlign: 'center', 
-                  py: 4, 
-                  color: '#999',
-                  backgroundColor: '#f5f5f5',
-                  borderRadius: 1,
-                  border: '1px dashed #ddd'
-                }}>
-                  <Typography variant="body1">
-                    This section was not completed during the maintenance process.
-                  </Typography>
-                </Box>
-              )}
-            </Paper>
-          ))}
+              </Paper>
+            ));
+          })()}
 
           {/* Action Buttons */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4, pt: 3, borderTop: '1px solid #e0e0e0' }}>
-            <Button
-              variant="outlined"
-              onClick={onBack}
-              size="large"
-              sx={{ minWidth: 120 }}
-            >
-              Back
-            </Button>
-            <Button
-              variant="contained"
-              onClick={onNext}
-              size="large"
-              sx={{ minWidth: 120 }}
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Submit Report'}
-            </Button>
+          <Box sx={{ mt: 4 }}>
+            <Paper sx={{
+              padding: 2,
+              marginBottom: 0,
+              marginTop: 3
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Button
+                  variant="contained"
+                  onClick={onBack}
+                  disabled={loading}
+                  sx={{
+                    background: RMSTheme.components.button.primary.background,
+                    color: RMSTheme.components.button.primary.text,
+                    padding: '12px 32px',
+                    borderRadius: RMSTheme.borderRadius.small,
+                    border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                    boxShadow: RMSTheme.components.button.primary.shadow,
+                    '&:hover': {
+                      background: RMSTheme.components.button.primary.hover
+                    },
+                    '&:disabled': {
+                      opacity: 0.6
+                    }
+                  }}
+                >
+                  ← Back
+                </Button>
+                
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body2" sx={{ color: '#666' }}>
+                    Review Report
+                  </Typography>
+                </Box>
+                
+                <Button
+                  variant="contained"
+                  onClick={onNext}
+                  disabled={loading}
+                  sx={{
+                    background: RMSTheme.components.button.primary.background,
+                    color: RMSTheme.components.button.primary.text,
+                    padding: '12px 32px',
+                    borderRadius: RMSTheme.borderRadius.small,
+                    border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                    boxShadow: RMSTheme.components.button.primary.shadow,
+                    '&:hover': {
+                      background: RMSTheme.components.button.primary.hover
+                    },
+                    '&:disabled': {
+                      opacity: 0.6
+                    }
+                  }}
+                >
+                  {loading ? <CircularProgress size={24} /> : 'Submit Report →'}
+                </Button>
+              </Box>
+            </Paper>
           </Box>
         </Box>
       </Paper>

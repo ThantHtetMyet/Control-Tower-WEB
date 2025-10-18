@@ -18,56 +18,59 @@ import {
 // Import the yes/no status service
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
 
-const DatabaseBackup_Review = ({ data }) => {
+const DatabaseBackup_Review = ({ data = {} }) => {
   const [mssqlBackupData, setMssqlBackupData] = useState([]);
   const [scadaBackupData, setScadaBackupData] = useState([]);
   const [remarks, setRemarks] = useState('');
   const [latestBackupFileName, setLatestBackupFileName] = useState('');
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
-  const [loading, setLoading] = useState(false);
 
   // Initialize data from props
   useEffect(() => {
-    if (data) {
-      if (data.mssqlBackupData && data.mssqlBackupData.length > 0) {
-        setMssqlBackupData(data.mssqlBackupData);
-      }
-      
-      if (data.scadaBackupData && data.scadaBackupData.length > 0) {
-        setScadaBackupData(data.scadaBackupData);
-      }
-      
-      if (data.remarks) {
-        setRemarks(data.remarks);
-      }
-      
-      if (data.latestBackupFileName) {
-        setLatestBackupFileName(data.latestBackupFileName);
-      }
+    console.log('DatabaseBackup_Review - Received data:', data);
+    
+    if (data.mssqlBackupData && data.mssqlBackupData.length > 0) {
+      setMssqlBackupData(data.mssqlBackupData);
     }
+    
+    if (data.scadaBackupData && data.scadaBackupData.length > 0) {
+      setScadaBackupData(data.scadaBackupData);
+    }
+    
+    if (data.remarks) {
+      setRemarks(data.remarks);
+    }
+    
+    if (data.latestBackupFileName) {
+      setLatestBackupFileName(data.latestBackupFileName);
+    }
+    
+    console.log('Final database backup data:', { 
+      mssqlBackupData: data.mssqlBackupData, 
+      scadaBackupData: data.scadaBackupData, 
+      remarks: data.remarks, 
+      latestBackupFileName: data.latestBackupFileName 
+    });
   }, [data]);
 
-  // Fetch YesNoStatus options for display
+  // Fetch YesNoStatus options on component mount
   useEffect(() => {
     const fetchYesNoStatuses = async () => {
       try {
-        setLoading(true);
         const response = await yesNoStatusService.getYesNoStatuses();
         setYesNoStatusOptions(response || []);
       } catch (error) {
         console.error('Error fetching yes/no status options:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchYesNoStatuses();
   }, []);
 
-  // Get yes/no status name by id
-  const getYesNoStatusName = (id) => {
-    const status = yesNoStatusOptions.find(option => option.id === id);
-    return status ? status.name : id;
+  // Get status name by ID
+  const getStatusName = (id, options) => {
+    const status = options.find(option => option.ID === id || option.id === id);
+    return status ? (status.Name || status.name) : id;
   };
 
   // Styling
@@ -95,51 +98,39 @@ const DatabaseBackup_Review = ({ data }) => {
         <BackupIcon /> Database Backup Check
       </Typography>
       
-      {/* Instructions */}
+      <Typography variant="body1" sx={{ marginBottom: 3 }}>
+        Verify database backup processes and ensure backup files are created successfully.
+      </Typography>
+
+      {/* Database Backup Instructions */}
       <Box sx={{ marginBottom: 3 }}>
+        <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: 'bold' }}>
+          Database Backup
+        </Typography>
+        
         <Typography variant="body1" sx={{ marginBottom: 2 }}>
-          Verify database backup processes and ensure backup files are created successfully.
+          Check <b> D:\MSSQLSERVER-BACKUP\Monthly </b> make sure the database is backup in this directory.
         </Typography>
       </Box>
 
-      {/* Latest Backup File Name */}
-      <Box sx={{ marginBottom: 3 }}>
-        <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
-          📁 Latest Backup File Name
-        </Typography>
-        <TextField
-          fullWidth
-          variant="outlined"
-          label="Latest Backup File Name"
-          value={latestBackupFileName}
-          disabled
-          placeholder="No backup file name provided"
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              backgroundColor: '#f5f5f5',
-            }
-          }}
-        />
-      </Box>
-
-      {/* MSSQL Database Backup Check */}
+      {/* MSSQL Database Backup Table */}
       <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
         🗄️ MSSQL Database Backup Check
       </Typography>
       
-      <TableContainer component={Paper} sx={{ marginBottom: 3 }}>
+      <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
               <TableCell sx={{ fontWeight: 'bold' }}>Item</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Result</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Monthly DB Backup are Created</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {mssqlBackupData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={2} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
-                  No MSSQL backup data available.
+                  No data available for this section.
                 </TableCell>
               </TableRow>
             ) : (
@@ -149,18 +140,28 @@ const DatabaseBackup_Review = ({ data }) => {
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={row.item}
+                      value={row.item || ''}
                       disabled
                       size="small"
+                      sx={{
+                        '& .MuiInputBase-input.Mui-disabled': {
+                          WebkitTextFillColor: '#000000',
+                        },
+                      }}
                     />
                   </TableCell>
                   <TableCell>
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={loading ? 'Loading...' : getYesNoStatusName(row.result)}
+                      value={getStatusName(row.monthlyDBBackupCreated, yesNoStatusOptions) || ''}
                       disabled
                       size="small"
+                      sx={{
+                        '& .MuiInputBase-input.Mui-disabled': {
+                          WebkitTextFillColor: '#000000',
+                        },
+                      }}
                     />
                   </TableCell>
                 </TableRow>
@@ -170,24 +171,31 @@ const DatabaseBackup_Review = ({ data }) => {
         </Table>
       </TableContainer>
 
-      {/* SCADA Database Backup Check */}
+      {/* SCADA Section */}
+      <Box sx={{ marginTop: 4, marginBottom: 3 }}>
+        <Typography variant="body1" sx={{ marginBottom: 2 }}>
+          Check <b> D:\SCADA </b> make sure the database is backup in this directory.
+        </Typography>
+      </Box>
+
+      {/* SCADA Database Backup Table */}
       <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
         📊 SCADA Database Backup Check
       </Typography>
       
-      <TableContainer component={Paper} sx={{ marginBottom: 3 }}>
+      <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
               <TableCell sx={{ fontWeight: 'bold' }}>Item</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Result</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>SCADA DB Backup are Created</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {scadaBackupData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={2} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
-                  No SCADA backup data available.
+                  No data available for this section.
                 </TableCell>
               </TableRow>
             ) : (
@@ -197,18 +205,28 @@ const DatabaseBackup_Review = ({ data }) => {
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={row.item}
+                      value={row.item || ''}
                       disabled
                       size="small"
+                      sx={{
+                        '& .MuiInputBase-input.Mui-disabled': {
+                          WebkitTextFillColor: '#000000',
+                        },
+                      }}
                     />
                   </TableCell>
                   <TableCell>
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={loading ? 'Loading...' : getYesNoStatusName(row.result)}
+                      value={getStatusName(row.monthlyDBBackupCreated, yesNoStatusOptions) || ''}
                       disabled
                       size="small"
+                      sx={{
+                        '& .MuiInputBase-input.Mui-disabled': {
+                          WebkitTextFillColor: '#000000',
+                        },
+                      }}
                     />
                   </TableCell>
                 </TableRow>
@@ -232,11 +250,35 @@ const DatabaseBackup_Review = ({ data }) => {
           label="Remarks"
           value={remarks}
           disabled
-          placeholder="No remarks provided"
           sx={{
             '& .MuiOutlinedInput-root': {
               backgroundColor: '#f5f5f5',
-            }
+            },
+            '& .MuiInputBase-input.Mui-disabled': {
+              WebkitTextFillColor: '#000000',
+            },
+          }}
+        />
+      </Box>
+
+      {/* Latest Backup File Name */}
+      <Box sx={{ marginBottom: 3 }}>
+        <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+          📁 Latest Backup File Name
+        </Typography>
+        <TextField
+          fullWidth
+          variant="outlined"
+          label="Latest Backup File Name"
+          value={latestBackupFileName}
+          disabled
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: '#f5f5f5',
+            },
+            '& .MuiInputBase-input.Mui-disabled': {
+              WebkitTextFillColor: '#000000',
+            },
           }}
         />
       </Box>

@@ -3,31 +3,52 @@ import {
   Box,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
 } from '@mui/material';
 import {
   Videocam as VideocamIcon,
 } from '@mui/icons-material';
+import WillowlynxSumpPitCCTVCameraImage from '../../../resources/ServerPMReportForm/WillowlynxSumpPitCCTVCamera.png';
+
+// Import the yes/no status service
+import yesNoStatusService from '../../../api-services/yesNoStatusService';
 
 const WillowlynxSumpPitCCTVCamera_Review = ({ data = {} }) => {
-  const [cameraData, setCameraData] = useState([]);
+  const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
 
   // Initialize data from props
   useEffect(() => {
-    if (data.cameraData && data.cameraData.length > 0) {
-      setCameraData(data.cameraData);
+    console.log('WillowlynxSumpPitCCTVCamera_Review - Received data:', data);
+    
+    if (data) {
+      setResult(data.result || '');
+      setRemarks(data.remarks || '');
     }
-    if (data.remarks) {
-      setRemarks(data.remarks);
-    }
+    
+    console.log('Final sump pit CCTV camera data:', { result: data?.result, remarks: data?.remarks });
   }, [data]);
+
+  // Fetch Yes/No status options
+  useEffect(() => {
+    const fetchYesNoStatusOptions = async () => {
+      try {
+        const options = await yesNoStatusService.getYesNoStatuses();
+        setYesNoStatusOptions(options);
+      } catch (error) {
+        console.error('Error fetching yes/no status options:', error);
+      }
+    };
+
+    fetchYesNoStatusOptions();
+  }, []);
+
+  // Helper function to get status name from ID
+  const getStatusName = (statusId, statusOptions) => {
+    const status = statusOptions.find(option => option.id === statusId);
+    return status ? status.name : statusId;
+  };
 
   // Styling
   const sectionContainerStyle = {
@@ -48,89 +69,55 @@ const WillowlynxSumpPitCCTVCamera_Review = ({ data = {} }) => {
     gap: 1
   };
 
+  const inlineField = {
+    minWidth: 200,
+    '& .MuiOutlinedInput-root': { backgroundColor: '#f5f5f5' },
+    '& .MuiInputBase-input.Mui-disabled': {
+      WebkitTextFillColor: '#000000',
+    },
+  };
+
   return (
     <Paper sx={sectionContainerStyle}>
+      {/* Header */}
       <Typography variant="h5" sx={sectionHeaderStyle}>
         <VideocamIcon /> Willowlynx Sump Pit CCTV Camera Check
       </Typography>
-      
-      <Typography variant="body1" sx={{ marginBottom: 3 }}>
-        Monitor CCTV camera functionality and video feed quality for sump pit surveillance.
+
+      <Typography variant="body1" sx={{ ml: 2, mb: 2 }}>
+        Click the CCTV icon on an HMI, which will load the CCTV Module. Check if the
+        CCTV camera is working properly and the video feed is clear.
       </Typography>
 
-      {/* CCTV Camera Table */}
-      <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableCell sx={{ fontWeight: 'bold' }}>Camera Location</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Camera ID</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Video Quality</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Check Result</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {cameraData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
-                  No data available for this section.
-                </TableCell>
-              </TableRow>
-            ) : (
-              cameraData.map((row, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.cameraLocation || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.cameraId || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.status || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.videoQuality || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.checkResult || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Screenshot */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+        <img 
+          src={WillowlynxSumpPitCCTVCameraImage} 
+          alt="Willowlynx Sump Pit CCTV Camera" 
+          style={{ 
+            maxWidth: '100%', 
+            height: 'auto',
+            border: '1px solid #ddd',
+            borderRadius: '8px'
+          }} 
+        />
+      </Box>
+
+      {/* Result */}
+      <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+        Result:
+      </Typography>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, ml: 2, mb: 2 }}>
+        <Typography>CCTV camera is working properly and video feed is clear. </Typography>
+        <TextField
+          size="small"
+          value={getStatusName(result, yesNoStatusOptions) || ''}
+          variant="outlined"
+          disabled
+          sx={inlineField}
+        />
+      </Box>
 
       {/* Remarks Section */}
       <Box sx={{ marginTop: 3 }}>
@@ -149,7 +136,10 @@ const WillowlynxSumpPitCCTVCamera_Review = ({ data = {} }) => {
           sx={{
             '& .MuiOutlinedInput-root': {
               backgroundColor: '#f5f5f5',
-            }
+            },
+            '& .MuiInputBase-input.Mui-disabled': {
+              WebkitTextFillColor: '#000000',
+            },
           }}
         />
       </Box>

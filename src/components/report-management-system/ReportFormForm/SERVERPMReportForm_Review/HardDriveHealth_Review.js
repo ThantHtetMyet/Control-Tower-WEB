@@ -49,6 +49,12 @@ const HardDriveHealth_Review = ({ data = {} }) => {
     fetchResultStatuses();
   }, []);
 
+  // Get status name by ID
+  const getStatusName = (id, options) => {
+    const status = options.find(option => option.ID === id || option.id === id);
+    return status ? (status.Name || status.name) : id;
+  };
+
   // Styling
   const sectionContainerStyle = {
     padding: 3,
@@ -139,12 +145,7 @@ const HardDriveHealth_Review = ({ data = {} }) => {
                       fullWidth
                       variant="outlined"
                       label="Result"
-                      value={(() => {
-                        const selectedOption = resultStatusOptions.find(option => 
-                          option.id === row.result || option.id === parseInt(row.result)
-                        );
-                        return selectedOption ? selectedOption.name : (row.result || 'No result');
-                      })()}
+                      value={getStatusName(row.result, resultStatusOptions) || ''}
                       disabled
                       size="small"
                       sx={{
@@ -155,8 +156,7 @@ const HardDriveHealth_Review = ({ data = {} }) => {
                           }
                         },
                         '& .MuiInputBase-input.Mui-disabled': {
-                          WebkitTextFillColor: '#666 !important',
-                          color: '#666 !important'
+                          WebkitTextFillColor: '#000000',
                         }
                       }}
                     />

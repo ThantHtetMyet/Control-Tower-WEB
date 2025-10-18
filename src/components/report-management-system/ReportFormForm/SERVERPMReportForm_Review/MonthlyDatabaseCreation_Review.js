@@ -15,9 +15,13 @@ import {
   Storage as StorageIcon,
 } from '@mui/icons-material';
 
+// Import the yes/no status service
+import yesNoStatusService from '../../../api-services/yesNoStatusService';
+
 const MonthlyDatabaseCreation_Review = ({ data = {} }) => {
   const [monthlyDatabaseData, setMonthlyDatabaseData] = useState([]);
   const [remarks, setRemarks] = useState('');
+  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
 
   // Initialize data from props
   useEffect(() => {
@@ -28,6 +32,26 @@ const MonthlyDatabaseCreation_Review = ({ data = {} }) => {
       setRemarks(data.remarks);
     }
   }, [data]);
+
+  // Fetch YesNoStatus options on component mount
+  useEffect(() => {
+    const fetchYesNoStatuses = async () => {
+      try {
+        const response = await yesNoStatusService.getYesNoStatuses();
+        setYesNoStatusOptions(response || []);
+      } catch (error) {
+        console.error('Error fetching yes/no status options:', error);
+      }
+    };
+
+    fetchYesNoStatuses();
+  }, []);
+
+  // Get status name by ID
+  const getStatusName = (id, options) => {
+    const status = options.find(option => option.ID === id || option.id === id);
+    return status ? (status.Name || status.name) : id;
+  };
 
   // Styling
   const sectionContainerStyle = {
@@ -108,14 +132,17 @@ const MonthlyDatabaseCreation_Review = ({ data = {} }) => {
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={row.monthlyDBCreated || ''}
+                      value={getStatusName(row.monthlyDBCreated, yesNoStatusOptions) || ''}
                       size="small"
                       disabled
                       sx={{
                         minWidth: 120,
                         '& .MuiOutlinedInput-root': {
                           backgroundColor: '#f5f5f5',
-                        }
+                        },
+                        '& .MuiInputBase-input.Mui-disabled': {
+                          WebkitTextFillColor: '#000000',
+                        },
                       }}
                     />
                   </TableCell>

@@ -3,31 +3,58 @@ import {
   Box,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 
-const WillowlynxHistorialTrend_Review = ({ data = {} }) => {
-  const [trendData, setTrendData] = useState([]);
+// Import the yes/no status service
+import yesNoStatusService from '../../../api-services/yesNoStatusService';
+
+const WillowlynxHistorialTrend_Review = ({ data }) => {
+  const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
 
   // Initialize data from props
   useEffect(() => {
-    if (data.trendData && data.trendData.length > 0) {
-      setTrendData(data.trendData);
+    console.log('WillowlynxHistorialTrend_Review - Received data:', data);
+    
+    if (data) {
+      setResult(data.result || '');
+      setRemarks(data.remarks || '');
     }
-    if (data.remarks) {
-      setRemarks(data.remarks);
-    }
+    
+    console.log('Final historical trend data:', { result: data?.result, remarks: data?.remarks });
   }, [data]);
+
+  // Fetch Yes/No status options
+  useEffect(() => {
+    const fetchYesNoStatusOptions = async () => {
+      try {
+        const options = await yesNoStatusService.getYesNoStatuses();
+        setYesNoStatusOptions(options);
+      } catch (error) {
+        console.error('Error fetching yes/no status options:', error);
+      }
+    };
+
+    fetchYesNoStatusOptions();
+  }, []);
+
+  // Helper function to get status name from ID
+  const getStatusName = (statusId, statusOptions) => {
+    console.log('getStatusName called with:', { statusId, statusOptions });
+    if (!statusId || !statusOptions || statusOptions.length === 0) {
+      console.log('Returning statusId as fallback:', statusId);
+      return statusId || '';
+    }
+    const status = statusOptions.find(option => option.id === statusId);
+    const result = status ? status.name : statusId;
+    console.log('Status resolution result:', result);
+    return result;
+  };
 
   // Styling
   const sectionContainerStyle = {
@@ -48,99 +75,40 @@ const WillowlynxHistorialTrend_Review = ({ data = {} }) => {
     gap: 1
   };
 
+  const inlineField = {
+    minWidth: 200,
+    '& .MuiOutlinedInput-root': { backgroundColor: '#f5f5f5' },
+    '& .MuiInputBase-input.Mui-disabled': {
+      WebkitTextFillColor: '#000000',
+    },
+  };
+
   return (
     <Paper sx={sectionContainerStyle}>
+      {/* Header */}
       <Typography variant="h5" sx={sectionHeaderStyle}>
         <TrendingUpIcon /> Willowlynx Historical Trend Check
       </Typography>
-      
-      <Typography variant="body1" sx={{ marginBottom: 3 }}>
-        Review historical trends and data patterns in the Willowlynx system.
+
+      <Typography variant="body1" sx={{ ml: 2, mb: 2 }}>
+        Randomly select some analog measurement points, right click the point and select trend, check if the trend can be successfully displayed without errors.  
       </Typography>
 
-      {/* Historical Trend Table */}
-      <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableCell sx={{ fontWeight: 'bold' }}>Parameter</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Trend Period</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Min Value</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Max Value</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Average</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {trendData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
-                  No data available for this section.
-                </TableCell>
-              </TableRow>
-            ) : (
-              trendData.map((row, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.parameter || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.trendPeriod || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.minValue || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.maxValue || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.average || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.status || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Result */}
+      <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+        Result:
+      </Typography>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, ml: 2, mb: 2 }}>
+        <Typography>Trends can be displayed without issues. </Typography>
+        <TextField
+          size="small"
+          value={getStatusName(result, yesNoStatusOptions) || ''}
+          variant="outlined"
+          disabled
+          sx={inlineField}
+        />
+      </Box>
 
       {/* Remarks Section */}
       <Box sx={{ marginTop: 3 }}>
@@ -159,7 +127,10 @@ const WillowlynxHistorialTrend_Review = ({ data = {} }) => {
           sx={{
             '& .MuiOutlinedInput-root': {
               backgroundColor: '#f5f5f5',
-            }
+            },
+            '& .MuiInputBase-input.Mui-disabled': {
+              WebkitTextFillColor: '#000000',
+            },
           }}
         />
       </Box>

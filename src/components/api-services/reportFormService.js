@@ -719,9 +719,449 @@ export const getPMDVREquipment = async (pmReportFormRTUID) => {
 };
 
 // Future: Add Server PM Report functions
-// export const submitServerPMReportForm = async (formData, serverPMData, user) => {
-//   // Implementation for Server PM reports
-// };
+export const submitServerPMReportForm = async (formData, user) => {
+  try {
+    console.log('=== SUBMITTING SERVER PM REPORT FORM ===');
+    console.log('Form Data Structure:', JSON.stringify(formData, null, 2));
+
+    // Step 1: Create ReportForm entry first
+    const reportFormData = {
+      ReportFormTypeID: formData.reportFormTypeID,
+      JobNo: formData.jobNo,
+      SystemNameWarehouseID: formData.systemNameWarehouseID,
+      StationNameWarehouseID: formData.stationNameWarehouseID,
+      UploadStatus: formData.uploadStatus || 'Pending',
+      UploadHostname: formData.uploadHostname || '',
+      UploadIPAddress: formData.uploadIPAddress || '',
+      FormStatus: formData.formStatus || 'Draft'
+    };
+    
+    console.log('Creating ReportForm with data:', reportFormData);
+    const reportForm = await createReportForm(reportFormData);
+    console.log('ReportForm created:', reportForm);
+
+    // Helper function to transform component data
+    const transformComponentData = (componentData, componentName) => {
+      if (!componentData) return null;
+      
+      console.log(`Transforming ${componentName}:`, JSON.stringify(componentData, null, 2));
+      
+      // Helper function to transform field names in details
+      const transformDetailFields = (details) => {
+        if (!Array.isArray(details)) return details;
+        
+        return details.map(detail => {
+          const transformedDetail = { ...detail };
+          
+          // Transform "result" field to "ResultStatusID" for API compatibility
+          if (transformedDetail.result !== undefined) {
+            transformedDetail.ResultStatusID = transformedDetail.result;
+            delete transformedDetail.result;
+          }
+          
+          return transformedDetail;
+        });
+      };
+      
+      // Special handling for ASA Firewall data
+      const isASAFirewallDefaultData = (dataArray) => {
+        if (!Array.isArray(dataArray) || dataArray.length === 0) return false;
+        
+        // Check if all items are default ASA Firewall commands with no user input
+        return dataArray.every(item => {
+          const isDefaultCommand = (item.commandInput === 'show cpu usage' || item.commandInput === 'show environment');
+          const hasNoUserInput = (!item.expectedResultId || item.expectedResultId === '') && 
+                                 (!item.doneId || item.doneId === '');
+          return isDefaultCommand && hasNoUserInput;
+        });
+      };
+
+      // Special handling for Auto Failover data
+      const isAutoFailOverDefaultData = (dataArray) => {
+        if (!Array.isArray(dataArray) || dataArray.length === 0) return false;
+        
+        // Check if all items are default Auto Failover scenarios with no user input
+        return dataArray.every(item => {
+          const hasDefaultServers = (item.toServer === 'SCA-SR2' || item.toServer === 'SCA-SR1') && 
+                                   (item.fromServer === 'SCA-SR1' || item.fromServer === 'SCA-SR2');
+          const hasDefaultFailoverType = item.failoverType && item.failoverType.trim() !== '';
+          const hasDefaultExpectedResult = item.expectedResult && item.expectedResult.trim() !== '';
+          const hasNoUserInput = (!item.result || item.result === '');
+          
+          return hasDefaultServers && hasDefaultFailoverType && hasDefaultExpectedResult && hasNoUserInput;
+        });
+      };
+      
+      // Handle direct array structure
+      if (Array.isArray(componentData)) {
+        // Only return data if array has meaningful content
+        if (componentData.length === 0 || componentData.every(item => !item || Object.keys(item).length === 0)) {
+          return null;
+        }
+        
+        // Special check for ASA Firewall default data
+        if (componentName === 'asaFirewallData' && isASAFirewallDefaultData(componentData)) {
+          return null;
+        }
+        
+        // Special check for Auto Failover default data
+        if (componentName === 'autoFailOverData' && isAutoFailOverDefaultData(componentData)) {
+          return null;
+        }
+        
+        return {
+          remarks: '',
+          details: transformDetailFields(componentData)
+        };
+      }
+      
+      // Handle nested structure with remarks
+      if (componentData.remarks !== undefined) {
+        const dataArray = componentData[componentName] || componentData.asaFirewallData || componentData.autoFailOverData || componentData.data || [];
+        
+        // Check if there's meaningful data
+        const hasRemarks = componentData.remarks && componentData.remarks.trim() !== '';
+        let hasDetails = Array.isArray(dataArray) && dataArray.length > 0 && 
+                        dataArray.some(item => item && Object.keys(item).length > 0);
+        
+        // Special handling for diskUsageData - check for servers with actual disk data
+        if (componentName === 'diskUsageData') {
+          const servers = componentData.servers || [];
+          hasDetails = Array.isArray(servers) && servers.length > 0 && 
+                      servers.some(server => 
+                        server && 
+                        server.serverName && 
+                        server.serverName.trim() !== '' &&
+                        Array.isArray(server.disks) && 
+                        server.disks.length > 0 &&
+                        server.disks.some(disk => 
+                          disk && (
+                            (disk.disk && disk.disk.trim() !== '') ||
+                            (disk.status && disk.status.trim() !== '') ||
+                            (disk.capacity && disk.capacity.trim() !== '') ||
+                            (disk.freeSpace && disk.freeSpace.trim() !== '') ||
+                            (disk.usage && disk.usage.trim() !== '') ||
+                            (disk.check && disk.check.trim() !== '')
+                          )
+                        )
+                      );
+        }
+        
+        // Special handling for networkHealthData - simple structure without details
+        if (componentName === 'networkHealthData') {
+          const hasData = (componentData.dateChecked && componentData.dateChecked !== null) ||
+                         (componentData.result && componentData.result.trim() !== '') ||
+                         (componentData.remarks && componentData.remarks.trim() !== '');
+          
+          if (!hasData) {
+            return null;
+          }
+          
+          return {
+            YesNoStatusID: componentData.result || null,
+            DateChecked: componentData.dateChecked || null,
+            Remarks: componentData.remarks || ''
+          };
+        }
+
+        // Special handling for cpuAndRamUsageData - check for memory and CPU data
+        if (componentName === 'cpuAndRamUsageData') {
+          const memoryData = componentData.memoryUsageData || [];
+          const cpuData = componentData.cpuUsageData || [];
+          
+          const hasMemoryData = Array.isArray(memoryData) && memoryData.length > 0 && 
+                               memoryData.some(memory => 
+                                 memory && (
+                                   (memory.machineName && memory.machineName.trim() !== '') ||
+                                   (memory.memorySize && memory.memorySize.trim() !== '') ||
+                                   (memory.memoryInUse && memory.memoryInUse.trim() !== '') ||
+                                   (memory.memoryInUsed && memory.memoryInUsed.trim() !== '') ||
+                                   (memory.memoryUsageCheck && memory.memoryUsageCheck.trim() !== '')
+                                 )
+                               );
+          
+          const hasCpuData = Array.isArray(cpuData) && cpuData.length > 0 && 
+                            cpuData.some(cpu => 
+                              cpu && (
+                                (cpu.machineName && cpu.machineName.trim() !== '') ||
+                                (cpu.cpuUsage && cpu.cpuUsage.trim() !== '') ||
+                                (cpu.cpuUsageCheck && cpu.cpuUsageCheck.trim() !== '')
+                              )
+                            );
+          
+          hasDetails = hasMemoryData || hasCpuData;
+        }
+        
+        // Special check for ASA Firewall default data
+        if (componentName === 'asaFirewallData' && isASAFirewallDefaultData(dataArray)) {
+          hasDetails = false;
+        }
+        
+        // Special check for Auto Failover default data
+        if (componentName === 'autoFailOverData' && isAutoFailOverDefaultData(dataArray)) {
+          hasDetails = false;
+        }
+        
+        // Only return data if there's meaningful content
+        if (!hasRemarks && !hasDetails) {
+          return null;
+        }
+        
+        // Transform the data based on component type
+        let detailsToTransform = dataArray;
+        
+        // Special handling for diskUsageData - transform servers to flat details array
+        if (componentName === 'diskUsageData' && componentData.servers) {
+          detailsToTransform = [];
+          componentData.servers.forEach(server => {
+            if (server.disks && Array.isArray(server.disks)) {
+              server.disks.forEach(disk => {
+                // Map status name to ID - find the serverDiskStatusOption with matching name
+                let serverDiskStatusID = disk.status;
+                if (typeof disk.status === 'string' && componentData.serverDiskStatusOptions) {
+                  const statusOption = componentData.serverDiskStatusOptions.find(option => option.name === disk.status);
+                  if (statusOption) {
+                    serverDiskStatusID = statusOption.id;
+                  }
+                }
+                
+                detailsToTransform.push({
+                  serverName: server.serverName,
+                  diskName: disk.disk,
+                  capacity: disk.capacity,
+                  freeSpace: disk.freeSpace,
+                  usage: disk.usage,
+                  serverDiskStatusID: serverDiskStatusID,
+                  resultStatusID: disk.check,
+                  remarks: ''
+                });
+              });
+            }
+          });
+        }
+        
+        // Special handling for cpuAndRamUsageData - transform memory and CPU data to separate arrays
+        if (componentName === 'cpuAndRamUsageData') {
+          const cpuUsageDetails = [];
+          const memoryUsageDetails = [];
+          
+          // Add memory usage data
+          if (componentData.memoryUsageData && Array.isArray(componentData.memoryUsageData)) {
+            componentData.memoryUsageData.forEach((memory, index) => {
+              if (memory && (
+                (memory.machineName && memory.machineName.trim() !== '') ||
+                (memory.memorySize && memory.memorySize.trim() !== '') ||
+                (memory.memoryInUse && memory.memoryInUse.trim() !== '') ||
+                (memory.memoryUsageCheck && memory.memoryUsageCheck.trim() !== '')
+              )) {
+                // Only add if we have a valid GUID for resultStatusID
+                const resultStatusID = memory.memoryUsageCheck && memory.memoryUsageCheck.trim() !== '' ? memory.memoryUsageCheck : null;
+                if (resultStatusID) {
+                  memoryUsageDetails.push({
+                    serialNo: (index + 1).toString(),
+                    serverName: memory.machineName || '',
+                    memorySize: memory.memorySize || '',
+                    memoryInUse: memory.memoryInUse || '',
+                    resultStatusID: resultStatusID,
+                    remarks: ''
+                  });
+                }
+              }
+            });
+          }
+          
+          // Add CPU usage data
+          if (componentData.cpuUsageData && Array.isArray(componentData.cpuUsageData)) {
+            componentData.cpuUsageData.forEach((cpu, index) => {
+              if (cpu && (
+                (cpu.machineName && cpu.machineName.trim() !== '') ||
+                (cpu.cpuUsage && cpu.cpuUsage.trim() !== '') ||
+                (cpu.cpuUsageCheck && cpu.cpuUsageCheck.trim() !== '')
+              )) {
+                // Only add if we have a valid GUID for resultStatusID
+                const resultStatusID = cpu.cpuUsageCheck && cpu.cpuUsageCheck.trim() !== '' ? cpu.cpuUsageCheck : null;
+                if (resultStatusID) {
+                  cpuUsageDetails.push({
+                    serialNo: (index + 1).toString(),
+                    serverName: cpu.machineName || '',
+                    cpuUsage: cpu.cpuUsage || '',
+                    resultStatusID: resultStatusID,
+                    remarks: ''
+                  });
+                }
+              }
+            });
+          }
+          
+          return {
+            remarks: componentData.remarks || '',
+            cpuUsageDetails: cpuUsageDetails,
+            memoryUsageDetails: memoryUsageDetails
+          };
+        }
+        
+        return {
+          remarks: componentData.remarks || '',
+          details: transformDetailFields(Array.isArray(detailsToTransform) ? detailsToTransform : [])
+        };
+      }
+      
+      return null;
+    };
+
+    // Step 2: Create the complete PM Report Form Server data with all components
+    const pmReportData = {
+      reportFormID: reportForm.id, // Use the ID from the created ReportForm
+      pmReportFormTypeID: formData.pmReportFormTypeID,
+      projectNo: formData.projectNo,
+      customer: formData.customer,
+      reportTitle: formData.reportTitle,
+      attendedBy: formData.attendedBy,
+      witnessedBy: formData.witnessedBy,
+      startDate: formData.startDate,
+      completionDate: formData.completionDate,
+      remarks: formData.remarks,
+      createdBy: user.id,
+
+      // Transform all component data
+      serverHealthData: transformComponentData(formData.serverHealthData, 'serverHealthData'),
+      diskUsageData: transformComponentData(formData.diskUsageData, 'diskUsageData'),
+      cpuAndRamUsageData: transformComponentData(formData.cpuAndRamUsageData, 'cpuAndRamUsageData'),
+      networkHealthData: transformComponentData(formData.networkHealthData, 'networkHealthData'),
+      hardDriveHealthData: transformComponentData(formData.hardDriveHealthData, 'hardDriveHealthData'),
+      willowlynxProcessStatusData: transformComponentData(formData.willowlynxProcessStatusData, 'willowlynxProcessStatusData'),
+      willowlynxNetworkStatusData: transformComponentData(formData.willowlynxNetworkStatusData, 'willowlynxNetworkStatusData'),
+      willowlynxRTUStatusData: transformComponentData(formData.willowlynxRTUStatusData, 'willowlynxRTUStatusData'),
+      willowlynxHistorialTrendData: transformComponentData(formData.willowlynxHistoricalTrendData, 'willowlynxHistoricalTrendData'),
+      willowlynxHistoricalReportData: transformComponentData(formData.willowlynxHistoricalReportData, 'willowlynxHistoricalReportData'),
+      willowlynxSumpPitCCTVCameraData: transformComponentData(formData.willowlynxCCTVCameraData, 'willowlynxCCTVCameraData'),
+      monthlyDatabaseCreationData: transformComponentData(formData.monthlyDatabaseCreationData, 'monthlyDatabaseCreationData'),
+      databaseBackupData: transformComponentData(formData.databaseBackupData, 'databaseBackupData'),
+      timeSyncData: transformComponentData(formData.timeSyncData, 'timeSyncData'),
+      hotFixesData: transformComponentData(formData.hotFixesData, 'hotFixesData'),
+      autoFailOverData: transformComponentData(formData.autoFailOverData, 'autoFailOverData'),
+      asaFirewallData: transformComponentData(formData.asaFirewallData, 'asaFirewallData'),
+      softwarePatchData: transformComponentData(formData.softwarePatchData, 'softwarePatchData')
+    };
+
+    console.log('=== SENDING COMPLETE PM REPORT DATA ===');
+    console.log('PM Report Data:', JSON.stringify(pmReportData, null, 2));
+
+    // Step 3: Make single API call to create the complete PM report with all components
+    const createDto = pmReportData;
+    const response = await api.post('/pmreportformserver', createDto);
+
+    console.log('=== PM REPORT SUBMITTED SUCCESSFULLY ===');
+    console.log('Response:', JSON.stringify(response.data, null, 2));
+
+    return { 
+      success: true, 
+      message: 'Server PM report submitted successfully',
+      data: response.data,
+      reportForm: reportForm // Return the created ReportForm for reference
+    };
+  } catch (error) {
+    console.error('Error in submitServerPMReportForm:', error);
+    console.error('Error details:', error.response?.data);
+    throw error;
+  }
+};
+
+// Server PM Report specific API functions
+export const createServerPMReportForm = async (serverPMReportFormData) => {
+  const response = await api.post('/pmreportformserver', serverPMReportFormData);
+  return response.data;
+};
+
+export const createServerHealth = async (serverHealthData) => {
+  const response = await api.post('/pmserverhealth', serverHealthData);
+  return response.data;
+};
+
+export const createHardDriveHealth = async (hardDriveHealthData) => {
+  const response = await api.post('/pmharddrive', hardDriveHealthData);
+  return response.data;
+};
+
+export const createDiskUsage = async (diskUsageData) => {
+  const response = await api.post('/pmdiskusage', diskUsageData);
+  return response.data;
+};
+
+export const createCPUAndRamUsage = async (cpuRamData) => {
+  const response = await api.post('/pmcpuandramusage', cpuRamData);
+  return response.data;
+};
+
+export const createNetworkHealth = async (networkHealthData) => {
+  const response = await api.post('/pmnetworkhealth', networkHealthData);
+  return response.data;
+};
+
+export const createWillowlynxProcessStatus = async (processStatusData) => {
+  const response = await api.post('/pmserverwillowlynxprocessstatus', processStatusData);
+  return response.data;
+};
+
+export const createWillowlynxNetworkStatus = async (networkStatusData) => {
+  const response = await api.post('/pmserverwillowlynxnetworkstatus', networkStatusData);
+  return response.data;
+};
+
+export const createWillowlynxRTUStatus = async (rtuStatusData) => {
+  const response = await api.post('/pmserverwillowlynxrtustatus', rtuStatusData);
+  return response.data;
+};
+
+export const createWillowlynxHistoricalTrend = async (historicalTrendData) => {
+  const response = await api.post('/pmserverwillowlynxhistoricaltrend', historicalTrendData);
+  return response.data;
+};
+
+export const createWillowlynxHistoricalReport = async (historicalReportData) => {
+  const response = await api.post('/pmserverwillowlynxhistoricalreport', historicalReportData);
+  return response.data;
+};
+
+export const createWillowlynxSumpPitCCTVCamera = async (cctvCameraData) => {
+  const response = await api.post('/pmserverwillowlynxcctvCamera', cctvCameraData);
+  return response.data;
+};
+
+export const createMonthlyDatabaseCreation = async (databaseCreationData) => {
+  const response = await api.post('/pmservermonthlydatabasecreation', databaseCreationData);
+  return response.data;
+};
+
+export const createDatabaseBackup = async (databaseBackupData) => {
+  const response = await api.post('/pmserverdatabasebackup', databaseBackupData);
+  return response.data;
+};
+
+export const createTimeSync = async (timeSyncData) => {
+  const response = await api.post('/pmservertimesync', timeSyncData);
+  return response.data;
+};
+
+export const createHotFixes = async (hotFixesData) => {
+  const response = await api.post('/pmserverhotfixes', hotFixesData);
+  return response.data;
+};
+
+export const createAutoFailOver = async (autoFailOverData) => {
+  const response = await api.post('/pmserverautofailover', autoFailOverData);
+  return response.data;
+};
+
+export const createASAFirewall = async (asaFirewallData) => {
+  const response = await api.post('/pmserverasafirewall', asaFirewallData);
+  return response.data;
+};
+
+export const createSoftwarePatch = async (softwarePatchData) => {
+  const response = await api.post('/pmserversoftwarepatch', softwarePatchData);
+  return response.data;
+};
 
 // Add this function before the submitCMReportForm function
 export const createCMMaterialUsed = async (materialUsedData) => {

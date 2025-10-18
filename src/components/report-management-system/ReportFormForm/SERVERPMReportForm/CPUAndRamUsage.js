@@ -116,7 +116,6 @@ const CPUAndRamUsage = ({ data, onDataChange, onStatusChange }) => {
       machineName: '', 
       memorySize: '', 
       memoryInUse: '', 
-      memoryInUsed: '', 
       memoryUsageCheck: '' 
     }]);
   };
@@ -280,8 +279,8 @@ const CPUAndRamUsage = ({ data, onDataChange, onStatusChange }) => {
                         fullWidth
                         select
                         variant="outlined"
-                        value={row.memoryInUsed}
-                        onChange={(e) => handleMemoryUsageChange(index, 'memoryInUsed', e.target.value)}
+                        value={row.memoryUsageCheck}
+                        onChange={(e) => handleMemoryUsageChange(index, 'memoryUsageCheck', e.target.value)}
                         size="small"
                         disabled={loading}
                         sx={{
@@ -303,9 +302,9 @@ const CPUAndRamUsage = ({ data, onDataChange, onStatusChange }) => {
                           )}
                         </MenuItem>
                         {resultStatusOptions.map((option) => (
-                          <MenuItem key={option.id} value={option.name}>
-                            {option.name}
-                          </MenuItem>
+                          <MenuItem key={option.id} value={option.id}>
+                          {option.name}
+                        </MenuItem>
                         ))}
                       </TextField>
                     </TableCell>
@@ -410,7 +409,7 @@ const CPUAndRamUsage = ({ data, onDataChange, onStatusChange }) => {
                           )}
                         </MenuItem>
                         {resultStatusOptions.map((option) => (
-                          <MenuItem key={option.id} value={option.name}>
+                          <MenuItem key={option.id} value={option.id}>
                             {option.name}
                           </MenuItem>
                         ))}

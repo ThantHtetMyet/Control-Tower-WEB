@@ -70,6 +70,12 @@ const ServerHealth_Review = ({ data, disabled = true, formData }) => {
     fetchResultStatuses();
   }, []);
 
+  // Get status name by ID
+  const getStatusName = (id, options) => {
+    const status = options.find(option => option.ID === id || option.id === id);
+    return status ? (status.Name || status.name) : id;
+  };
+
   const disabledFieldStyle = {
     '& .MuiOutlinedInput-root': {
       backgroundColor: '#f9f9f9',
@@ -153,15 +159,7 @@ const ServerHealth_Review = ({ data, disabled = true, formData }) => {
                       fullWidth
                       size="small"
                       label="Result"
-                      value={(() => {
-                        console.log('Row result:', row.result);
-                        console.log('Result status options:', resultStatusOptions);
-                        const selectedOption = resultStatusOptions.find(option => 
-                          option.id === row.result || option.id === parseInt(row.result)
-                        );
-                        console.log('Selected option:', selectedOption);
-                        return selectedOption ? selectedOption.name : (row.result || 'No result');
-                      })()}
+                      value={getStatusName(row.result, resultStatusOptions) || ''}
                       disabled={disabled}
                       placeholder="No result selected"
                       sx={disabledFieldStyle}

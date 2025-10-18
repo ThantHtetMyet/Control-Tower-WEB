@@ -134,9 +134,9 @@ const WillowlynxHistoricalReport = ({ data, onDataChange, onStatusChange }) => {
             )}
           </MenuItem>
           {yesNoStatusOptions.map((option) => (
-            <MenuItem key={option.id} value={option.name}>
-              {option.name}
-            </MenuItem>
+            <MenuItem key={option.id} value={option.id}>
+                          {option.name}
+                        </MenuItem>
           ))}
         </TextField>
       </Box>

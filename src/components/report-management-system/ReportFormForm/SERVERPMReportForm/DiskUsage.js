@@ -78,10 +78,12 @@ const DiskUsage = ({ data = {}, onDataChange }) => {
     if (onDataChange) {
       onDataChange({
         servers,
-        remarks
+        remarks,
+        serverDiskStatusOptions,
+        resultStatusOptions
       });
     }
-  }, [servers, remarks, onDataChange]);
+  }, [servers, remarks, serverDiskStatusOptions, resultStatusOptions, onDataChange]);
 
   // Server management handlers
   const addServer = () => {
@@ -356,7 +358,7 @@ const DiskUsage = ({ data = {}, onDataChange }) => {
                               <em>Select Status</em>
                             </MenuItem>
                             {resultStatusOptions.map((option) => (
-                              <MenuItem key={option.id} value={option.name}>
+                              <MenuItem key={option.id} value={option.id}>
                                 {option.name}
                               </MenuItem>
                             ))}

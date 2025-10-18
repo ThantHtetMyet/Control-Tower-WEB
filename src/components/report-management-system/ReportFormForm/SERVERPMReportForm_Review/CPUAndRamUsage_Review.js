@@ -17,11 +17,14 @@ import {
 
 // Import the CPU and RAM usage image
 import CPUAndRamUsageImage from '../../../resources/ServerPMReportForm/CPUAndRamUsage.png';
+// Import the result status service
+import resultStatusService from '../../../api-services/resultStatusService';
 
 const CPUAndRamUsage_Review = ({ data = {} }) => {
   const [memoryUsageData, setMemoryUsageData] = useState([]);
   const [cpuUsageData, setCpuUsageData] = useState([]);
   const [remarks, setRemarks] = useState('');
+  const [resultStatusOptions, setResultStatusOptions] = useState([]);
 
   // Initialize data from props
   useEffect(() => {
@@ -41,6 +44,27 @@ const CPUAndRamUsage_Review = ({ data = {} }) => {
       setRemarks(data.remarks);
     }
   }, [data]);
+
+  // Fetch ResultStatus options on component mount
+  useEffect(() => {
+    const fetchResultStatuses = async () => {
+      try {
+        const response = await resultStatusService.getResultStatuses();
+        setResultStatusOptions(response || []);
+      } catch (error) {
+        console.error('Error fetching result status options:', error);
+        setResultStatusOptions([]);
+      }
+    };
+
+    fetchResultStatuses();
+  }, []);
+
+  // Get status name by ID
+  const getStatusName = (id, options) => {
+    const status = options.find(option => option.ID === id || option.id === id);
+    return status ? (status.Name || status.name) : id;
+  };
 
   // Styling
   const sectionContainerStyle = {
@@ -178,7 +202,7 @@ const CPUAndRamUsage_Review = ({ data = {} }) => {
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={row.memoryInUsed || ''}
+                      value={getStatusName(row.memoryInUsed, resultStatusOptions) || ''}
                       disabled
                       size="small"
                       sx={{
@@ -241,7 +265,7 @@ const CPUAndRamUsage_Review = ({ data = {} }) => {
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={row.cpuUsageCheck || ''}
+                      value={getStatusName(row.cpuUsageCheck, resultStatusOptions) || ''}
                       disabled
                       size="small"
                     />

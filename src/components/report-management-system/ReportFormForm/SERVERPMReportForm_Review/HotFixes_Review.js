@@ -15,14 +15,13 @@ import {
   Update as UpdateIcon,
 } from '@mui/icons-material';
 
-// Import the yes/no status service
-import yesNoStatusService from '../../../api-services/yesNoStatusService';
+// Import the result status service
+import resultStatusService from '../../../api-services/resultStatusService';
 
 const HotFixes_Review = ({ data }) => {
   const [hotFixesData, setHotFixesData] = useState([]);
   const [remarks, setRemarks] = useState('');
-  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [resultStatusOptions, setResultStatusOptions] = useState([]);
 
   // Initialize data from props
   useEffect(() => {
@@ -37,28 +36,24 @@ const HotFixes_Review = ({ data }) => {
     }
   }, [data]);
 
-  // Fetch YesNoStatus options for display
+  // Fetch ResultStatus options on component mount
   useEffect(() => {
-    const fetchYesNoStatuses = async () => {
+    const fetchResultStatuses = async () => {
       try {
-        setLoading(true);
-        const response = await yesNoStatusService.getYesNoStatuses();
-        setYesNoStatusOptions(response || []);
+        const response = await resultStatusService.getResultStatuses();
+        setResultStatusOptions(response || []);
       } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
-        setYesNoStatusOptions([]);
-      } finally {
-        setLoading(false);
+        console.error('Error fetching result status options:', error);
       }
     };
 
-    fetchYesNoStatuses();
+    fetchResultStatuses();
   }, []);
 
-  // Get yes/no status name by id
-  const getYesNoStatusName = (id) => {
-    const status = yesNoStatusOptions.find(option => option.id === id);
-    return status ? status.name : id;
+  // Get status name by ID
+  const getStatusName = (id, options) => {
+    const status = options.find(option => option.ID === id || option.id === id);
+    return status ? (status.Name || status.name) : id;
   };
 
   // Styling
@@ -88,7 +83,7 @@ const HotFixes_Review = ({ data }) => {
       
       {/* Instructions */}
       <Box sx={{ marginBottom: 3 }}>
-        <Typography variant="body1" sx={{ marginBottom: 2 }}>
+        <Typography variant="body1" sx={{ marginBottom: 2, fontWeight: 'bold', color: '#333' }}>
           Check for available hotfixes and service packs, and verify installation status.
         </Typography>
         
@@ -114,15 +109,15 @@ const HotFixes_Review = ({ data }) => {
         </Box>
       </Box>
 
-      {/* Hotfixes / Service Packs Table */}
-      <TableContainer component={Paper} sx={{ marginBottom: 3 }}>
-        <Table>
+      {/* HotFixes Table */}
+      <TableContainer component={Paper} sx={{ marginBottom: 2, border: '1px solid #ddd' }}>
+        <Table size="small">
           <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableCell sx={{ fontWeight: 'bold' }}>Item</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Result</TableCell>
+            <TableRow>
+              <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold', color: '#333', border: '1px solid #ddd' }} align="center">S/N</TableCell>
+              <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold', color: '#333', border: '1px solid #ddd' }} align="center">Machine Name</TableCell>
+              <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold', color: '#333', border: '1px solid #ddd' }} align="center">Latest Hotfixes Applied</TableCell>
+              <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold', color: '#333', border: '1px solid #ddd' }} align="center">Done</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -135,42 +130,58 @@ const HotFixes_Review = ({ data }) => {
             ) : (
               hotFixesData.map((row, index) => (
                 <TableRow key={index}>
-                  <TableCell>
+                  <TableCell sx={{ border: '1px solid #ddd', padding: '8px' }} align="center">
+                    {row.serialNumber}
+                  </TableCell>
+                  <TableCell sx={{ border: '1px solid #ddd', padding: '8px' }}>
                     <TextField
                       fullWidth
-                      variant="outlined"
-                      value={row.item}
-                      disabled
                       size="small"
+                      value={row.machineName || ''}
+                      disabled
+                      variant="outlined"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: '#f5f5f5',
+                          '& fieldset': {
+                            borderColor: '#ddd'
+                          }
+                        }
+                      }}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ border: '1px solid #ddd', padding: '8px' }}>
                     <TextField
                       fullWidth
-                      multiline
-                      rows={2}
-                      variant="outlined"
-                      value={row.description}
-                      disabled
                       size="small"
+                      value={row.latestHotfixesApplied || ''}
+                      disabled
+                      variant="outlined"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: '#f5f5f5',
+                          '& fieldset': {
+                            borderColor: '#ddd'
+                          }
+                        }
+                      }}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ border: '1px solid #ddd', padding: '8px' }}>
                     <TextField
                       fullWidth
-                      variant="outlined"
-                      value={row.status}
-                      disabled
                       size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={loading ? 'Loading...' : getYesNoStatusName(row.result)}
+                      value={getStatusName(row.done, resultStatusOptions) || ''}
                       disabled
-                      size="small"
+                      variant="outlined"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: '#f5f5f5',
+                          '& fieldset': {
+                            borderColor: '#ddd'
+                          }
+                        }
+                      }}
                     />
                   </TableCell>
                 </TableRow>

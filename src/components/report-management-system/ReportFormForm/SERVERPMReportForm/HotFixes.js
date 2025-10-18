@@ -234,7 +234,7 @@ const HotFixes = ({ data, onDataChange, onStatusChange }) => {
                         )}
                       </MenuItem>
                       {resultStatusOptions.map((option) => (
-                        <MenuItem key={option.id} value={option.name}>
+                        <MenuItem key={option.id} value={option.id}>
                           {option.name}
                         </MenuItem>
                       ))}

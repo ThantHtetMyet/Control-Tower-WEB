@@ -3,31 +3,54 @@ import {
   Box,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
 } from '@mui/material';
 import {
   Assessment as AssessmentIcon,
 } from '@mui/icons-material';
+import WillowlynxHistoricalReportImage from '../../../resources/ServerPMReportForm/WillowlynxHistoricalReport.png';
+
+// Import the yes/no status service
+import yesNoStatusService from '../../../api-services/yesNoStatusService';
 
 const WillowlynxHistoricalReport_Review = ({ data = {} }) => {
-  const [reportData, setReportData] = useState([]);
+  const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
 
   // Initialize data from props
   useEffect(() => {
-    if (data.reportData && data.reportData.length > 0) {
-      setReportData(data.reportData);
+    console.log('WillowlynxHistoricalReport_Review - Received data:', data);
+    
+    if (data.result) {
+      setResult(data.result);
     }
     if (data.remarks) {
       setRemarks(data.remarks);
     }
+    
+    console.log('Final historical report data:', { result: data.result, remarks: data.remarks });
   }, [data]);
+
+  // Fetch YesNo Status options on component mount
+  useEffect(() => {
+    const fetchYesNoStatuses = async () => {
+      try {
+        const response = await yesNoStatusService.getYesNoStatuses();
+        setYesNoStatusOptions(response || []);
+      } catch (error) {
+        console.error('Error fetching yes/no status options:', error);
+      }
+    };
+
+    fetchYesNoStatuses();
+  }, []);
+
+  // Get status name by ID
+  const getStatusName = (id, options) => {
+    const status = options.find(option => option.ID === id || option.id === id);
+    return status ? (status.Name || status.name) : id;
+  };
 
   // Styling
   const sectionContainerStyle = {
@@ -48,89 +71,56 @@ const WillowlynxHistoricalReport_Review = ({ data = {} }) => {
     gap: 1
   };
 
+  const inlineField = {
+    minWidth: 200,
+    '& .MuiOutlinedInput-root': { backgroundColor: '#f5f5f5' },
+    '& .MuiInputBase-input.Mui-disabled': {
+      WebkitTextFillColor: '#000000',
+    },
+  };
+
   return (
     <Paper sx={sectionContainerStyle}>
+      {/* Header */}
       <Typography variant="h5" sx={sectionHeaderStyle}>
         <AssessmentIcon /> Willowlynx Historical Report Check
       </Typography>
-      
-      <Typography variant="body1" sx={{ marginBottom: 3 }}>
-        Review historical reports and data analysis from the Willowlynx system.
+
+      <Typography variant="body1" sx={{ ml: 2, mb: 2 }}>
+        Click the CTHistReport icon on an HMI, which will load the Historical Report
+        Module. Try to load Analog History Report and Digital History Report and Alarm
+        History Report.
       </Typography>
 
-      {/* Historical Report Table */}
-      <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableCell sx={{ fontWeight: 'bold' }}>Report Type</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Date Range</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Data Points</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Check Result</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {reportData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
-                  No data available for this section.
-                </TableCell>
-              </TableRow>
-            ) : (
-              reportData.map((row, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.reportType || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.dateRange || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.status || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.dataPoints || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.checkResult || ''}
-                      disabled
-                      size="small"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Screenshot */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+        <img 
+          src={WillowlynxHistoricalReportImage} 
+          alt="Willowlynx Historical Report" 
+          style={{ 
+            maxWidth: '100%', 
+            height: 'auto',
+            border: '1px solid #ddd',
+            borderRadius: '8px'
+          }} 
+        />
+      </Box>
+
+      {/* Result */}
+      <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+        Result:
+      </Typography>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, ml: 2, mb: 2 }}>
+        <Typography>All reports can be displayed without issues. </Typography>
+        <TextField
+          size="small"
+          value={getStatusName(result, yesNoStatusOptions) || ''}
+          variant="outlined"
+          disabled
+          sx={inlineField}
+        />
+      </Box>
 
       {/* Remarks Section */}
       <Box sx={{ marginTop: 3 }}>
@@ -149,7 +139,10 @@ const WillowlynxHistoricalReport_Review = ({ data = {} }) => {
           sx={{
             '& .MuiOutlinedInput-root': {
               backgroundColor: '#f5f5f5',
-            }
+            },
+            '& .MuiInputBase-input.Mui-disabled': {
+              WebkitTextFillColor: '#000000',
+            },
           }}
         />
       </Box>

@@ -96,6 +96,12 @@ const ASAFirewall_Review = ({ data, disabled = true }) => {
     fetchResultStatusOptions();
   }, []);
 
+  // Get status name by ID
+  const getStatusName = (id, options) => {
+    const status = options.find(option => option.ID === id || option.id === id);
+    return status ? (status.Name || status.name) : id;
+  };
+
   const disabledFieldStyle = {
     '& .MuiOutlinedInput-root': {
       backgroundColor: '#f9f9f9',
@@ -169,35 +175,21 @@ const ASAFirewall_Review = ({ data, disabled = true }) => {
                 </TableCell>
                 <TableCell>
                   <TextField
-                    select
                     fullWidth
                     size="small"
-                    value={row.expectedResultId}
+                    value={getStatusName(row.expectedResultId, asaFirewallStatusOptions) || ''}
                     disabled={disabled || loading}
                     sx={disabledFieldStyle}
-                  >
-                    {asaFirewallStatusOptions.map((option) => (
-                      <MenuItem key={option.id} value={option.id}>
-                        {option.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                  />
                 </TableCell>
                 <TableCell>
                   <TextField
-                    select
                     fullWidth
                     size="small"
-                    value={row.doneId}
+                    value={getStatusName(row.doneId, resultStatusOptions) || ''}
                     disabled={disabled || loading}
                     sx={disabledFieldStyle}
-                  >
-                    {resultStatusOptions.map((option) => (
-                      <MenuItem key={option.id} value={option.id}>
-                        {option.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                  />
                 </TableCell>
               </TableRow>
             ))}
