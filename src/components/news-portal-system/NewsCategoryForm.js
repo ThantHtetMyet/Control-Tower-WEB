@@ -81,7 +81,7 @@ const NewsCategoryForm = () => {
       
       setTimeout(() => navigate('/news-portal-system/categories'), 2000);
     } catch (err) {
-      console.error('Submit error:', err);
+      // console.error('Submit error:', err);
       setError('Error saving category: ' + err.message);
     } finally {
       setLoading(false);

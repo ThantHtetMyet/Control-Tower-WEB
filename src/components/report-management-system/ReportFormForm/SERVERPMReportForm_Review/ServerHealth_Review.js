@@ -61,7 +61,7 @@ const ServerHealth_Review = ({ data, disabled = true, formData }) => {
         const response = await resultStatusService.getResultStatuses();
         setResultStatusOptions(response || []);
       } catch (error) {
-        console.error('Error fetching result status options:', error);
+        // console.error('Error fetching result status options:', error);
       } finally {
         setLoading(false);
       }

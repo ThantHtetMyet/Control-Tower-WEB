@@ -24,7 +24,7 @@ export const fetchRoomById = async (id) => {
 };
 
 export const createRoom = async (roomData) => {
-  console.log('createRoom called with:', JSON.stringify(roomData));
+  // console.log('createRoom called with:', JSON.stringify(roomData));
   const response = await fetch(`${API_BASE_URL}/Room`, {
     method: 'POST',
     headers: {
@@ -34,11 +34,11 @@ export const createRoom = async (roomData) => {
   });
   
   // Log the response status
-  console.log('createRoom response status:', response.status);
+  // console.log('createRoom response status:', response.status);
   
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Server error response:', errorText);
+    // console.error('Server error response:', errorText);
     throw new Error('Failed to create room');
   }
   return await response.json();

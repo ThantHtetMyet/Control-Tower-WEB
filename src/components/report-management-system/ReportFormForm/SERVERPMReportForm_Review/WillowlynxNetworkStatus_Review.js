@@ -20,8 +20,6 @@ const WillowlynxNetworkStatus_Review = ({ data = {} }) => {
 
   // Initialize data from props
   useEffect(() => {
-    console.log('WillowlynxNetworkStatus_Review - Received data:', data);
-    
     if (data.result) {
       setResult(data.result);
     }
@@ -29,7 +27,7 @@ const WillowlynxNetworkStatus_Review = ({ data = {} }) => {
       setRemarks(data.remarks);
     }
     
-    console.log('Final network status data:', { result: data.result, remarks: data.remarks });
+    
   }, [data]);
 
   // Fetch Yes/No status options

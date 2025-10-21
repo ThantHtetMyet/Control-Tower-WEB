@@ -95,7 +95,7 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
         const types = await getPMReportFormTypes();
         setPMReportFormTypes(types);
       } catch (error) {
-        console.error('Error fetching PM Report Form Types:', error);
+        // console.error('Error fetching PM Report Form Types:', error);
       } finally {
         setLoading(false);
       }

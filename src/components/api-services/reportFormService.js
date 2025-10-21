@@ -2,7 +2,7 @@ import api from './api';
 import { API_BASE_URL } from '../../config/apiConfig';
 
 // Report Form API calls
-export const getReportForms = async (page = 1, pageSize = 10, search = '', reportFormTypeId = null) => {
+export const getReportForms = async (page = 1, pageSize = 10, search = '', reportFormTypeId = null, sortField = null, sortDirection = 'asc') => {
   const params = new URLSearchParams({
     page: page.toString(),
     pageSize: pageSize.toString()
@@ -10,6 +10,8 @@ export const getReportForms = async (page = 1, pageSize = 10, search = '', repor
   
   if (search) params.append('search', search);
   if (reportFormTypeId) params.append('reportFormTypeId', reportFormTypeId);
+  if (sortField) params.append('sortField', sortField);
+  if (sortDirection) params.append('sortDirection', sortDirection);
   
   const response = await api.get(`/reportform?${params}`);
   return response.data;
@@ -382,9 +384,9 @@ export const submitRTUPMReportForm = async (formData, rtuPMData, user) => {
       UploadIPAddress: formData.uploadIPAddress,
       FormStatus: formData.formStatus
     };
-    console.log('Creating ReportForm with data:', reportFormData);
+    //console.log('Creating ReportForm with data:', reportFormData);
     const reportForm = await createReportForm(reportFormData);
-    console.log('ReportForm created:', reportForm);
+    //console.log('ReportForm created:', reportForm);
 
     // Step 2: Create PMReportFormRTU entry (RTU-specific)
     const rtuPMReportFormData = {
@@ -736,15 +738,15 @@ export const submitServerPMReportForm = async (formData, user) => {
       FormStatus: formData.formStatus || 'Draft'
     };
     
-    console.log('Creating ReportForm with data:', reportFormData);
+    //console.log('Creating ReportForm with data:', reportFormData);
     const reportForm = await createReportForm(reportFormData);
-    console.log('ReportForm created:', reportForm);
+    //console.log('ReportForm created:', reportForm);
 
     // Helper function to transform component data
     const transformComponentData = (componentData, componentName) => {
       if (!componentData) return null;
       
-      console.log(`Transforming ${componentName}:`, JSON.stringify(componentData, null, 2));
+      //console.log(`Transforming ${componentName}:`, JSON.stringify(componentData, null, 2));
       
       // Helper function to transform field names in details
       const transformDetailFields = (details) => {
@@ -759,20 +761,36 @@ export const submitServerPMReportForm = async (formData, user) => {
             delete transformedDetail.result;
           }
           
+          // Transform "done" field to "ResultStatusID" for API compatibility (used by HotFixes)
+          if (transformedDetail.done !== undefined) {
+            transformedDetail.ResultStatusID = transformedDetail.done;
+            delete transformedDetail.done;
+          }
+          
+          // Transform ASA Firewall specific fields for API compatibility
+          if (transformedDetail.expectedResultId !== undefined) {
+            transformedDetail.ASAFirewallStatusID = transformedDetail.expectedResultId;
+            delete transformedDetail.expectedResultId;
+          }
+          
+          if (transformedDetail.doneId !== undefined) {
+            transformedDetail.ResultStatusID = transformedDetail.doneId;
+            delete transformedDetail.doneId;
+          }
+          
           return transformedDetail;
         });
       };
       
       // Special handling for ASA Firewall data
-      const isASAFirewallDefaultData = (dataArray) => {
-        if (!Array.isArray(dataArray) || dataArray.length === 0) return false;
+      const isASAFirewallDefaultData = (data) => {
+        if (!data || !data.details || !Array.isArray(data.details) || data.details.length === 0) return false;
         
-        // Check if all items are default ASA Firewall commands with no user input
-        return dataArray.every(item => {
+        // Check if all items are default ASA Firewall commands with no user completion
+        return data.details.every(item => {
           const isDefaultCommand = (item.commandInput === 'show cpu usage' || item.commandInput === 'show environment');
-          const hasNoUserInput = (!item.expectedResultId || item.expectedResultId === '') && 
-                                 (!item.doneId || item.doneId === '');
-          return isDefaultCommand && hasNoUserInput;
+          const hasNoUserCompletion = (!item.doneId || item.doneId === '');
+          return isDefaultCommand && hasNoUserCompletion;
         });
       };
 
@@ -800,7 +818,7 @@ export const submitServerPMReportForm = async (formData, user) => {
         }
         
         // Special check for ASA Firewall default data
-        if (componentName === 'asaFirewallData' && isASAFirewallDefaultData(componentData)) {
+        if (componentName === 'asaFirewallData' && isASAFirewallDefaultData({ details: componentData })) {
           return null;
         }
         
@@ -847,21 +865,334 @@ export const submitServerPMReportForm = async (formData, user) => {
                       );
         }
         
+        // Helper function to convert YesNo status name to ID
+        const convertYesNoStatusToId = (statusValue, yesNoStatusOptions) => {
+          if (!statusValue || statusValue.trim() === '') return null;
+          
+          // If it's already a GUID, return as is
+          const guidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          if (guidRegex.test(statusValue)) {
+            return statusValue;
+          }
+          
+          // Find the option by name (case insensitive)
+          const option = yesNoStatusOptions?.find(opt => 
+            opt.name?.toLowerCase() === statusValue.toLowerCase() ||
+            opt.Name?.toLowerCase() === statusValue.toLowerCase()
+          );
+          
+          return option ? (option.id || option.ID) : statusValue;
+        };
+
+        // Special handling for monthlyDatabaseCreationData
+        if (componentName === 'monthlyDatabaseCreationData') {
+          const monthlyDatabaseData = componentData.monthlyDatabaseData || [];
+          const yesNoStatusOptions = componentData.yesNoStatusOptions || [];
+          const hasRemarks = componentData.remarks && componentData.remarks.trim() !== '';
+          const hasDetails = Array.isArray(monthlyDatabaseData) && monthlyDatabaseData.length > 0 && 
+                            monthlyDatabaseData.some(item => 
+                              item && (
+                                (item.item && item.item.trim() !== '') ||
+                                (item.monthlyDBCreated && item.monthlyDBCreated.trim() !== '')
+                              )
+                            );
+          
+          if (!hasRemarks && !hasDetails) {
+            console.log('transformComponentData - monthlyDatabaseCreationData has no data, returning null');
+            return null;
+          }
+          
+          const transformedData = {
+            remarks: componentData.remarks || '',
+            details: monthlyDatabaseData.map((item, index) => ({
+              SerialNo: (index + 1).toString(),
+              ServerName: item.item || '',
+              YesNoStatusID: convertYesNoStatusToId(item.monthlyDBCreated, yesNoStatusOptions),
+              Remarks: ''
+            }))
+          };
+          
+          console.log('transformComponentData - monthlyDatabaseCreationData output:', transformedData);
+          return transformedData;
+        }
+
+        // Special handling for databaseBackupData
+        if (componentName === 'databaseBackupData') {
+          const mssqlBackupData = componentData.mssqlBackupData || [];
+          const scadaBackupData = componentData.scadaBackupData || [];
+          const yesNoStatusOptions = componentData.yesNoStatusOptions || [];
+          const hasRemarks = componentData.remarks && componentData.remarks.trim() !== '';
+          const hasLatestBackupFileName = componentData.latestBackupFileName && componentData.latestBackupFileName.trim() !== '';
+          
+          const hasMssqlData = Array.isArray(mssqlBackupData) && mssqlBackupData.length > 0 && 
+                              mssqlBackupData.some(item => 
+                                item && (
+                                  (item.item && item.item.trim() !== '') ||
+                                  (item.monthlyDBBackupCreated && item.monthlyDBBackupCreated.trim() !== '')
+                                )
+                              );
+          
+          const hasScadaData = Array.isArray(scadaBackupData) && scadaBackupData.length > 0 && 
+                              scadaBackupData.some(item => 
+                                item && (
+                                  (item.item && item.item.trim() !== '') ||
+                                  (item.monthlyDBBackupCreated && item.monthlyDBBackupCreated.trim() !== '')
+                                )
+                              );
+          
+          if (!hasRemarks && !hasLatestBackupFileName && !hasMssqlData && !hasScadaData) {
+            console.log('transformComponentData - databaseBackupData has no data, returning null');
+            return null;
+          }
+          
+          // Transform MSSQL backup data
+          const mssqlDetails = mssqlBackupData.map((item, index) => ({
+            SerialNo: (index + 1).toString(),
+            ServerName: item.item || '',
+            YesNoStatusID: convertYesNoStatusToId(item.monthlyDBBackupCreated, yesNoStatusOptions),
+            Remarks: ''
+          }));
+          
+          // Transform SCADA backup data
+          const scadaDetails = scadaBackupData.map((item, index) => ({
+            SerialNo: (index + 1).toString(),
+            ServerName: item.item || '',
+            YesNoStatusID: convertYesNoStatusToId(item.monthlyDBBackupCreated, yesNoStatusOptions),
+            Remarks: ''
+          }));
+          
+          const transformedData = {
+            remarks: componentData.remarks || '',
+            latestBackupFileName: componentData.latestBackupFileName || '',
+            mssqlDetails: mssqlDetails,
+            scadaDetails: scadaDetails
+          };
+          
+          console.log('transformComponentData - databaseBackupData output:', transformedData);
+          return transformedData;
+        }
+
         // Special handling for networkHealthData - simple structure without details
         if (componentName === 'networkHealthData') {
+          
           const hasData = (componentData.dateChecked && componentData.dateChecked !== null) ||
                          (componentData.result && componentData.result.trim() !== '') ||
                          (componentData.remarks && componentData.remarks.trim() !== '');
           
           if (!hasData) {
+            console.log('transformComponentData - networkHealthData has no data, returning null');
             return null;
           }
           
-          return {
+          const transformedData = {
             YesNoStatusID: componentData.result || null,
             DateChecked: componentData.dateChecked || null,
             Remarks: componentData.remarks || ''
           };
+          
+          console.log('transformComponentData - networkHealthData output:', transformedData);
+          return transformedData;
+        }
+        // Special handling for Willowlynx Process Status - simple structure without details
+        if (componentName === 'willowlynxProcessStatusData') {
+          //console.log('willowlynxProcessStatusData Component', componentData);
+          //console.log('willowlynxProcessStatusData Component type:', typeof componentData);
+          //console.log('willowlynxProcessStatusData Component keys:', Object.keys(componentData || {}));
+          
+          const hasData = (componentData.result && componentData.result.trim() !== '') ||
+                         (componentData.remarks && componentData.remarks.trim() !== '');
+          /*
+          console.log('willowlynxProcessStatusData hasData check:', {
+            result: componentData.result,
+            remarks: componentData.remarks,
+            hasData: hasData
+          });
+          */
+          if (!hasData) {
+            console.log('transformComponentData - willowlynxProcessStatusData has no data, returning null');
+            return null;
+          }
+          
+          const transformedData = {
+            YesNoStatusID: componentData.result || null,
+            Remarks: componentData.remarks || ''
+          };
+          
+          console.log('transformComponentData - willowlynxProcessStatusData output:', transformedData);
+          return transformedData;
+        }
+
+        // Special handling for Willowlynx Network Status - simple structure without details
+        if (componentName === 'willowlynxNetworkStatusData') {
+          
+          const hasData = (componentData.result && componentData.result.trim() !== '') ||
+                         (componentData.remarks && componentData.remarks.trim() !== '');
+          
+          if (!hasData) {
+            console.log('transformComponentData - willowlynxNetworkStatusData has no data, returning null');
+            return null;
+          }
+          
+          const transformedData = {
+            YesNoStatusID: componentData.result || null,
+            Remarks: componentData.remarks || ''
+          };
+          
+          console.log('transformComponentData - willowlynxNetworkStatusData output:', transformedData);
+          return transformedData;
+        }
+
+        // Special handling for Willowlynx RTU Status - simple structure without details
+        if (componentName === 'willowlynxRTUStatusData') {
+          
+          const hasData = (componentData.result && componentData.result.trim() !== '') ||
+                         (componentData.remarks && componentData.remarks.trim() !== '');
+          
+          if (!hasData) {
+            console.log('transformComponentData - willowlynxRTUStatusData has no data, returning null');
+            return null;
+          }
+          
+          const transformedData = {
+            YesNoStatusID: componentData.result || null,
+            Remarks: componentData.remarks || ''
+          };
+          
+          console.log('transformComponentData - willowlynxRTUStatusData output:', transformedData);
+          return transformedData;
+        }
+
+        // Special handling for Willowlynx Historical Trend - simple structure without details
+        if (componentName === 'willowlynxHistoricalTrendData') {
+          
+          const hasData = (componentData.result && componentData.result.trim() !== '') ||
+                         (componentData.remarks && componentData.remarks.trim() !== '');
+          
+          if (!hasData) {
+            console.log('transformComponentData - willowlynxHistoricalTrendData has no data, returning null');
+            return null;
+          }
+          
+          const transformedData = {
+            YesNoStatusID: componentData.result || null,
+            Remarks: componentData.remarks || ''
+          };
+          
+          console.log('transformComponentData - willowlynxHistoricalTrendData output:', transformedData);
+          return transformedData;
+        }
+
+        // Special handling for Willowlynx Historical Report - simple structure without details
+        if (componentName === 'willowlynxHistoricalReportData') {
+          
+          const hasData = (componentData.result && componentData.result.trim() !== '') ||
+                         (componentData.remarks && componentData.remarks.trim() !== '');
+          
+          if (!hasData) {
+            console.log('transformComponentData - willowlynxHistoricalReportData has no data, returning null');
+            return null;
+          }
+          
+          const transformedData = {
+            YesNoStatusID: componentData.result || null,
+            Remarks: componentData.remarks || ''
+          };
+          
+          console.log('transformComponentData - willowlynxHistoricalReportData output:', transformedData);
+          return transformedData;
+        }
+
+        // Special handling for Willowlynx CCTV Camera - simple structure without details
+        if (componentName === 'willowlynxCCTVCameraData') {
+          
+          const hasData = (componentData.result && componentData.result.trim() !== '') ||
+                         (componentData.remarks && componentData.remarks.trim() !== '');
+          
+          if (!hasData) {
+            console.log('transformComponentData - willowlynxCCTVCameraData has no data, returning null');
+            return null;
+          }
+          
+          const transformedData = {
+            YesNoStatusID: componentData.result || null,
+            Remarks: componentData.remarks || ''
+          };
+          
+          console.log('transformComponentData - willowlynxCCTVCameraData output:', transformedData);
+          return transformedData;
+        }
+
+        // Special handling for hotFixesData - map frontend field names to backend DTO field names
+        if (componentName === 'hotFixesData') {
+          const hasRemarks = componentData.remarks && componentData.remarks.trim() !== '';
+          const hasDetails = Array.isArray(dataArray) && dataArray.length > 0 && 
+                            dataArray.some(item => item && Object.keys(item).length > 0);
+          
+          if (!hasRemarks && !hasDetails) {
+            console.log('transformComponentData - hotFixesData has no data, returning null');
+            return null;
+          }
+          
+          // Transform field names to match backend DTO
+          const transformedDetails = dataArray.map((item, index) => ({
+            SerialNo: String(item.serialNumber || (index + 1)), // Ensure string conversion
+            ServerName: item.machineName || '',
+            LatestHotFixsApplied: item.latestHotfixesApplied || '',
+            ResultStatusID: item.done || null, // 'done' field contains the ResultStatus GUID
+            Remarks: item.remarks || ''
+          }));
+          
+          const transformedData = {
+            remarks: componentData.remarks || '',
+            details: transformedDetails
+          };
+          
+          console.log('transformComponentData - hotFixesData output:', transformedData);
+          return transformedData;
+        }
+
+        // Special handling for timeSyncData
+        if (componentName === 'timeSyncData') {
+          console.log('=== TIMESYNC TRANSFORMATION DEBUG ===');
+          console.log('Raw componentData:', JSON.stringify(componentData, null, 2));
+          
+          const timeSyncDataArray = componentData.timeSyncData || [];
+          console.log('timeSyncDataArray:', JSON.stringify(timeSyncDataArray, null, 2));
+          
+          const hasRemarks = componentData.remarks && componentData.remarks.trim() !== '';
+          const hasDetails = Array.isArray(timeSyncDataArray) && timeSyncDataArray.length > 0 && 
+                            timeSyncDataArray.some(item => 
+                              item && (
+                                (item.machineName && item.machineName.trim() !== '') ||
+                                (item.timeSyncResult && item.timeSyncResult.trim() !== '')
+                              )
+                            );
+          
+          console.log('hasRemarks:', hasRemarks, 'hasDetails:', hasDetails);
+          
+          if (!hasRemarks && !hasDetails) {
+            console.log('transformComponentData - timeSyncData has no data, returning null');
+            return null;
+          }
+          
+          const transformedData = {
+            remarks: componentData.remarks || '',
+            details: timeSyncDataArray.map((item, index) => {
+              console.log(`Processing item ${index}:`, JSON.stringify(item, null, 2));
+              const transformedItem = {
+                SerialNo: (index + 1).toString(),
+                ServerName: item.machineName || '',
+                ResultStatusID: item.timeSyncResult || null,
+                Remarks: ''
+              };
+              console.log(`Transformed item ${index}:`, JSON.stringify(transformedItem, null, 2));
+              return transformedItem;
+            })
+          };
+          
+          console.log('=== FINAL TIMESYNC TRANSFORMATION OUTPUT ===');
+          console.log('transformComponentData - timeSyncData output:', JSON.stringify(transformedData, null, 2));
+          return transformedData;
         }
 
         // Special handling for cpuAndRamUsageData - check for memory and CPU data
@@ -893,7 +1224,7 @@ export const submitServerPMReportForm = async (formData, user) => {
         }
         
         // Special check for ASA Firewall default data
-        if (componentName === 'asaFirewallData' && isASAFirewallDefaultData(dataArray)) {
+        if (componentName === 'asaFirewallData' && isASAFirewallDefaultData({ details: dataArray })) {
           hasDetails = false;
         }
         
@@ -1000,6 +1331,75 @@ export const submitServerPMReportForm = async (formData, user) => {
           };
         }
         
+        // Special handling for autoFailOverData - map frontend field names to backend DTO field names
+        if (componentName === 'autoFailOverData') {
+          const hasRemarks = componentData.remarks && componentData.remarks.trim() !== '';
+          const hasDetails = Array.isArray(dataArray) && dataArray.length > 0 && 
+                            dataArray.some(item => item && Object.keys(item).length > 0);
+          
+          if (!hasRemarks && !hasDetails) {
+            console.log('transformComponentData - autoFailOverData has no data, returning null');
+            return null;
+          }
+          
+          // Transform field names to match backend DTO
+          const transformedDetails = dataArray.map((item, index) => ({
+            YesNoStatusID: item.result || null, // 'result' field contains the YesNoStatus GUID
+            ToServer: item.toServer || '',
+            FromServer: item.fromServer || '',
+            Remarks: item.remarks || ''
+          }));
+          
+          const transformedData = {
+            remarks: componentData.remarks || '',
+            details: transformedDetails
+          };
+          
+          console.log('transformComponentData - autoFailOverData output:', transformedData);
+          return transformedData;
+        }
+
+        // Special handling for softwarePatchData - map frontend field names to backend DTO field names
+        if (componentName === 'softwarePatchData') {
+          const hasRemarks = componentData.remarks && componentData.remarks.trim() !== '';
+          const hasDetails = Array.isArray(dataArray) && dataArray.length > 0 && 
+                            dataArray.some(item => item && (
+                              (item.serialNumber && String(item.serialNumber).trim() !== '') ||
+                              (item.machineName && item.machineName.trim() !== '') ||
+                              (item.previousPatch && item.previousPatch.trim() !== '') ||
+                              (item.currentPatch && item.currentPatch.trim() !== '')
+                            ));
+          
+          if (!hasRemarks && !hasDetails) {
+            console.log('transformComponentData - softwarePatchData has no data, returning null');
+            return null;
+          }
+          
+          // Transform field names to match backend DTO
+          const transformedDetails = dataArray.map((item, index) => ({
+            SerialNo: String(item.serialNumber || (index + 1)),
+            ServerName: item.machineName || '',
+            PreviousPatch: item.previousPatch || '',
+            CurrentPatch: item.currentPatch || '',
+            Remarks: item.remarks || ''
+          }));
+          
+          const transformedData = {
+            remarks: componentData.remarks || '',
+            details: transformedDetails
+          };
+          
+          console.log('transformComponentData - softwarePatchData output:', transformedData);
+          return transformedData;
+        }
+
+        // Fallback for other components - but NOT for Willowlynx components
+        if (componentName.startsWith('willowlynx')) {
+          // This should not happen if all Willowlynx components are handled above
+          console.warn(`Unhandled Willowlynx component: ${componentName}`, componentData);
+          return null;
+        }
+
         return {
           remarks: componentData.remarks || '',
           details: transformDetailFields(Array.isArray(detailsToTransform) ? detailsToTransform : [])
@@ -1029,12 +1429,17 @@ export const submitServerPMReportForm = async (formData, user) => {
       cpuAndRamUsageData: transformComponentData(formData.cpuAndRamUsageData, 'cpuAndRamUsageData'),
       networkHealthData: transformComponentData(formData.networkHealthData, 'networkHealthData'),
       hardDriveHealthData: transformComponentData(formData.hardDriveHealthData, 'hardDriveHealthData'),
-      willowlynxProcessStatusData: transformComponentData(formData.willowlynxProcessStatusData, 'willowlynxProcessStatusData'),
+      willowlynxProcessStatusData: (() => {
+        //console.log('DEBUG: formData.willowlynxProcessStatusData before transform:', formData.willowlynxProcessStatusData);
+        const result = transformComponentData(formData.willowlynxProcessStatusData, 'willowlynxProcessStatusData');
+        //console.log('DEBUG: willowlynxProcessStatusData after transform:', result);
+        return result;
+      })(),
       willowlynxNetworkStatusData: transformComponentData(formData.willowlynxNetworkStatusData, 'willowlynxNetworkStatusData'),
       willowlynxRTUStatusData: transformComponentData(formData.willowlynxRTUStatusData, 'willowlynxRTUStatusData'),
-      willowlynxHistorialTrendData: transformComponentData(formData.willowlynxHistoricalTrendData, 'willowlynxHistoricalTrendData'),
+      willowlynxHistorialTrendData: transformComponentData(formData.willowlynxHistorialTrendData, 'willowlynxHistoricalTrendData'),
       willowlynxHistoricalReportData: transformComponentData(formData.willowlynxHistoricalReportData, 'willowlynxHistoricalReportData'),
-      willowlynxSumpPitCCTVCameraData: transformComponentData(formData.willowlynxCCTVCameraData, 'willowlynxCCTVCameraData'),
+      willowlynxSumpPitCCTVCameraData: transformComponentData(formData.willowlynxSumpPitCCTVCameraData, 'willowlynxCCTVCameraData'),
       monthlyDatabaseCreationData: transformComponentData(formData.monthlyDatabaseCreationData, 'monthlyDatabaseCreationData'),
       databaseBackupData: transformComponentData(formData.databaseBackupData, 'databaseBackupData'),
       timeSyncData: transformComponentData(formData.timeSyncData, 'timeSyncData'),

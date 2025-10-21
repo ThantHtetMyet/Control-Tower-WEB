@@ -19,15 +19,13 @@ const WillowlynxHistorialTrend_Review = ({ data }) => {
 
   // Initialize data from props
   useEffect(() => {
-    console.log('WillowlynxHistorialTrend_Review - Received data:', data);
     
     if (data) {
       setResult(data.result || '');
       setRemarks(data.remarks || '');
     }
     
-    console.log('Final historical trend data:', { result: data?.result, remarks: data?.remarks });
-  }, [data]);
+    }, [data]);
 
   // Fetch Yes/No status options
   useEffect(() => {
@@ -36,7 +34,7 @@ const WillowlynxHistorialTrend_Review = ({ data }) => {
         const options = await yesNoStatusService.getYesNoStatuses();
         setYesNoStatusOptions(options);
       } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
+        // console.error('Error fetching yes/no status options:', error);
       }
     };
 
@@ -45,14 +43,14 @@ const WillowlynxHistorialTrend_Review = ({ data }) => {
 
   // Helper function to get status name from ID
   const getStatusName = (statusId, statusOptions) => {
-    console.log('getStatusName called with:', { statusId, statusOptions });
+    
     if (!statusId || !statusOptions || statusOptions.length === 0) {
-      console.log('Returning statusId as fallback:', statusId);
+      // console.log('Returning statusId as fallback:', statusId);
       return statusId || '';
     }
     const status = statusOptions.find(option => option.id === statusId);
     const result = status ? status.name : statusId;
-    console.log('Status resolution result:', result);
+    // console.log('Status resolution result:', result);
     return result;
   };
 

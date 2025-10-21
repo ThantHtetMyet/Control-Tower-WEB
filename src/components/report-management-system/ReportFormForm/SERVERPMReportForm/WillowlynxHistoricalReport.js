@@ -35,7 +35,7 @@ const WillowlynxHistoricalReport = ({ data, onDataChange, onStatusChange }) => {
         const response = await yesNoStatusService.getYesNoStatuses();
         setYesNoStatusOptions(response || []);
       } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
+        // console.error('Error fetching yes/no status options:', error);
       } finally {
         setLoading(false);
       }

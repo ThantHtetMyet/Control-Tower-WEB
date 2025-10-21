@@ -64,7 +64,7 @@ const NewsList = () => {
       setTotalPages(response.totalPages || 1);
       console.log('News state updated:', response.items || []);
     } catch (err) {
-      console.error('Error in fetchNews:', err);
+      // console.error('Error in fetchNews:', err);
       setError('Error fetching news: ' + err.message);
     } finally {
       setLoading(false);
@@ -105,7 +105,7 @@ const NewsList = () => {
       await fetchNews();
       
     } catch (error) {
-      console.error('Error deleting news:', error);
+      // console.error('Error deleting news:', err);error);
       
       // Handle specific validation errors
       let errorMessage = 'Failed to delete news. Please try again.';

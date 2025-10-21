@@ -32,8 +32,34 @@ const ASAFirewall_Review = ({ data, disabled = true }) => {
   // Initialize data from props only once
   useEffect(() => {
     if (data && !isInitialized.current) {
-      if (data.asaFirewallData && data.asaFirewallData.length > 0) {
-        setAsaFirewallData(data.asaFirewallData);
+      let dataToProcess = null;
+      let remarksToSet = '';
+
+      // Handle different data structures
+      if (Array.isArray(data)) {
+        // Direct array from API response
+        dataToProcess = data;
+      } else if (data.details && Array.isArray(data.details)) {
+        // DTO structure with details array (most common case)
+        dataToProcess = data.details;
+        remarksToSet = data.remarks || '';
+      } else if (data.asaFirewallData && Array.isArray(data.asaFirewallData)) {
+        // Nested structure with asaFirewallData array
+        dataToProcess = data.asaFirewallData;
+        remarksToSet = data.remarks || '';
+      }
+
+      if (dataToProcess && dataToProcess.length > 0) {
+        // Map API response fields to component expected fields
+        const mappedData = dataToProcess.map(item => ({
+          serialNumber: item.SerialNumber || item.serialNumber,
+          commandInput: item.CommandInput || item.commandInput,
+          expectedResultId: item.ASAFirewallStatusID || item.expectedResultId,
+          doneId: item.ResultStatusID || item.doneId,
+          expectedResultName: item.ASAFirewallStatusName || item.expectedResultName,
+          doneName: item.ResultStatusName || item.doneName
+        }));
+        setAsaFirewallData(mappedData);
       } else {
         // Initialize with default data for display
         setAsaFirewallData([
@@ -52,7 +78,10 @@ const ASAFirewall_Review = ({ data, disabled = true }) => {
         ]);
       }
       
-      if (data.remarks) {
+      // Set remarks from various possible sources
+      if (remarksToSet) {
+        setRemarks(remarksToSet);
+      } else if (data.remarks) {
         setRemarks(data.remarks);
       }
       
@@ -68,7 +97,7 @@ const ASAFirewall_Review = ({ data, disabled = true }) => {
         const response = await asaFirewallStatusService.getAll();
         setAsaFirewallStatusOptions(response || []);
       } catch (error) {
-        console.error('Error fetching ASA Firewall Status options:', error);
+        // console.error('Error fetching ASA Firewall Status options:', error);
         setAsaFirewallStatusOptions([]);
       } finally {
         setLoading(false);
@@ -86,7 +115,7 @@ const ASAFirewall_Review = ({ data, disabled = true }) => {
         const response = await resultStatusService.getResultStatuses();
         setResultStatusOptions(response || []);
       } catch (error) {
-        console.error('Error fetching Result Status options:', error);
+        // console.error('Error fetching Result Status options:', error);
         setResultStatusOptions([]);
       } finally {
         setLoading(false);

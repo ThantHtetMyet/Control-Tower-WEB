@@ -53,7 +53,7 @@ const NewsCategoryEdit = () => {
       setFormData(categoryData);
       setOriginalData(categoryData);
     } catch (err) {
-      console.error('Error fetching category:', err);
+      // console.error('Error fetching category:', err);
       setError('Failed to load category data: ' + err.message);
     } finally {
       setLoading(false);
@@ -97,7 +97,7 @@ const NewsCategoryEdit = () => {
         updatedBy: user?.id || '00000000-0000-0000-0000-000000000000'
       };
   
-      console.log('Updating category:', updateData);
+      // console.log('Updating category:', updateData);
       await updateCategory(id, updateData);
       
       setSuccessMessage('Category updated successfully!');
@@ -111,7 +111,7 @@ const NewsCategoryEdit = () => {
       }, 2000);
       
     } catch (err) {
-      console.error('Update error:', err);
+      // console.error('Update error:', err);
       setError('Failed to update category: ' + err.message);
     } finally {
       setSaving(false);

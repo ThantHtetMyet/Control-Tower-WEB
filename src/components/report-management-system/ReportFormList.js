@@ -3,9 +3,10 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Button, IconButton, Typography, Box, Chip, Tooltip, LinearProgress,
   Alert, Snackbar, MenuItem, Select, FormControl, InputLabel,
-  Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText
+  Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText,
+  Pagination, Stack, TextField, InputAdornment
 } from '@mui/material';
-import { Edit, Delete, Add, Visibility, Description } from '@mui/icons-material';
+import { Edit, Delete, Add, Visibility, Description, Search, ArrowUpward, ArrowDownward } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getReportForms, getReportFormTypes, deleteReportForm, getRTUPMReportForm } from '../api-services/reportFormService';
 import moment from 'moment';
@@ -20,23 +21,65 @@ const ReportFormList = () => {
   const [selectedTypeId, setSelectedTypeId] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedDeleteId, setSelectedDeleteId] = useState(null);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  
+  // Search state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  
+  // Sorting state
+  const [sortField, setSortField] = useState('');
+  const [sortDirection, setSortDirection] = useState('asc'); // 'asc' or 'desc'
+  
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchReportForms();
     fetchReportFormTypes();
-  }, [selectedTypeId]);
+  }, [selectedTypeId, currentPage, pageSize, searchTerm, sortField, sortDirection]);
 
   const fetchReportForms = async () => {
     try {
       setLoading(true);
-      const data = await getReportForms(1, 50, '', selectedTypeId || null);
-      setReportForms(data.data || data); // Change from data.items to data.data
+      const response = await getReportForms(currentPage, pageSize, searchTerm, selectedTypeId || null, sortField, sortDirection);
+      
+      // Process the data to add specificReportTypeName based on reportFormTypeName
+      const processedData = (response.data || []).map(form => ({
+        ...form,
+        // Map specificReportTypeName based on reportFormTypeName
+        specificReportTypeName: getSpecificReportTypeName(form.reportFormTypeName)
+      }));
+      
+      setReportForms(processedData);
+      setTotalCount(response.totalCount || 0);
+      setTotalPages(response.totalPages || 0);
     } catch (err) {
       setError('Error fetching report forms: ' + err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to determine specific report type name
+  const getSpecificReportTypeName = (reportFormTypeName) => {
+    if (!reportFormTypeName) return 'N/A';
+    
+    const typeName = reportFormTypeName.toLowerCase();
+    if (typeName.includes('preventive') || typeName.includes('preventative')) {
+      // For PM forms, we need to determine the specific type
+      // This could be RTU, Server, LV PM, etc.
+      // For now, we'll return the full name and let the backend provide more specific info later
+      return reportFormTypeName;
+    } else if (typeName.includes('corrective')) {
+      return 'Corrective Maintenance';
+    }
+    
+    return reportFormTypeName;
   };
 
   const fetchReportFormTypes = async () => {
@@ -58,7 +101,12 @@ const ReportFormList = () => {
       try {
         await deleteReportForm(selectedDeleteId);
         setSuccessMessage('Report form deleted successfully');
-        fetchReportForms();
+        // Reset to first page if current page becomes empty
+        if (reportForms.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        } else {
+          fetchReportForms();
+        }
       } catch (err) {
         setError('Error deleting report form: ' + err.message);
       }
@@ -66,6 +114,60 @@ const ReportFormList = () => {
     setDeleteConfirmOpen(false);
     setSelectedDeleteId(null);
   };
+
+  // Pagination handlers
+  const handlePageChange = (event, newPage) => {
+    setCurrentPage(newPage);
+  };
+
+  const handlePageSizeChange = (event) => {
+    setPageSize(event.target.value);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
+
+  // Search handlers
+  const handleSearchInputChange = (event) => {
+    setSearchInput(event.target.value);
+  };
+
+  const handleSearchSubmit = () => {
+    setSearchTerm(searchInput);
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  const handleSearchKeyPress = (event) => {
+    if (event.key === 'Enter') {
+      handleSearchSubmit();
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchTerm('');
+    setCurrentPage(1);
+  };
+
+  // Sorting handlers
+  const handleSort = (field) => {
+    if (sortField === field) {
+      // If clicking the same field, toggle direction
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // If clicking a new field, set it as sort field with ascending direction
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1); // Reset to first page when sorting
+  };
+
+  const getSortIcon = (field) => {
+    if (sortField !== field) return null;
+    return sortDirection === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />;
+  };
+
+  // Remove client-side sorting since we're now handling it on the backend
+  // The sortedReportForms will just be the reportForms as received from API
+  const sortedReportForms = reportForms;
 
   const handleDeleteCancel = () => {
     setDeleteConfirmOpen(false);
@@ -135,7 +237,7 @@ const ReportFormList = () => {
         </Button>
       </Box>
 
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
         <FormControl sx={{ 
           minWidth: 200,
           '& .MuiOutlinedInput-root': {
@@ -155,7 +257,10 @@ const ReportFormList = () => {
           <Select
             value={selectedTypeId}
             label="Filter by Type"
-            onChange={(e) => setSelectedTypeId(e.target.value)}
+            onChange={(e) => {
+              setSelectedTypeId(e.target.value);
+              setCurrentPage(1); // Reset to first page when filtering
+            }}
           >
             <MenuItem value="">All Types</MenuItem>
             {reportFormTypes.map((type) => (
@@ -163,6 +268,88 @@ const ReportFormList = () => {
                 {type.name}
               </MenuItem>
             ))}
+          </Select>
+        </FormControl>
+
+        <TextField
+          placeholder="Search report forms..."
+          value={searchInput}
+          onChange={handleSearchInputChange}
+          onKeyPress={handleSearchKeyPress}
+          sx={{
+            minWidth: 300,
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: RMSTheme.background.paper,
+              '&:hover fieldset': {
+                borderColor: RMSTheme.primary.main
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: RMSTheme.primary.main
+              }
+            }
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search sx={{ color: RMSTheme.text.secondary }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+
+        <Button
+          variant="contained"
+          onClick={handleSearchSubmit}
+          sx={{
+            background: RMSTheme.gradients.primary,
+            color: '#FFFFFF',
+            '&:hover': {
+              background: RMSTheme.gradients.accent,
+            }
+          }}
+        >
+          Search
+        </Button>
+
+        {searchTerm && (
+          <Button
+            variant="outlined"
+            onClick={handleClearSearch}
+            sx={{
+              borderColor: RMSTheme.primary.main,
+              color: RMSTheme.primary.main,
+              '&:hover': {
+                borderColor: RMSTheme.primary.dark,
+                backgroundColor: RMSTheme.background.hover
+              }
+            }}
+          >
+            Clear Search
+          </Button>
+        )}
+
+        <FormControl sx={{ minWidth: 120 }}>
+          <InputLabel>Page Size</InputLabel>
+          <Select
+            value={pageSize}
+            label="Page Size"
+            onChange={handlePageSizeChange}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: RMSTheme.background.paper,
+                '&:hover fieldset': {
+                  borderColor: RMSTheme.primary.main
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: RMSTheme.primary.main
+                }
+              }
+            }}
+          >
+            <MenuItem value={5}>5</MenuItem>
+            <MenuItem value={10}>10</MenuItem>
+            <MenuItem value={25}>25</MenuItem>
+            <MenuItem value={50}>50</MenuItem>
           </Select>
         </FormControl>
       </Box>
@@ -179,20 +366,173 @@ const ReportFormList = () => {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: RMSTheme.background.hover }}>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 150 }}>Report Type</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 150 }}>Specific Report Type</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 120 }}>Job No</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 200 }}>System Name</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 200 }}>Station Name</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 120 }}>Form Status</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 150 }}>Created Date</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 150 }}>Created By</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 150 }}>Updated By</TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  color: RMSTheme.text.primary, 
+                  minWidth: 150,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: RMSTheme.background.default }
+                }}
+                onClick={() => handleSort('reportFormTypeName')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Report Type
+                  {getSortIcon('reportFormTypeName')}
+                </Box>
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  color: RMSTheme.text.primary, 
+                  minWidth: 150,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: RMSTheme.background.default }
+                }}
+                onClick={() => handleSort('specificReportTypeName')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Specific Report Type
+                  {getSortIcon('specificReportTypeName')}
+                </Box>
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  color: RMSTheme.text.primary, 
+                  minWidth: 120,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: RMSTheme.background.default }
+                }}
+                onClick={() => handleSort('jobNo')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Job No
+                  {getSortIcon('jobNo')}
+                </Box>
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  color: RMSTheme.text.primary, 
+                  minWidth: 200,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: RMSTheme.background.default }
+                }}
+                onClick={() => handleSort('systemName')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  System Name
+                  {getSortIcon('systemName')}
+                </Box>
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  color: RMSTheme.text.primary, 
+                  minWidth: 200,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: RMSTheme.background.default }
+                }}
+                onClick={() => handleSort('stationName')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Station Name
+                  {getSortIcon('stationName')}
+                </Box>
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  color: RMSTheme.text.primary, 
+                  minWidth: 120,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: RMSTheme.background.default }
+                }}
+                onClick={() => handleSort('formStatus')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Form Status
+                  {getSortIcon('formStatus')}
+                </Box>
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  color: RMSTheme.text.primary, 
+                  minWidth: 150,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: RMSTheme.background.default }
+                }}
+                onClick={() => handleSort('createdDate')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Created Date
+                  {getSortIcon('createdDate')}
+                </Box>
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  color: RMSTheme.text.primary, 
+                  minWidth: 150,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: RMSTheme.background.default }
+                }}
+                onClick={() => handleSort('createdBy')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Created By
+                  {getSortIcon('createdBy')}
+                </Box>
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  color: RMSTheme.text.primary, 
+                  minWidth: 150,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  '&:hover': { backgroundColor: RMSTheme.background.default }
+                }}
+                onClick={() => handleSort('updatedBy')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Updated By
+                  {getSortIcon('updatedBy')}
+                </Box>
+              </TableCell>
               <TableCell sx={{ fontWeight: 'bold', color: RMSTheme.text.primary, minWidth: 120 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {reportForms.map((form) => (
+            {reportForms.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                  <Typography variant="body1" sx={{ color: RMSTheme.text.secondary }}>
+                    {searchTerm ? `No report forms found matching "${searchTerm}"` : 'No report forms available'}
+                  </Typography>
+                  {searchTerm && (
+                    <Button
+                      variant="text"
+                      onClick={handleClearSearch}
+                      sx={{ mt: 1, color: RMSTheme.primary.main }}
+                    >
+                      Clear search to see all forms
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ) : (
+              sortedReportForms.map((form) => (
               <TableRow 
                 key={form.id}
                 onDoubleClick={() => {
@@ -313,10 +653,52 @@ const ReportFormList = () => {
                   </Box>
                 </TableCell>
               </TableRow>
-            ))}
+            ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Pagination Controls */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mt: 3,
+        flexWrap: 'wrap',
+        gap: 2
+      }}>
+        <Typography variant="body2" sx={{ color: RMSTheme.text.secondary }}>
+          Showing {reportForms.length > 0 ? ((currentPage - 1) * pageSize + 1) : 0} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} entries
+          {searchTerm && ` (filtered from total entries)`}
+        </Typography>
+        
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Pagination
+            count={totalPages}
+            page={currentPage}
+            onChange={handlePageChange}
+            color="primary"
+            showFirstButton
+            showLastButton
+            sx={{
+              '& .MuiPaginationItem-root': {
+                color: RMSTheme.text.primary,
+                '&:hover': {
+                  backgroundColor: RMSTheme.background.hover,
+                },
+                '&.Mui-selected': {
+                  backgroundColor: RMSTheme.primary.main,
+                  color: RMSTheme.text.onPrimary,
+                  '&:hover': {
+                    backgroundColor: RMSTheme.primary.dark,
+                  }
+                }
+              }
+            }}
+          />
+        </Stack>
+      </Box>
 
       <Snackbar
         open={!!error}

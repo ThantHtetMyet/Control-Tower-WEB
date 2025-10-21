@@ -189,12 +189,13 @@ const DatabaseBackup = ({ data, onDataChange, onStatusChange }) => {
               <TableCell sx={{ fontWeight: 'bold' }}>S/N</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Item</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Monthly DB Backup are Created</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {mssqlBackupData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
+                <TableCell colSpan={4} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
                   No items added yet. Click "Add Item" to get started.
                 </TableCell>
               </TableRow>
@@ -250,6 +251,20 @@ const DatabaseBackup = ({ data, onDataChange, onStatusChange }) => {
                       ))}
                     </TextField>
                   </TableCell>
+                  <TableCell>
+                    <IconButton
+                      onClick={() => removeMssqlBackupRow(index)}
+                      color="error"
+                      size="small"
+                      sx={{ 
+                        '&:hover': { 
+                          backgroundColor: 'rgba(244, 67, 54, 0.1)' 
+                        } 
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -282,12 +297,13 @@ const DatabaseBackup = ({ data, onDataChange, onStatusChange }) => {
               <TableCell sx={{ fontWeight: 'bold' }}>S/N</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Item</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>SCADA DB Backup are Created</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {scadaBackupData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
+                <TableCell colSpan={4} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
                   No items added yet. Click "Add Item" to get started.
                 </TableCell>
               </TableRow>
@@ -337,11 +353,25 @@ const DatabaseBackup = ({ data, onDataChange, onStatusChange }) => {
                         )}
                       </MenuItem>
                       {yesNoStatusOptions.map((option) => (
-                        <MenuItem key={option.id} value={option.name}>
+                        <MenuItem key={option.id} value={option.id}>
                           {option.name}
                         </MenuItem>
                       ))}
                     </TextField>
+                  </TableCell>
+                  <TableCell>
+                    <IconButton
+                      onClick={() => removeScadaBackupRow(index)}
+                      color="error"
+                      size="small"
+                      sx={{ 
+                        '&:hover': { 
+                          backgroundColor: 'rgba(244, 67, 54, 0.1)' 
+                        } 
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))

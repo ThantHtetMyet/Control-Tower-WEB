@@ -21,8 +21,6 @@ const WillowlynxRTUStatus_Review = ({ data = {} }) => {
 
   // Initialize data from props
   useEffect(() => {
-    console.log('WillowlynxRTUStatus_Review - Received data:', data);
-    
     if (data.result) {
       setResult(data.result);
     }
@@ -30,7 +28,6 @@ const WillowlynxRTUStatus_Review = ({ data = {} }) => {
       setRemarks(data.remarks);
     }
     
-    console.log('Final RTU status data:', { result: data.result, remarks: data.remarks });
   }, [data]);
 
   // Fetch YesNo Status options on component mount

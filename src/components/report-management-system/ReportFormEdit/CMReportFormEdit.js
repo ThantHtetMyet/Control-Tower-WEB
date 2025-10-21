@@ -282,7 +282,7 @@ const CMReportFormEdit = () => {
     } else if (typeof date === 'string') {
       dateObj = new Date(date);
     } else {
-      console.error('Invalid date object:', date);
+      // // console.error('Invalid date object:', date);
       return '';
     }
     
@@ -311,7 +311,7 @@ const CMReportFormEdit = () => {
         setSystemNames(systemsResponse?.data || []);
         setWarehouseData(warehouseResponse);
       } catch (error) {
-        console.error('Error fetching dropdown data:', error);
+        // console.error('Error fetching dropdown data:', error);
       }
     };
 
@@ -326,7 +326,7 @@ const CMReportFormEdit = () => {
           const response = await warehouseService.getStationNameWarehouses(formData.systemNameWarehouseID);
           setStationNames(response || []);
         } catch (error) {
-          console.error('Error fetching station names:', error);
+          // console.error('Error fetching station names:', error);
           setStationNames([]);
         }
       } else {
@@ -424,7 +424,7 @@ const CMReportFormEdit = () => {
           if (cmData.id) {
             setCmReportFormId(cmData.id);
             const materialUsedResponse = await getCMMaterialUsed(cmData.id);
-            console.log('Material Used Response:', materialUsedResponse);
+            // console.log('Material Used Response:', materialUsedResponse);
             
             if (materialUsedResponse && materialUsedResponse.length > 0) {
               const formattedMaterialUsed = materialUsedResponse.map(item => ({
@@ -440,8 +440,8 @@ const CMReportFormEdit = () => {
           }
         }
       } catch (error) {
-        console.error('Error fetching CM report form:', error);
-        setError('Failed to load CM report form data');
+          // console.error('Error fetching CM report form:', error);
+          setError('Failed to load CM report form data');
       } finally {
         setLoading(false);
       }

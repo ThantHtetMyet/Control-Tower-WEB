@@ -20,7 +20,6 @@ const WillowlynxSumpPitCCTVCamera_Review = ({ data = {} }) => {
 
   // Initialize data from props
   useEffect(() => {
-    console.log('WillowlynxSumpPitCCTVCamera_Review - Received data:', data);
     
     if (data) {
       setResult(data.result || '');

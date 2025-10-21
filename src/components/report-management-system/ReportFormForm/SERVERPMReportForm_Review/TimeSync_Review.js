@@ -25,7 +25,7 @@ const TimeSync_Review = ({ data = {} }) => {
 
   // Initialize data from props
   useEffect(() => {
-    console.log('TimeSync_Review - Received data:', data);
+    // console.log('TimeSync_Review - Received data:', data);
     
     if (data.timeSyncData && data.timeSyncData.length > 0) {
       setTimeSyncData(data.timeSyncData);
@@ -35,7 +35,7 @@ const TimeSync_Review = ({ data = {} }) => {
       setRemarks(data.remarks);
     }
     
-    console.log('Final time sync data:', { timeSyncData: data.timeSyncData, remarks: data.remarks });
+    // console.log('Final time sync data:', { timeSyncData: data.timeSyncData, remarks: data.remarks });
   }, [data]);
 
   // Fetch ResultStatus options on component mount
@@ -45,7 +45,7 @@ const TimeSync_Review = ({ data = {} }) => {
         const response = await resultStatusService.getResultStatuses();
         setResultStatusOptions(response || []);
       } catch (error) {
-        console.error('Error fetching result status options:', error);
+        // // console.error('Error fetching result status options:', error);
       }
     };
 

@@ -108,7 +108,7 @@ const EmployeeForm = () => {
       const data = await fetchSubDepartments(1, 1000); // Fetch all subdepartments
       setSubDepartments(data.items || data);
     } catch (err) {
-      console.error('Error fetching sub-departments:', err);
+      // console.error('Error fetching sub-departments:', err);
     }
   };
 
@@ -120,7 +120,7 @@ const EmployeeForm = () => {
         setOccupations(data);
       }
     } catch (err) {
-      console.error('Error fetching occupations:', err);
+      // console.error('Error fetching occupations:', err);
     }
   };
 
@@ -129,7 +129,7 @@ const EmployeeForm = () => {
       const data = await applicationService.getApplications();
       setApplications(data);
     } catch (err) {
-      console.error('Error fetching applications:', err);
+      // console.error('Error fetching applications:', err);
     }
   };
 
@@ -138,7 +138,7 @@ const EmployeeForm = () => {
       const data = await accessLevelService.getAccessLevels();
       setAccessLevels(data);
     } catch (err) {
-      console.error('Error fetching access levels:', err);
+      // console.error('Error fetching access levels:', err);
     }
   };
 

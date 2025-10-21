@@ -22,7 +22,6 @@ const WillowlynxProcessStatus_Review = ({ data = {} }) => {
 
   // Initialize data from props
   useEffect(() => {
-    console.log('WillowlynxProcessStatus_Review - Received data:', data);
     
     if (data.result) {
       setResult(data.result);
@@ -31,7 +30,6 @@ const WillowlynxProcessStatus_Review = ({ data = {} }) => {
       setRemarks(data.remarks);
     }
     
-    console.log('Final process status data:', { result: data.result, remarks: data.remarks });
   }, [data]);
 
   // Fetch YesNo Status options on component mount
@@ -41,7 +39,7 @@ const WillowlynxProcessStatus_Review = ({ data = {} }) => {
         const response = await yesNoStatusService.getYesNoStatuses();
         setYesNoStatusOptions(response || []);
       } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
+        // console.error('Error fetching yes/no status options:', error);
       }
     };
 

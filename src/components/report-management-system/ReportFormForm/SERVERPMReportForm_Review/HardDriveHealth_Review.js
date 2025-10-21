@@ -42,7 +42,7 @@ const HardDriveHealth_Review = ({ data = {} }) => {
         const response = await resultStatusService.getResultStatuses();
         setResultStatusOptions(response || []);
       } catch (error) {
-        console.error('Error fetching result status options:', error);
+        // console.error('Error fetching result status options:', error);
       }
     };
 

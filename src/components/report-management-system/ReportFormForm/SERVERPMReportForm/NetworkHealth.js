@@ -39,7 +39,7 @@ const NetworkHealth = ({ data, onDataChange, onStatusChange }) => {
         const response = await yesNoStatusService.getYesNoStatuses();
         setYesNoStatusOptions(response || []);
       } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
+        // console.error('Error fetching yes/no status options:', error);
       } finally {
         setLoading(false);
       }
@@ -155,7 +155,7 @@ const NetworkHealth = ({ data, onDataChange, onStatusChange }) => {
               )}
             </MenuItem>
             {yesNoStatusOptions.map((option) => (
-              <MenuItem key={option.id} value={option.name}>
+              <MenuItem key={option.id} value={option.id}>
                 {option.name}
               </MenuItem>
             ))}

@@ -85,7 +85,6 @@ function EmployeeDashboard() {
       setEmployees(allEmployees.slice(0, 10)); // Show first 10 employees
       setError(null);
     } catch (err) {
-      console.error('Error fetching dashboard data:', err);
       setError('Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);

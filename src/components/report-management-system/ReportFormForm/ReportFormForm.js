@@ -98,11 +98,11 @@ const ReportFormForm = () => {
         const data = await getNextJobNumber();
         setFormData(prev => ({ ...prev, jobNo: data.jobNumber }));
       } catch (error) {
-        console.error('Error fetching job number:', error);
+        // console.error('Error fetching job number:', error);
         if (error.response?.status === 401) {
-          console.error('User not authenticated');
+          // console.error('User not authenticated');
         } else if (error.response?.status === 404) {
-          console.error('API endpoint not found - check if backend server is running');
+          // console.error('API endpoint not found - check if backend server is running');
         }
       }
     };
@@ -190,7 +190,7 @@ const ReportFormForm = () => {
           materialUsedOldSerialImages,
           materialUsedNewSerialImages
         );
-        console.log('CM Report Form submitted successfully:', result);
+        // console.log('CM Report Form submitted successfully:', result);
         
         // Show success toast for CM reports
         setNotification({
@@ -206,10 +206,10 @@ const ReportFormForm = () => {
         
         return; // Exit early to avoid the generic success handling below
       } else if (isServerPreventativeMaintenance) {
-        console.log("Server Preventative Maintenance is working");
+        // console.log("Server Preventative Maintenance is working");
         // Handle Server PM report submission
         result = await submitServerPMReportForm(formData, user);
-        console.log('Server PM Report Form submitted successfully:', result);
+        // console.log('Server PM Report Form submitted successfully:', result);
         
         // Show success toast for Server PM reports
         setShowSuccessToast(true);
@@ -221,10 +221,10 @@ const ReportFormForm = () => {
         
         return; // Exit early to avoid the generic success handling below
       } else if (isRTUPreventativeMaintenance) {
-        console.log("RTU Preventative Maintenance is working");
+        // console.log("RTU Preventative Maintenance is working");
         // Handle RTU PM report submission
         result = await submitRTUPMReportForm(formData, rtuPMData, user);
-        console.log('RTU PM Report Form submitted successfully:', result);
+        // console.log('RTU PM Report Form submitted successfully:', result);
         
         // Show success toast for RTU PM reports
         setShowSuccessToast(true);
@@ -236,10 +236,10 @@ const ReportFormForm = () => {
         
         return; // Exit early to avoid the generic success handling below
       } else if (isPreventativeMaintenance) {
-        console.log("Other PM type (not RTU) - not implemented yet");
+        // console.log("Other PM type (not RTU) - not implemented yet");
         throw new Error('This PM report type is not yet implemented');
       } else {
-        console.log("OTHERS Report Form is working");
+        // console.log("OTHERS Report Form is working");
         // Use the generic submission for other types with complete data
         const completeFormData = {
           ReportFormTypeID: formData.reportFormTypeID,
@@ -273,7 +273,7 @@ const ReportFormForm = () => {
       }
       
     } catch (error) {
-      console.error('Error creating report form:', error);
+      // console.error('Error creating report form:', error);
       setError('Failed to create report form: ' + (error.message || 'Unknown error'));
     } finally {
       setLoading(false);

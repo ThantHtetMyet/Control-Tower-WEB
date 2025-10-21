@@ -58,6 +58,7 @@ const NewsForm = () => {
       const response = await getCategories();
       setCategories(response.items || response || []);
     } catch (err) {
+      // console.error('Error fetching categories:', err);
       setError('Error fetching categories: ' + err.message);
     }
   };
@@ -241,6 +242,7 @@ const NewsForm = () => {
       setSuccessMessage(isEdit ? 'News updated successfully' : 'News created successfully');
       setTimeout(() => navigate('/news-portal-system/news'), 2000);
     } catch (err) {
+      // console.error('Error creating news:', err);
       setError('Error saving news: ' + err.message);
     } finally {
       setLoading(false);

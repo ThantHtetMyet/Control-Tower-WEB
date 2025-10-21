@@ -46,7 +46,7 @@ function ApplicationList() {
       setError(null);
     } catch (err) {
       setError('Failed to fetch applications');
-      console.error('Error fetching applications:', err);
+      // console.error('Error fetching applications:', err);
     } finally {
       setLoading(false);
     }
@@ -71,7 +71,7 @@ function ApplicationList() {
       closeDeleteDialog();
     } catch (err) {
       setError('Failed to delete application');
-      console.error('Error deleting application:', err);
+      // console.error('Error deleting application:', err);
     }
   };
 

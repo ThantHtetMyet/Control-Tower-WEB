@@ -72,7 +72,7 @@ const NewsCategoryList = () => {
       }, 2000);
       
     } catch (error) {
-      console.error('Error deleting category:', error);
+      // // console.error('Error deleting category:', err);error);
       
       // Handle specific validation errors
       let errorMessage = 'Failed to delete category. Please try again.';

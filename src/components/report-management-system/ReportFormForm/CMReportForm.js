@@ -225,7 +225,7 @@ const CMReportForm = ({
         const data = await warehouseService.getAllWarehouseData();
         setWarehouseData(data);
       } catch (error) {
-        console.error('Failed to fetch warehouse data:', error);
+        // console.error('Failed to fetch warehouse data:', error);
         setWarehouseData({
           furtherActions: [],
           formStatuses: []

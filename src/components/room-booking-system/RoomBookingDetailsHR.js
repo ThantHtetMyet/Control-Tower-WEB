@@ -59,7 +59,7 @@ const RoomBookingDetailsHR = () => {
       setBooking(response);
     } catch (err) {
       setError('Failed to load booking details');
-      console.error('Error loading booking:', err);
+      // console.error('Error loading booking:', err);
     } finally {
       setLoading(false);
     }
@@ -95,7 +95,7 @@ const RoomBookingDetailsHR = () => {
         message: errorMessage,
         severity: 'error'
       });
-      console.error('Error approving booking:', err);
+      // console.error('Error approving booking:', err);
     } finally {
       setActionLoading(false);
     }
@@ -143,7 +143,7 @@ const RoomBookingDetailsHR = () => {
         message: errorMessage,
         severity: 'error'
       });
-      console.error('Error rejecting booking:', err);
+      // console.error('Error rejecting booking:', err);
     } finally {
       setActionLoading(false);
     }

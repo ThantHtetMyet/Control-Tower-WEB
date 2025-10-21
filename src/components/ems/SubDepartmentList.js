@@ -36,7 +36,7 @@ const SubDepartmentList = () => {
       const data = await fetchSubDepartments(1, 100, searchTerm, selectedDepartment || null);
       setSubDepartments(data.items || data);
     } catch (error) {
-      console.error('Error fetching sub-departments:', error);
+      // console.error('Error fetching sub-departments:', error);
       showNotification('Error fetching sub-departments', 'error');
     } finally {
       setLoading(false);
@@ -48,7 +48,7 @@ const SubDepartmentList = () => {
       const data = await getDepartments();
       setDepartments(data);
     } catch (error) {
-      console.error('Error loading departments:', error);
+      // console.error('Error loading departments:', error);
     }
   };
 

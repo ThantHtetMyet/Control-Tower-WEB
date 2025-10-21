@@ -25,7 +25,7 @@ const BuildingList = () => {
       const data = await fetchBuildings();
       setBuildings(data);
     } catch (error) {
-      console.error('Error fetching buildings:', error);
+      // console.error('Error fetching buildings:', error);
       showNotification('Error fetching buildings', 'error');
     } finally {
       setLoading(false);
@@ -55,7 +55,7 @@ const BuildingList = () => {
       showNotification('Building deleted successfully');
       fetchBuildingsData();
     } catch (error) {
-      console.error('Error deleting building:', error);
+      // console.error('Error deleting building:', error);
       showNotification('Error deleting building', 'error');
     }
   };

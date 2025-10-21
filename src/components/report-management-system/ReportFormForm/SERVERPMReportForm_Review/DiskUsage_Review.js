@@ -97,7 +97,7 @@ const DiskUsage_Review = ({ data = {} }) => {
         setResultStatusOptions(resultStatusResponse || []);
         
       } catch (error) {
-        console.error('Error fetching options:', error);
+        // console.error('Error fetching options:', error);
         // Set fallback options if API calls fail
         setServerDiskStatusOptions([
           { ID: 'healthy', Name: 'Healthy' },

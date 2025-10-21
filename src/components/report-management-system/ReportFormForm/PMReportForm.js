@@ -23,7 +23,7 @@ const PMReportForm = ({ formData, reportFormTypes, onInputChange, onNext, onBack
         const data = await getPMReportFormTypes();
         setPMReportFormTypes(data || []);
       } catch (error) {
-        console.error('Failed to fetch PM report form types:', error);
+        // console.error('Failed to fetch PM report form types:', error);
         setPMReportFormTypes([]);
       } finally {
         setLoading(false);

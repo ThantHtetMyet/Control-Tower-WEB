@@ -34,7 +34,7 @@ const CompanyList = () => {
         showNotification('Error fetching companies', 'error');
       }
     } catch (error) {
-      console.error('Error fetching companies:', error);
+      // console.error('Error fetching companies:', error);
       showNotification('Error fetching companies', 'error');
     } finally {
       setLoading(false);
@@ -68,7 +68,7 @@ const CompanyList = () => {
         showNotification(errorText || 'Error deleting company', 'error');
       }
     } catch (error) {
-      console.error('Error deleting company:', error);
+      // console.error('Error deleting company:', error);
       showNotification('Error deleting company. Please try again.', 'error');
     }
   };

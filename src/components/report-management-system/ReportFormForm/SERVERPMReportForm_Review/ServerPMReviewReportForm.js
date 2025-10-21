@@ -319,14 +319,7 @@ const ServerPMReviewReportForm = ({
   error,
   serverPMData = {} 
 }) => {
-  // Debug: Log the formData to see its structure
-  console.log('ServerPMReviewReportForm - formData:', formData);
-  console.log('ServerPMReviewReportForm - serverPMData:', serverPMData);
   
-  console.log('Debug - formData:', formData);
-  console.log('Debug - serverPMData:', serverPMData);
-  console.log('Debug - formData keys:', formData ? Object.keys(formData) : 'No formData');
-
   // Component configuration matching ServerPMReportForm
   const components = [
     { key: 'serverHealth', title: 'Server Health Check', icon: ComputerIcon, Component: ServerHealth_Review, dataKey: 'serverHealthData' },
@@ -519,12 +512,11 @@ const ServerPMReviewReportForm = ({
             const isASAFirewallDefaultData = (dataArray) => {
               if (!Array.isArray(dataArray) || dataArray.length === 0) return false;
               
-              // Check if all items are default ASA Firewall commands with no user input
+              // Check if all items are default ASA Firewall commands with no user completion
               return dataArray.every(item => {
                 const hasDefaultCommand = item.commandInput === 'show cpu usage' || item.commandInput === 'show environment';
-                const hasNoUserInput = (!item.expectedResultId || item.expectedResultId === '') && 
-                                      (!item.doneId || item.doneId === '');
-                return hasDefaultCommand && hasNoUserInput;
+                const hasNoUserCompletion = (!item.doneId || item.doneId === '');
+                return hasDefaultCommand && hasNoUserCompletion;
               });
             };
 
@@ -549,10 +541,10 @@ const ServerPMReviewReportForm = ({
               
               // Debug logging to understand data structure
               if (dataKey === 'diskUsageData') {
-                console.log('DiskUsage data:', data);
+                // console.log('DiskUsage data:', data);
               }
               if (dataKey === 'hardDriveHealthData') {
-                console.log('HardDriveHealth data:', data);
+                // console.log('HardDriveHealth data:', data);
               }
               
               // Special handling for diskUsageData

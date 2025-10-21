@@ -7,7 +7,7 @@ const warehouseService = {
       const response = await api.get('/FurtherActionTakenWarehouse');
       return response.data;
     } catch (error) {
-      console.error('Error fetching further action taken options:', error);
+      // console.error('Error fetching further action taken options:', error);
       throw error;
     }
   },
@@ -18,7 +18,7 @@ const warehouseService = {
       const response = await api.get('/FormStatusWarehouse');
       return response.data;
     } catch (error) {
-      console.error('Error fetching form status options:', error);
+      // console.error('Error fetching form status options:', error);
       throw error;
     }
   },
@@ -29,7 +29,7 @@ const warehouseService = {
       const response = await api.get(`/SystemNameWarehouse?page=${page}&pageSize=${pageSize}&search=${search}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching system name warehouses:', error);
+      // console.error('Error fetching system name warehouses:', error);
       throw error;
     }
   },
@@ -40,7 +40,7 @@ const warehouseService = {
       const response = await api.get(`/StationNameWarehouse/BySystemName/${systemNameWarehouseID}?page=${page}&pageSize=${pageSize}&search=${search}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching station name warehouses:', error);
+      // console.error('Error fetching station name warehouses:', error);
       throw error;
     }
   },
@@ -60,7 +60,7 @@ const warehouseService = {
         systemNames: Array.isArray(systemNameRes.data?.data) ? systemNameRes.data.data : []
       };
     } catch (error) {
-      console.error('Error fetching warehouse data:', error);
+      // console.error('Error fetching warehouse data:', error);
       throw error;
     }
   }
