@@ -87,6 +87,7 @@ import ReportFormList from './components/report-management-system/ReportFormList
 import ReportFormForm from './components/report-management-system/ReportFormForm/ReportFormForm';
 import RTUPMReportFormDetails from './components/report-management-system/ReportFormDetails/RTUPMReportFormDetails';
 import CMReportFormDetails from './components/report-management-system/ReportFormDetails/CMReportFormDetails';
+import ServerPMReportFormDetails from './components/report-management-system/ReportFormDetails/ServerPMReportFormDetails/ServerPMReportFormDetails';
 // Add RTU PM Edit imports
 import RTUPMReportFormEdit from './components/report-management-system/ReportFormEdit/RTUPMReportFormEdit';
 import RTUPMReviewReportFormEdit from './components/report-management-system/ReportFormEdit/RTUPMReviewReportFormEdit';
@@ -666,6 +667,18 @@ function App() {
                     <ReportFormNavBar />
                     <Box sx={{ flexGrow: 1, p: 3 }}>
                       <CMReportFormDetails />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              
+              <Route
+                path="/report-management-system/report-forms/server-pm-details/:id"
+                element={
+                  <ProtectedRoute>
+                    <ReportFormNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <ServerPMReportFormDetails />
                     </Box>
                   </ProtectedRoute>
                 }

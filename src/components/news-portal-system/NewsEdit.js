@@ -263,7 +263,6 @@ const NewsEdit = () => {
       setSuccessMessage('News updated successfully');
       setTimeout(() => navigate('/news-portal-system/news'), 2000);
     } catch (err) {
-      // console.error('Update error:', err);
       setError('Error updating news: ' + err.message);
     } finally {
       setLoading(false);

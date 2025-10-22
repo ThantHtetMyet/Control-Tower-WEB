@@ -1630,3 +1630,9 @@ export const deleteCMMaterialUsed = async (id) => {
   const response = await api.delete(`/CMMaterialUsed/${id}`);
   return response.data;
 };
+
+// Get Server PM Report Form with all related data
+export const getServerPMReportFormWithDetails = async (id) => {
+  const response = await api.get(`/PMReportFormServer/${id}`);
+  return response.data;
+};

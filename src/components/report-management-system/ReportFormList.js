@@ -51,8 +51,8 @@ const ReportFormList = () => {
       // Process the data to add specificReportTypeName based on reportFormTypeName
       const processedData = (response.data || []).map(form => ({
         ...form,
-        // Map specificReportTypeName based on reportFormTypeName
-        specificReportTypeName: getSpecificReportTypeName(form.reportFormTypeName)
+        // Map specificReportTypeName based on reportFormTypeName and systemName
+        specificReportTypeName: getSpecificReportTypeName(form.reportFormTypeName, form.systemNameWarehouseName)
       }));
       
       setReportForms(processedData);
@@ -66,15 +66,32 @@ const ReportFormList = () => {
   };
 
   // Helper function to determine specific report type name
-  const getSpecificReportTypeName = (reportFormTypeName) => {
+  const getSpecificReportTypeName = (reportFormTypeName, systemName) => {
     if (!reportFormTypeName) return 'N/A';
     
     const typeName = reportFormTypeName.toLowerCase();
+    const systemNameLower = systemName ? systemName.toLowerCase() : '';
+    
+    // Check for preventive/preventative maintenance first
     if (typeName.includes('preventive') || typeName.includes('preventative')) {
-      // For PM forms, we need to determine the specific type
-      // This could be RTU, Server, LV PM, etc.
-      // For now, we'll return the full name and let the backend provide more specific info later
-      return reportFormTypeName;
+      // Check if it's a Server PM report by looking at system name
+      if (systemNameLower.includes('server') || systemNameLower.includes('security') || systemNameLower.includes('isoss')) {
+        return 'Server';
+      }
+      // Check if it's an RTU PM report
+      else if (systemNameLower.includes('rtu') || typeName.includes('rtu')) {
+        return 'RTU';
+      }
+      // For other PM forms, return the original type name
+      else {
+        return reportFormTypeName;
+      }
+    }
+    // Check for specific PM types in the report form type name
+    else if (typeName.includes('server') && (typeName.includes('preventive') || typeName.includes('preventative'))) {
+      return 'Server';
+    } else if (typeName.includes('rtu') && (typeName.includes('preventive') || typeName.includes('preventative'))) {
+      return 'RTU';
     } else if (typeName.includes('corrective')) {
       return 'Corrective Maintenance';
     }
@@ -536,12 +553,23 @@ const ReportFormList = () => {
               <TableRow 
                 key={form.id}
                 onDoubleClick={() => {
-                  // Check if it's an RTU PM report
-                  if (form.specificReportTypeName === 'RTU') {
+                  console.log('Double-click - Form data:', form);
+                  console.log('Double-click - reportFormTypeName:', form.reportFormTypeName);
+                  console.log('Double-click - specificReportTypeName:', form.specificReportTypeName);
+                  console.log('Double-click - systemName:', form.systemNameWarehouseName);
+                  
+                  // Check if it's a Server PM report
+                  if (form.specificReportTypeName === 'Server') {
+                    console.log('Navigating to Server PM details');
+                    navigate(`/report-management-system/report-forms/server-pm-details/${form.id}`);
+                  } else if (form.specificReportTypeName === 'RTU') {
+                    console.log('Navigating to RTU PM details');
                     navigate(`/report-management-system/report-forms/rtu-pm-details/${form.id}`);
                   } else if (form.reportFormTypeName === 'Corrective Maintenance') {
+                    console.log('Navigating to CM details');
                     navigate(`/report-management-system/report-forms/cm-details/${form.id}`);
                   } else {
+                    console.log('Navigating to generic details');
                     navigate(`/report-management-system/report-forms/details/${form.id}`);
                   }
                 }}
@@ -601,8 +629,15 @@ const ReportFormList = () => {
                       <IconButton
                         size="small"
                         onClick={() => {
+                          console.log('Form data:', form);
+                          console.log('Report Type Name:', form.reportFormTypeName);
+                          console.log('Specific Report Type Name:', form.specificReportTypeName);
+                          console.log('System Name:', form.systemName);
+                          
                           if (form.specificReportTypeName === 'RTU') {
                             navigate(`/report-management-system/report-forms/rtu-pm-details/${form.id}`);
+                          } else if (form.specificReportTypeName === 'Server') {
+                            navigate(`/report-management-system/report-forms/server-pm-details/${form.id}`);
                           } else if (form.reportFormTypeName === 'Corrective Maintenance') {
                             navigate(`/report-management-system/report-forms/cm-details/${form.id}`);
                           } else {
