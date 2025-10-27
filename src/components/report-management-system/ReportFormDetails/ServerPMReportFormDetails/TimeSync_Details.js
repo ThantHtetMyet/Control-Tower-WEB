@@ -4,88 +4,87 @@ import {
   Typography,
   TextField,
   Chip,
-  Grid,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
+  Paper
 } from '@mui/material';
 import {
   Schedule as ScheduleIcon,
-  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
-import { format } from 'date-fns';
-import yesNoStatusService from '../../../api-services/yesNoStatusService';
+import resultStatusService from '../../../api-services/resultStatusService';
 
 const TimeSync_Details = ({ data, disabled = false }) => {
   const [timeSyncData, setTimeSyncData] = useState([]);
   const [remarks, setRemarks] = useState('');
-  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
-
-  // Helper function for date formatting
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    try {
-      return format(new Date(dateString), 'dd/MM/yyyy HH:mm');
-    } catch (error) {
-      return 'Invalid Date';
-    }
-  };
+  const [resultStatusOptions, setResultStatusOptions] = useState([]);
 
   useEffect(() => {
-    const fetchYesNoStatusOptions = async () => {
+    const fetchResultStatusOptions = async () => {
       try {
-        const options = await yesNoStatusService.getYesNoStatusOptions();
-        setYesNoStatusOptions(options);
+        const options = await resultStatusService.getResultStatuses();
+        setResultStatusOptions(options || []);
       } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
+        console.error('Error fetching result status options:', error);
       }
     };
 
-    fetchYesNoStatusOptions();
+    fetchResultStatusOptions();
   }, []);
 
   useEffect(() => {
-    // Handle case where data is the array directly
     if (Array.isArray(data) && data.length > 0) {
-      setTimeSyncData(data);
+      // Handle case where data is the pmServerTimeSyncs array directly
+      const transformedData = [];
+      data.forEach(record => {
+        if (record.details && record.details.length > 0) {
+          record.details.forEach(detail => {
+            transformedData.push({
+              machineName: detail.serverName || '',
+              timeSyncResult: detail.resultStatusID || '',
+              resultStatusName: detail.resultStatusName || '',
+              serialNo: detail.serialNo
+            });
+          });
+        }
+      });
+      setTimeSyncData(transformedData);
+      
+      // Get remarks from the first record
+      if (data[0] && data[0].remarks) {
+        setRemarks(data[0].remarks);
+      }
     } else if (data && data.timeSyncData && data.timeSyncData.length > 0) {
       setTimeSyncData(data.timeSyncData);
-    }
-    
-    if (data && data.remarks) {
-      setRemarks(data.remarks || data.Remarks || '');
+      if (data.remarks) {
+        setRemarks(data.remarks);
+      }
     }
   }, [data]);
 
-  const getStatusChip = (status) => {
-    if (!status) return null;
+  const getResultStatusName = (statusId) => {
+    if (!statusId) return 'N/A';
+    const status = resultStatusOptions.find(option => option.id === statusId);
+    return status ? status.name : statusId;
+  };
+
+  const getStatusColor = (statusName) => {
+    if (!statusName) return 'default';
     
-    const statusLower = status.toString().toLowerCase();
-    let color = 'default';
+    const statusLower = statusName.toString().toLowerCase();
     
-    if (statusLower.includes('pass') || statusLower.includes('ok') || statusLower.includes('good')) {
-      color = 'success';
-    } else if (statusLower.includes('fail') || statusLower.includes('error') || statusLower.includes('bad')) {
-      color = 'error';
-    } else if (statusLower.includes('warning') || statusLower.includes('caution')) {
-      color = 'warning';
+    if (statusLower.includes('pass') || statusLower.includes('ok') || statusLower.includes('good') || statusLower.includes('success')) {
+      return 'success';
+    } else if (statusLower.includes('fail') || statusLower.includes('error') || statusLower.includes('bad') || statusLower.includes('critical')) {
+      return 'error';
+    } else if (statusLower.includes('warning') || statusLower.includes('caution') || statusLower.includes('pending')) {
+      return 'warning';
     }
     
-    return (
-      <Chip 
-        label={status} 
-        color={color} 
-        size="small"
-        variant="outlined"
-      />
-    );
+    return 'default';
   };
 
   const fieldStyle = {
@@ -98,119 +97,108 @@ const TimeSync_Details = ({ data, disabled = false }) => {
     }
   };
 
+  // Styling to match TimeSync.js
+  const sectionContainerStyle = {
+    padding: 3,
+    marginBottom: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+    border: '1px solid #e0e0e0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  };
+
+  const sectionHeaderStyle = {
+    color: '#1976d2',
+    fontWeight: 'bold',
+    marginBottom: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
+  };
+
   return (
-    <Box sx={{ 
-      padding: 3, 
-      backgroundColor: '#ffffff', 
-      borderRadius: 2, 
-      border: '1px solid #e0e0e0',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      marginBottom: 3
-    }}>
+    <Paper sx={sectionContainerStyle}>
+      <Typography variant="h5" sx={sectionHeaderStyle}>
+        <ScheduleIcon /> SCADA & Historical Time Sync
+      </Typography>
       
-      {/* Section Title */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        marginBottom: 3,
-        paddingBottom: 2,
-        borderBottom: '1px solid #e0e0e0'
-      }}>
-        <ScheduleIcon sx={{ 
-          color: '#1976d2', 
-          marginRight: 1,
-          fontSize: '1.5rem'
-        }} />
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: '#1976d2', 
-            fontWeight: 'bold'
-          }}
-        >
-          Time Sync Check
+      {/* Time Sync Instructions */}
+      <Box sx={{ marginBottom: 3 }}>
+        <Typography variant="body1" sx={{ marginBottom: 2 }}>
+          To check the time sync for SCADA server, Historical server, and HMIs by using command line w32tm /query /status. To be within 5 minutes tolerance
         </Typography>
       </Box>
-      {/* Time Sync Data */}
-      {timeSyncData.length > 0 && (
-        <Box sx={{ marginBottom: 3 }}>
-          {timeSyncData.map((record, recordIndex) => (
-            <Accordion key={recordIndex} sx={{ marginBottom: 2 }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <ScheduleIcon />
-                  <Typography variant="h6">
-                    Time Sync Check - {formatDate(record.CreatedDate)}
-                  </Typography>
-                </Box>
-              </AccordionSummary>
-              <AccordionDetails>
-                {/* Record Remarks */}
-                {record.Remarks && (
-                  <Box sx={{ marginBottom: 2, padding: 2, backgroundColor: '#f9f9f9', borderRadius: 1 }}>
-                    <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-                      <strong>Remarks:</strong> {record.Remarks}
+
+      {/* Time Sync Table */}
+      <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableCell sx={{ fontWeight: 'bold' }}>S/N</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Machine Name</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Time Sync Result</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {timeSyncData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={3} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
+                  No time sync data available
+                </TableCell>
+              </TableRow>
+            ) : (
+              timeSyncData.map((row, index) => (
+                <TableRow key={index}>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {row.serialNo || 'N/A'}
                     </Typography>
-                  </Box>
-                )}
-                
-                {/* Details Table */}
-                {record.Details && record.Details.length > 0 ? (
-                  <TableContainer component={Paper}>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                          <TableCell sx={{ fontWeight: 'bold' }}>Server Name</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>Result Status</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {record.Details.map((detail, detailIndex) => (
-                          <TableRow key={detailIndex}>
-                            <TableCell>{detail.ServerName || 'N/A'}</TableCell>
-                            <TableCell>
-                              {detail.ResultStatusID ? getStatusChip(detail.ResultStatusID) : 'N/A'}
-                            </TableCell>
-                            <TableCell>{detail.Remarks || 'N/A'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No detail records available for this time sync check
-                  </Typography>
-                )}
-              </AccordionDetails>
-            </Accordion>
-          ))}
-        </Box>
-      )}
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {row.machineName || 'N/A'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    {row.timeSyncResult ? (
+                      <Chip 
+                        label={row.resultStatusName || getResultStatusName(row.timeSyncResult)} 
+                        color={getStatusColor(row.resultStatusName || getResultStatusName(row.timeSyncResult))} 
+                        size="small"
+                      />
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        N/A
+                      </Typography>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-      {/* Remarks */}
+      {/* Remarks Section */}
       {remarks && (
-        <TextField
-          fullWidth
-          multiline
-          rows={3}
-          label="Remarks"
-          value={remarks}
-          disabled={disabled}
-          sx={fieldStyle}
-        />
-      )}
-
-      {/* No Data Message */}
-      {timeSyncData.length === 0 && !remarks && (
-        <Box sx={{ textAlign: 'center', padding: 3, color: '#666' }}>
-          <Typography variant="body2">
-            No time sync data available
+        <Box sx={{ marginTop: 3 }}>
+          <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+            📝 Remarks
           </Typography>
+          
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            variant="outlined"
+            label="Remarks"
+            value={remarks}
+            disabled={disabled}
+            sx={fieldStyle}
+          />
         </Box>
       )}
-    </Box>
+    </Paper>
   );
 };
 

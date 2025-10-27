@@ -147,8 +147,8 @@ const WillowlynxNetworkStatus_Details = ({ data, disabled = false }) => {
         <Typography>All servers, switches, and RTU are green.</Typography>
         {result ? (
           <Chip
-            label={getYesNoStatusLabel(result)}
-            color={getStatusColor(getYesNoStatusLabel(result))}
+            label={result}
+            color={getStatusColor(result)}
             variant="filled"
             size="small"
           />

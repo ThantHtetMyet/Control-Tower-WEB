@@ -4,10 +4,13 @@ import {
   Typography,
   TextField,
   Chip,
-  Grid
+  Paper
 } from '@mui/material';
 import { Videocam as VideocamIcon } from '@mui/icons-material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
+import WillowlynxSumpPitCCTVCameraImage from '../../../resources/ServerPMReportForm/WillowlynxSumpPitCCTVCamera.png';
 
 const WillowlynxSumpPitCCTVCamera_Details = ({ data, disabled = false }) => {
   const [result, setResult] = useState('');
@@ -17,8 +20,8 @@ const WillowlynxSumpPitCCTVCamera_Details = ({ data, disabled = false }) => {
   useEffect(() => {
     const fetchYesNoStatusOptions = async () => {
       try {
-        const options = await yesNoStatusService.getYesNoStatusOptions();
-        setYesNoStatusOptions(options);
+        const options = await yesNoStatusService.getYesNoStatuses();
+        setYesNoStatusOptions(options || []);
       } catch (error) {
         console.error('Error fetching yes/no status options:', error);
       }
@@ -29,8 +32,27 @@ const WillowlynxSumpPitCCTVCamera_Details = ({ data, disabled = false }) => {
 
   useEffect(() => {
     if (data) {
-      setResult(data.result || data.YesNoStatusID || '');
-      setRemarks(data.remarks || data.Remarks || '');
+      // Handle API response structure
+      let cctvCameraItem = null;
+      
+      if (data.pmServerWillowlynxCCTVCameras && Array.isArray(data.pmServerWillowlynxCCTVCameras)) {
+        cctvCameraItem = data.pmServerWillowlynxCCTVCameras[0];
+      } else if (Array.isArray(data)) {
+        cctvCameraItem = data[0];
+      } else {
+        cctvCameraItem = data;
+      }
+
+      if (cctvCameraItem) {
+        setResult(
+          cctvCameraItem.YesNoStatusID || 
+          cctvCameraItem.yesNoStatusID || 
+          cctvCameraItem.result || 
+          cctvCameraItem.remarks || 
+          ''
+        );
+        setRemarks(cctvCameraItem.Remarks || cctvCameraItem.remarks || '');
+      }
     }
   }, [data]);
 
@@ -40,10 +62,8 @@ const WillowlynxSumpPitCCTVCamera_Details = ({ data, disabled = false }) => {
   };
 
   const getStatusColor = (statusId) => {
-    const status = yesNoStatusOptions.find(option => option.id === statusId);
-    if (!status) return 'default';
-    
-    switch (status.name.toLowerCase()) {
+    const label = getYesNoStatusLabel(statusId);
+    switch (label.toLowerCase()) {
       case 'yes':
       case 'ok':
       case 'good':
@@ -57,104 +77,97 @@ const WillowlynxSumpPitCCTVCamera_Details = ({ data, disabled = false }) => {
     }
   };
 
-  const fieldStyle = {
-    '& .MuiInputBase-input.Mui-disabled': {
-      WebkitTextFillColor: '#000000',
-      color: '#000000'
-    },
-    '& .MuiInputLabel-root.Mui-disabled': {
-      color: '#666666'
-    }
+  // Styling constants
+  const sectionContainerStyle = {
+    padding: 3,
+    marginBottom: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+    border: '1px solid #e0e0e0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  };
+
+  const sectionHeaderStyle = {
+    color: '#1976d2',
+    fontWeight: 'bold',
+    marginBottom: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
+  };
+
+  const inlineField = {
+    minWidth: 200,
+    '& .MuiOutlinedInput-root': { backgroundColor: 'white' },
   };
 
   return (
-    <Box sx={{ 
-      padding: 3, 
-      backgroundColor: '#ffffff', 
-      borderRadius: 2, 
-      border: '1px solid #e0e0e0',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      marginBottom: 3
-    }}>
-      
-      {/* Section Title */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        marginBottom: 3,
-        paddingBottom: 2,
-        borderBottom: '1px solid #e0e0e0'
-      }}>
-        <VideocamIcon sx={{ 
-          color: '#1976d2', 
-          marginRight: 1,
-          fontSize: '1.5rem'
-        }} />
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: '#1976d2', 
-            fontWeight: 'bold'
-          }}
-        >
-          Willowlynx Sump Pit CCTV Camera Check
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Paper sx={sectionContainerStyle}>
+        {/* Header */}
+        <Typography variant="h5" sx={sectionHeaderStyle}>
+          <VideocamIcon /> Willowlynx Sump Pit CCTV Camera Check
         </Typography>
-      </Box>
-      {/* Instructions */}
-      <Typography variant="body1" sx={{ marginBottom: 2, fontStyle: 'italic' }}>
-        Check the sump pit CCTV camera functionality to ensure proper monitoring and recording.
-      </Typography>
 
-      {/* Reference Image */}
-      {data?.referenceImagePath && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', marginBottom: 3 }}>
-          <img
-            src={data.referenceImagePath}
-            alt="Willowlynx Sump Pit CCTV Camera Reference"
-            style={{
-              maxWidth: '100%',
+        {/* Instructions */}
+        <Typography variant="body1" sx={{ ml: 2, mb: 2 }}>
+          Click the CCTV buttons from PLUMB-SAN page, make sure the player window for each camera can be played.
+        </Typography>
+
+        {/* Screenshot */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+          <img 
+            src={WillowlynxSumpPitCCTVCameraImage} 
+            alt="Willowlynx Sump Pit CCTV Camera" 
+            style={{ 
+              maxWidth: '100%', 
               height: 'auto',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-            }}
+              border: '1px solid #ddd',
+              borderRadius: '8px'
+            }} 
           />
         </Box>
-      )}
 
-      {/* Result */}
-      <Grid container spacing={2} sx={{ marginBottom: 2 }}>
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 1 }}>
-            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-              Result: Sump pit CCTV camera is functioning properly.
-            </Typography>
-            {result && (
-              <Chip
-                label={getYesNoStatusLabel(result)}
-                color={getStatusColor(result)}
-                size="small"
-              />
-            )}
-          </Box>
-        </Grid>
-      </Grid>
+        {/* Result */}
+        <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+          Result:
+        </Typography>
 
-      {/* Remarks */}
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, ml: 2, mb: 2 }}>
+          <Typography>All CCTV cameras can be played without issues. </Typography>
+          <Chip
+            label={getYesNoStatusLabel(result)}
+            color={getStatusColor(result)}
+            size="small"
+          />
+        </Box>
+
+        {/* Remarks Section */}
+        <Box sx={{ marginTop: 3 }}>
+          <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+            📝 Remarks
+          </Typography>
+          
           <TextField
             fullWidth
             multiline
-            rows={3}
+            rows={4}
+            variant="outlined"
             label="Remarks"
             value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-            disabled={disabled}
-            sx={fieldStyle}
+            disabled
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: '#f5f5f5',
+              },
+              '& .MuiInputBase-input.Mui-disabled': {
+                WebkitTextFillColor: '#000000',
+              },
+            }}
           />
-        </Grid>
-      </Grid>
-    </Box>
+        </Box>
+      </Paper>
+    </LocalizationProvider>
   );
 };
 

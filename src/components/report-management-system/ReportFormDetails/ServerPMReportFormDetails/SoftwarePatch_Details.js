@@ -2,60 +2,111 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  TextField,
-  Chip,
-  Grid
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  TextField
 } from '@mui/material';
 import { SystemUpdate as SystemUpdateIcon } from '@mui/icons-material';
-import yesNoStatusService from '../../../api-services/yesNoStatusService';
 
 const SoftwarePatch_Details = ({ data, disabled = false }) => {
-  const [result, setResult] = useState('');
+  const [softwarePatchData, setSoftwarePatchData] = useState([]);
   const [remarks, setRemarks] = useState('');
-  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
 
+  // Debug logging
   useEffect(() => {
-    const fetchYesNoStatusOptions = async () => {
-      try {
-        const options = await yesNoStatusService.getYesNoStatusOptions();
-        setYesNoStatusOptions(options);
-      } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
-      }
-    };
-
-    fetchYesNoStatusOptions();
-  }, []);
-
-  useEffect(() => {
-    if (data) {
-      setResult(data.result || data.YesNoStatusID || '');
-      setRemarks(data.remarks || data.Remarks || '');
-    }
+    console.log('SoftwarePatch_Details - Raw data received:', data);
   }, [data]);
 
-  const getYesNoStatusLabel = (statusId) => {
-    const status = yesNoStatusOptions.find(option => option.id === statusId);
-    return status ? status.name : 'Unknown';
-  };
+  // Data transformation effect
+  useEffect(() => {
+    if (data) {
+      let processedData = [];
+      let processedRemarks = '';
 
-  const getStatusColor = (statusId) => {
-    const status = yesNoStatusOptions.find(option => option.id === statusId);
-    if (!status) return 'default';
-    
-    switch (status.name.toLowerCase()) {
-      case 'yes':
-      case 'ok':
-      case 'good':
-        return 'success';
-      case 'no':
-      case 'error':
-      case 'bad':
-        return 'error';
-      default:
-        return 'default';
+      try {
+        // Handle different data structures - prioritize the exact API structure
+        if (data.pmServerSoftwarePatchSummaries && Array.isArray(data.pmServerSoftwarePatchSummaries) && data.pmServerSoftwarePatchSummaries.length > 0) {
+          console.log('SoftwarePatch_Details - Found pmServerSoftwarePatchSummaries');
+          const summary = data.pmServerSoftwarePatchSummaries[0];
+          console.log('SoftwarePatch_Details - Summary object:', summary);
+          
+          if (summary && summary.details && Array.isArray(summary.details)) {
+            processedData = summary.details;
+            console.log('SoftwarePatch_Details - Extracted details:', processedData);
+          }
+          processedRemarks = summary?.remarks || '';
+        } 
+        // Handle direct array of summaries
+        else if (Array.isArray(data) && data.length > 0 && data[0].details) {
+          console.log('SoftwarePatch_Details - Found direct array with details');
+          const summary = data[0];
+          if (summary.details && Array.isArray(summary.details)) {
+            processedData = summary.details;
+          }
+          processedRemarks = summary?.remarks || '';
+        }
+        // Handle case where data itself contains the details
+        else if (data.details && Array.isArray(data.details)) {
+          console.log('SoftwarePatch_Details - Found direct details array');
+          processedData = data.details;
+          processedRemarks = data.remarks || '';
+        }
+        // Handle case where data is directly the array of items
+        else if (Array.isArray(data)) {
+          console.log('SoftwarePatch_Details - Data is direct array');
+          processedData = data;
+          processedRemarks = data[0]?.remarks || '';
+        }
+        // Fallback: try other possible structures
+        else {
+          console.log('SoftwarePatch_Details - Trying fallback structures');
+          const possibleKeys = ['PMServerSoftwarePatchSummaries', 'softwarePatchSummaries', 'SoftwarePatchSummaries'];
+          
+          for (const key of possibleKeys) {
+            if (data[key] && Array.isArray(data[key]) && data[key].length > 0) {
+              const summary = data[key][0];
+              if (summary && summary.details && Array.isArray(summary.details)) {
+                processedData = summary.details;
+                processedRemarks = summary?.remarks || '';
+                break;
+              }
+            }
+          }
+        }
+
+        // Extract remarks from various possible locations if not found
+        if (!processedRemarks) {
+          processedRemarks = data.remarks || data.Remarks || '';
+        }
+
+        console.log('SoftwarePatch_Details - Final processed data:', processedData);
+        console.log('SoftwarePatch_Details - Final processed remarks:', processedRemarks);
+        console.log('SoftwarePatch_Details - Data length:', processedData.length);
+
+        // Validate the processed data
+        if (processedData.length > 0) {
+          console.log('SoftwarePatch_Details - Sample item:', processedData[0]);
+          console.log('SoftwarePatch_Details - Sample item keys:', Object.keys(processedData[0]));
+        }
+
+        setSoftwarePatchData(processedData);
+        setRemarks(processedRemarks);
+      } catch (error) {
+        console.error('SoftwarePatch_Details - Error processing data:', error);
+        setSoftwarePatchData([]);
+        setRemarks('');
+      }
+    } else {
+      console.log('SoftwarePatch_Details - No data provided');
+      setSoftwarePatchData([]);
+      setRemarks('');
     }
-  };
+  }, [data]);
 
   const fieldStyle = {
     '& .MuiInputBase-input.Mui-disabled': {
@@ -67,94 +118,120 @@ const SoftwarePatch_Details = ({ data, disabled = false }) => {
     }
   };
 
+  // Styling constants matching SoftwarePatch.js
+  const sectionContainerStyle = {
+    padding: 3,
+    marginBottom: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+    border: '1px solid #e0e0e0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  };
+
+  const sectionHeaderStyle = {
+    fontWeight: 'bold',
+    marginBottom: 2,
+    color: '#1976d2',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
+  };
+
+  const tableHeaderStyle = {
+    backgroundColor: '#f5f5f5',
+    fontWeight: 'bold',
+    color: '#333',
+    border: '1px solid #ddd'
+  };
+
+  const tableCellStyle = {
+    border: '1px solid #ddd',
+    padding: '8px'
+  };
+
   return (
-    <Box sx={{ 
-      padding: 3, 
-      backgroundColor: '#ffffff', 
-      borderRadius: 2, 
-      border: '1px solid #e0e0e0',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      marginBottom: 3
-    }}>
-      
-      {/* Section Title */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        marginBottom: 3,
-        paddingBottom: 2,
-        borderBottom: '1px solid #e0e0e0'
-      }}>
-        <SystemUpdateIcon sx={{ 
-          color: '#1976d2', 
-          marginRight: 1,
-          fontSize: '1.5rem'
-        }} />
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: '#1976d2', 
-            fontWeight: 'bold'
-          }}
-        >
-          Software Patch Check
-        </Typography>
-      </Box>
-      {/* Instructions */}
-      <Typography variant="body1" sx={{ marginBottom: 2, fontStyle: 'italic' }}>
-        Check for available software patches and updates that need to be applied to the system.
+    <Paper sx={sectionContainerStyle}>
+      <Typography variant="h5" sx={sectionHeaderStyle}>
+        <SystemUpdateIcon /> Software Patch Summary
       </Typography>
 
-      {/* Reference Image */}
-      {data?.referenceImagePath && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', marginBottom: 3 }}>
-          <img
-            src={data.referenceImagePath}
-            alt="Software Patch Reference"
-            style={{
-              maxWidth: '100%',
-              height: 'auto',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-            }}
-          />
+      {/* Data Display */}
+      {softwarePatchData && softwarePatchData.length > 0 ? (
+        <TableContainer component={Paper} sx={{ marginBottom: 2, border: '1px solid #ddd' }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={tableHeaderStyle} align="center">S/N</TableCell>
+                <TableCell sx={tableHeaderStyle} align="center">Server Name</TableCell>
+                <TableCell sx={tableHeaderStyle} align="center">Previous Patch</TableCell>
+                <TableCell sx={tableHeaderStyle} align="center">Current Patch</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {softwarePatchData.map((item, index) => (
+                <TableRow key={item.id || index}>
+                  <TableCell sx={tableCellStyle} align="center">
+                    {item.serialNo || index + 1}
+                  </TableCell>
+                  <TableCell sx={tableCellStyle} align="center">
+                    <Typography variant="body2">
+                      {item.serverName || 'N/A'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={tableCellStyle} align="center">
+                    <Typography variant="body2">
+                      {item.previousPatch || 'N/A'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={tableCellStyle} align="center">
+                    <Typography variant="body2">
+                      {item.currentPatch || 'N/A'}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      ) : (
+        <Box sx={{ 
+          padding: 3, 
+          textAlign: 'center', 
+          backgroundColor: '#f5f5f5', 
+          borderRadius: 1,
+          marginBottom: 2
+        }}>
+          <Typography variant="body1" color="textSecondary">
+            No software patch data available
+          </Typography>
         </Box>
       )}
 
-      {/* Result */}
-      <Grid container spacing={2} sx={{ marginBottom: 2 }}>
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 1 }}>
-            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-              Result: Software patches and updates are current and up to date.
-            </Typography>
-            {result && (
-              <Chip
-                label={getYesNoStatusLabel(result)}
-                color={getStatusColor(result)}
-                size="small"
-              />
-            )}
-          </Box>
-        </Grid>
-      </Grid>
-
-      {/* Remarks */}
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            label="Remarks"
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-            disabled={disabled}
-            sx={fieldStyle}
-          />
-        </Grid>
-      </Grid>
-    </Box>
+      {/* Remarks Section - Matching SoftwarePatch.js style */}
+      <Box sx={{ marginTop: 3 }}>
+        <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+          📝 Remarks
+        </Typography>
+        
+        <TextField
+          fullWidth
+          multiline
+          rows={4}
+          variant="outlined"
+          label="Remarks"
+          value={remarks}
+          onChange={(e) => setRemarks(e.target.value)}
+          disabled={disabled}
+          placeholder="Enter any additional remarks or observations..."
+          sx={{
+            ...fieldStyle,
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: 'white',
+            }
+          }}
+        />
+      </Box>
+    </Paper>
   );
 };
 

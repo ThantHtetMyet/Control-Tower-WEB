@@ -4,57 +4,80 @@ import {
   Typography,
   TextField,
   Chip,
-  Grid
+  Grid,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material';
 import { Security as SecurityIcon } from '@mui/icons-material';
-import yesNoStatusService from '../../../api-services/yesNoStatusService';
 
 const ASAFirewall_Details = ({ data, disabled = false }) => {
-  const [result, setResult] = useState('');
+  const [asaFirewallData, setAsaFirewallData] = useState([]);
   const [remarks, setRemarks] = useState('');
-  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
 
+  // Debug logging
   useEffect(() => {
-    const fetchYesNoStatusOptions = async () => {
-      try {
-        const options = await yesNoStatusService.getYesNoStatusOptions();
-        setYesNoStatusOptions(options);
-      } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
-      }
-    };
+    console.log('ASAFirewall_Details - Raw data received:', data);
+  }, [data]);
 
-    fetchYesNoStatusOptions();
-  }, []);
-
+  // Data transformation effect
   useEffect(() => {
     if (data) {
-      setResult(data.result || data.YesNoStatusID || '');
-      setRemarks(data.remarks || data.Remarks || '');
+      console.log('ASAFirewall_Details - Processing data:', data);
+      
+      let processedData = [];
+      let processedRemarks = '';
+
+      // Handle different data structures
+      if (data.pmServerASAFirewalls && Array.isArray(data.pmServerASAFirewalls)) {
+        processedData = data.pmServerASAFirewalls;
+        processedRemarks = data.pmServerASAFirewalls[0]?.remarks || '';
+      } else if (data.PMServerASAFirewalls && Array.isArray(data.PMServerASAFirewalls)) {
+        processedData = data.PMServerASAFirewalls;
+        processedRemarks = data.PMServerASAFirewalls[0]?.remarks || '';
+      } else if (data.asaFirewalls && Array.isArray(data.asaFirewalls)) {
+        processedData = data.asaFirewalls;
+        processedRemarks = data.asaFirewalls[0]?.remarks || '';
+      } else if (data.ASAFirewalls && Array.isArray(data.ASAFirewalls)) {
+        processedData = data.ASAFirewalls;
+        processedRemarks = data.ASAFirewalls[0]?.remarks || '';
+      } else if (Array.isArray(data)) {
+        processedData = data;
+        processedRemarks = data[0]?.remarks || '';
+      } else if (data.details && Array.isArray(data.details)) {
+        processedData = data.details;
+        processedRemarks = data.remarks || data.details[0]?.remarks || '';
+      }
+
+      // Extract remarks from various possible locations
+      if (!processedRemarks) {
+        processedRemarks = data.remarks || data.Remarks || '';
+      }
+
+      console.log('ASAFirewall_Details - Processed data:', processedData);
+      console.log('ASAFirewall_Details - Processed remarks:', processedRemarks);
+
+      setAsaFirewallData(processedData);
+      setRemarks(processedRemarks);
     }
   }, [data]);
 
-  const getYesNoStatusLabel = (statusId) => {
-    const status = yesNoStatusOptions.find(option => option.id === statusId);
-    return status ? status.name : 'Unknown';
-  };
-
-  const getStatusColor = (statusId) => {
-    const status = yesNoStatusOptions.find(option => option.id === statusId);
-    if (!status) return 'default';
+  const getResultStatusColor = (statusName) => {
+    if (!statusName) return 'default';
     
-    switch (status.name.toLowerCase()) {
-      case 'yes':
-      case 'ok':
-      case 'good':
-        return 'success';
-      case 'no':
-      case 'error':
-      case 'bad':
-        return 'error';
-      default:
-        return 'default';
+    const name = statusName.toLowerCase();
+    if (name.includes('pass') || name.includes('ok') || name.includes('good') || name.includes('success')) {
+      return 'success';
+    } else if (name.includes('fail') || name.includes('error') || name.includes('bad') || name.includes('critical')) {
+      return 'error';
+    } else if (name.includes('warning') || name.includes('caution')) {
+      return 'warning';
     }
+    return 'default';
   };
 
   const fieldStyle = {
@@ -67,63 +90,142 @@ const ASAFirewall_Details = ({ data, disabled = false }) => {
     }
   };
 
-  return (
-    <Box>
-      {/* Instructions */}
-      <Typography variant="body1" sx={{ marginBottom: 2, fontStyle: 'italic' }}>
-        Check the status and configuration of the ASA Firewall to ensure network security is maintained.
-      </Typography>
+  // Styling constants matching ASAFirewall.js
+  const sectionContainerStyle = {
+    padding: 3,
+    marginBottom: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+    border: '1px solid #e0e0e0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  };
 
-      {/* Reference Image */}
-      {data?.referenceImagePath && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', marginBottom: 3 }}>
-          <img
-            src={data.referenceImagePath}
-            alt="ASA Firewall Reference"
-            style={{
-              maxWidth: '100%',
-              height: 'auto',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-            }}
-          />
+  const sectionHeaderStyle = {
+    fontWeight: 'bold',
+    marginBottom: 2,
+    color: '#1976d2',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
+  };
+
+  return (
+    <Paper sx={sectionContainerStyle}>
+      <Typography variant="h5" sx={sectionHeaderStyle}>
+        <SecurityIcon /> ASA Firewall Maintenance
+      </Typography>
+      
+      {/* Instructions */}
+      <Box sx={{ marginBottom: 3 }}>
+        <Typography variant="body1" sx={{ marginBottom: 2, fontWeight: 'bold', color: '#333' }}>
+          To check for ASA firewall health and backup of running configuration
+        </Typography>
+        <Typography variant="body1" sx={{ marginBottom: 2 }}>
+          <strong>Procedure:</strong>
+        </Typography>
+        <Typography variant="body2" sx={{ marginLeft: 2, marginBottom: 1 }}>
+          1. Connect to ASDM application from SCADA server
+        </Typography>
+        <Typography variant="body2" sx={{ marginLeft: 2, marginBottom: 2 }}>
+          2. Access to ASA firewall CLI and input commands below
+        </Typography>
+      </Box>
+
+      {/* Data Display */}
+      {asaFirewallData && asaFirewallData.length > 0 ? (
+        <TableContainer component={Paper} sx={{ marginBottom: 3 }}>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>S/N</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>Command Input</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>Expected Result</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>Result Status</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {asaFirewallData.map((item, index) => (
+                <TableRow key={item.id || index}>
+                  <TableCell>{item.serialNumber || index + 1}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {item.commandInput || 'N/A'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {item.asaFirewallStatusName || 'N/A'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={item.resultStatusName || 'Unknown'}
+                      color={getResultStatusColor(item.resultStatusName)}
+                      variant="filled"
+                      size="small"
+                      sx={{
+                        fontWeight: 'bold',
+                        minWidth: '80px',
+                        '& .MuiChip-label': {
+                          padding: '0 12px'
+                        }
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      ) : (
+        <Box sx={{ 
+          padding: 3, 
+          textAlign: 'center', 
+          backgroundColor: '#f5f5f5', 
+          borderRadius: 1,
+          marginBottom: 3
+        }}>
+          <Typography variant="body1" color="textSecondary">
+            No ASA Firewall data available
+          </Typography>
         </Box>
       )}
 
-      {/* Result */}
-      <Grid container spacing={2} sx={{ marginBottom: 2 }}>
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 1 }}>
-            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-              Result: ASA Firewall is operational and properly configured.
-            </Typography>
-            {result && (
-              <Chip
-                label={getYesNoStatusLabel(result)}
-                color={getStatusColor(result)}
-                size="small"
-              />
-            )}
-          </Box>
-        </Grid>
-      </Grid>
+      {/* Additional Steps */}
+      <Box sx={{ marginBottom: 3, padding: 2, backgroundColor: '#fff3e0', borderRadius: 1 }}>
+        <Typography variant="body2" sx={{ marginBottom: 1 }}>
+          3. Check for firewall overview to ensure everything is running fine
+        </Typography>
+        <Typography variant="body2">
+          4. Backup the configuration to D drive of SCADA svr1
+        </Typography>
+      </Box>
 
-      {/* Remarks */}
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            label="Remarks"
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-            disabled={disabled}
-            sx={fieldStyle}
-          />
-        </Grid>
-      </Grid>
-    </Box>
+      {/* Remarks Section - Matching ASAFirewall.js style */}
+      <Box sx={{ marginTop: 3 }}>
+        <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+          📝 Remarks
+        </Typography>
+        
+        <TextField
+          fullWidth
+          multiline
+          rows={4}
+          variant="outlined"
+          label="Remarks"
+          value={remarks}
+          onChange={(e) => setRemarks(e.target.value)}
+          disabled={disabled}
+          placeholder="Enter any additional remarks or observations..."
+          sx={{
+            ...fieldStyle,
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: 'white',
+            }
+          }}
+        />
+      </Box>
+    </Paper>
   );
 };
 

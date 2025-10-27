@@ -10,18 +10,15 @@ import {
   TableRow,
   Paper,
   Chip,
-  TextField,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
+  TextField
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import StorageIcon from '@mui/icons-material/Storage';
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
 
 const MonthlyDatabaseCreation_Details = ({ data, disabled = false }) => {
-  const [monthlyDatabaseData, setMonthlyDatabaseData] = useState([]);
-  const [remarks, setRemarks] = useState('');
+  const [monthlyDatabaseCreations, setMonthlyDatabaseCreations] = useState([]);
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
 
   // Helper function for date formatting
@@ -49,40 +46,51 @@ const MonthlyDatabaseCreation_Details = ({ data, disabled = false }) => {
   }, []);
 
   useEffect(() => {
-    // Handle case where data is the array directly
-    if (Array.isArray(data) && data.length > 0) {
-      setMonthlyDatabaseData(data);
-    } else if (data && data.monthlyDatabaseData && data.monthlyDatabaseData.length > 0) {
-      setMonthlyDatabaseData(data.monthlyDatabaseData);
-    }
-    
-    if (data && data.remarks) {
-      setRemarks(data.remarks || data.Remarks || '');
+    if (data && data.pmServerMonthlyDatabaseCreations) {
+      setMonthlyDatabaseCreations(data.pmServerMonthlyDatabaseCreations);
+    } else if (Array.isArray(data)) {
+      setMonthlyDatabaseCreations(data);
     }
   }, [data]);
 
-  const getStatusChip = (status) => {
-    if (!status) return null;
-    
-    const statusLower = status.toString().toLowerCase();
-    let color = 'default';
-    
-    if (statusLower.includes('pass') || statusLower.includes('ok') || statusLower.includes('good')) {
-      color = 'success';
-    } else if (statusLower.includes('fail') || statusLower.includes('error') || statusLower.includes('bad')) {
-      color = 'error';
-    } else if (statusLower.includes('warning') || statusLower.includes('caution')) {
-      color = 'warning';
+  const getYesNoStatusLabel = (statusId) => {
+    const status = yesNoStatusOptions.find(option => option.id === statusId);
+    return status ? status.name : 'Unknown';
+  };
+
+  const getStatusColor = (statusId) => {
+    const label = getYesNoStatusLabel(statusId);
+    switch (label.toLowerCase()) {
+      case 'yes':
+      case 'ok':
+      case 'good':
+        return 'success';
+      case 'no':
+      case 'error':
+      case 'bad':
+        return 'error';
+      default:
+        return 'default';
     }
-    
-    return (
-      <Chip 
-        label={status} 
-        color={color} 
-        size="small"
-        variant="outlined"
-      />
-    );
+  };
+
+  // Styling
+  const sectionContainerStyle = {
+    padding: 3,
+    marginBottom: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+    border: '1px solid #e0e0e0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  };
+
+  const sectionHeaderStyle = {
+    color: '#1976d2',
+    fontWeight: 'bold',
+    marginBottom: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
   };
 
   const fieldStyle = {
@@ -96,118 +104,107 @@ const MonthlyDatabaseCreation_Details = ({ data, disabled = false }) => {
   };
 
   return (
-    <Box sx={{ 
-      padding: 3, 
-      backgroundColor: '#ffffff', 
-      borderRadius: 2, 
-      border: '1px solid #e0e0e0',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      marginBottom: 3
-    }}>
-      
-      {/* Section Title */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        marginBottom: 3,
-        paddingBottom: 2,
-        borderBottom: '1px solid #e0e0e0'
-      }}>
-        <StorageIcon sx={{ 
-          color: '#1976d2', 
-          marginRight: 1,
-          fontSize: '1.5rem'
-        }} />
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: '#1976d2', 
-            fontWeight: 'bold'
-          }}
-        >
-          Monthly Database Creation Check
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Paper sx={sectionContainerStyle}>
+        <Typography variant="h5" sx={sectionHeaderStyle}>
+          <StorageIcon /> Historical Database
         </Typography>
-      </Box>
-      {/* Monthly Database Creation Data */}
-      {monthlyDatabaseData.length > 0 && (
+        
+        {/* Monthly Database Creation Instructions */}
         <Box sx={{ marginBottom: 3 }}>
-          {monthlyDatabaseData.map((record, recordIndex) => (
-            <Accordion key={recordIndex} sx={{ marginBottom: 2 }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <StorageIcon />
-                  <Typography variant="h6">
-                    Monthly Database Creation Check - {formatDate(record.CreatedDate)}
-                  </Typography>
-                </Box>
-              </AccordionSummary>
-              <AccordionDetails>
-                {/* Record Remarks */}
-                {record.Remarks && (
-                  <Box sx={{ marginBottom: 2, padding: 2, backgroundColor: '#f9f9f9', borderRadius: 1 }}>
-                    <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-                      <strong>Remarks:</strong> {record.Remarks}
-                    </Typography>
-                  </Box>
-                )}
-                
+          <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: 'bold' }}>
+            Monthly Database Creation
+          </Typography>
+          
+          <Typography variant="body1" sx={{ marginBottom: 2 }}>
+            Willowlynx's historical DB uses monthly database. Check the MSSQL database and make sure the monthly databases are created for the next 6 months.
+          </Typography>
+        </Box>
+
+        {/* Monthly Database Creation Table */}
+        {monthlyDatabaseCreations.length > 0 && (
+          <Box sx={{ marginBottom: 3 }}>
+            {monthlyDatabaseCreations.map((record, recordIndex) => (
+              <Box key={recordIndex} sx={{ marginBottom: 3 }}>
                 {/* Details Table */}
-                {record.Details && record.Details.length > 0 ? (
-                  <TableContainer component={Paper}>
-                    <Table size="small">
+                {record.details && record.details.length > 0 ? (
+                  <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
+                    <Table>
                       <TableHead>
                         <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                          <TableCell sx={{ fontWeight: 'bold' }}>S/N</TableCell>
                           <TableCell sx={{ fontWeight: 'bold' }}>Server Name</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>Result Status</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold' }}>Monthly DB are Created</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {record.Details.map((detail, detailIndex) => (
+                        {record.details.map((detail, detailIndex) => (
                           <TableRow key={detailIndex}>
-                            <TableCell>{detail.ServerName || 'N/A'}</TableCell>
                             <TableCell>
-                              {detail.ResultStatusID ? getStatusChip(detail.ResultStatusID) : 'N/A'}
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                {detail.serialNo || (detailIndex + 1)}
+                              </Typography>
                             </TableCell>
-                            <TableCell>{detail.Remarks || 'N/A'}</TableCell>
+                            <TableCell>{detail.serverName || 'N/A'}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={getYesNoStatusLabel(detail.yesNoStatusID)}
+                                color={getStatusColor(detail.yesNoStatusID)}
+                                size="small"
+                              />
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </TableContainer>
                 ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No detail records available for this monthly database creation check
-                  </Typography>
+                  <Box sx={{ textAlign: 'center', padding: 3, color: '#666', marginBottom: 2 }}>
+                    <Typography variant="body2">
+                      No detail records available for this monthly database creation check
+                    </Typography>
+                  </Box>
                 )}
-              </AccordionDetails>
-            </Accordion>
-          ))}
-        </Box>
-      )}
+              </Box>
+            ))}
+          </Box>
+        )}
 
-      {/* Remarks */}
-      {remarks && (
-        <TextField
-          fullWidth
-          multiline
-          rows={3}
-          label="Remarks"
-          value={remarks}
-          disabled={disabled}
-          sx={fieldStyle}
-        />
-      )}
+        {/* Remarks Section */}
+        {monthlyDatabaseCreations.length > 0 && monthlyDatabaseCreations[0].remarks && (
+          <Box sx={{ marginTop: 3 }}>
+            <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+              📝 Remarks
+            </Typography>
+            
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              variant="outlined"
+              label="Remarks"
+              value={monthlyDatabaseCreations[0].remarks}
+              disabled
+              sx={{
+                ...fieldStyle,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f5f5f5',
+                }
+              }}
+            />
+          </Box>
+        )}
 
-      {/* No Data Message */}
-      {monthlyDatabaseData.length === 0 && !remarks && (
-        <Box sx={{ textAlign: 'center', padding: 3, color: '#666' }}>
-          <Typography variant="body2">
-            No monthly database creation data available
-          </Typography>
-        </Box>
-      )}
-    </Box>
+        {/* No Data Message */}
+        {monthlyDatabaseCreations.length === 0 && (
+          <Box sx={{ textAlign: 'center', padding: 3, color: '#666' }}>
+            <Typography variant="body2">
+              No monthly database creation data available
+            </Typography>
+          </Box>
+        )}
+      </Paper>
+    </LocalizationProvider>
   );
 };
 

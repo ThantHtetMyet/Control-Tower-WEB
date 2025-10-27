@@ -1416,11 +1416,12 @@ export const submitServerPMReportForm = async (formData, user) => {
       projectNo: formData.projectNo,
       customer: formData.customer,
       reportTitle: formData.reportTitle,
-      attendedBy: formData.attendedBy,
-      witnessedBy: formData.witnessedBy,
-      startDate: formData.startDate,
-      completionDate: formData.completionDate,
-      remarks: formData.remarks,
+      // Extract SignOff data from formData.signOffData
+      attendedBy: formData.signOffData?.attendedBy || formData.attendedBy || '',
+      witnessedBy: formData.signOffData?.witnessedBy || formData.witnessedBy || '',
+      startDate: formData.signOffData?.startDateTime || formData.startDate || null,
+      completionDate: formData.signOffData?.completionDateTime || formData.completionDate || null,
+      remarks: formData.signOffData?.remark || formData.remarks || '',
       createdBy: user.id,
 
       // Transform all component data

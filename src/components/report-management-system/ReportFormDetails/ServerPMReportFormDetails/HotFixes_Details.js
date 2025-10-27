@@ -2,61 +2,139 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
   TextField,
-  Chip,
-  Grid
+  Chip
 } from '@mui/material';
-import { Build as BuildIcon } from '@mui/icons-material';
-import yesNoStatusService from '../../../api-services/yesNoStatusService';
+import {
+  Build as BuildIcon,
+} from '@mui/icons-material';
+import resultStatusService from '../../../api-services/resultStatusService';
 
 const HotFixes_Details = ({ data, disabled = false }) => {
-  const [result, setResult] = useState('');
+  const [hotFixesData, setHotFixesData] = useState([]);
   const [remarks, setRemarks] = useState('');
-  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
+  const [resultStatusOptions, setResultStatusOptions] = useState([]);
 
+  // Fetch ResultStatus options on component mount
   useEffect(() => {
-    const fetchYesNoStatusOptions = async () => {
+    const fetchResultStatuses = async () => {
       try {
-        const options = await yesNoStatusService.getYesNoStatusOptions();
-        setYesNoStatusOptions(options);
+        const response = await resultStatusService.getResultStatuses();
+        setResultStatusOptions(response || []);
       } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
+        console.error('Error fetching result status options:', error);
       }
     };
 
-    fetchYesNoStatusOptions();
+    fetchResultStatuses();
   }, []);
 
+  // Transform API data when it changes
   useEffect(() => {
-    if (data) {
-      setResult(data.result || data.YesNoStatusID || '');
-      setRemarks(data.remarks || data.Remarks || '');
+    
+    if (!data) {
+      
+      setHotFixesData([]);
+      setRemarks('');
+      return;
+    }
+
+    try {
+      // Handle different possible data structures
+      let hotFixesArray = null;
+      let remarksValue = '';
+
+      // Check if data is the hotfixes array directly
+      if (Array.isArray(data)) {
+        hotFixesArray = data;
+      }
+      // Check for nested pmServerHotFixes property
+      else if (data.pmServerHotFixes && Array.isArray(data.pmServerHotFixes)) {
+        hotFixesArray = data.pmServerHotFixes;
+      }
+      // Check for other possible property names
+      else if (data.PMServerHotFixes && Array.isArray(data.PMServerHotFixes)) {
+        hotFixesArray = data.PMServerHotFixes;
+      }
+      else if (data.hotFixes && Array.isArray(data.hotFixes)) {
+        hotFixesArray = data.hotFixes;
+      }
+
+      console.log('HotFixes_Details - Extracted hotFixesArray:', hotFixesArray);
+
+      if (hotFixesArray && hotFixesArray.length > 0) {
+        const hotFixesRecord = hotFixesArray[0];
+        console.log('HotFixes_Details - Processing record:', hotFixesRecord);
+
+        // Extract details array
+        const details = hotFixesRecord.details || hotFixesRecord.Details || [];
+        console.log('HotFixes_Details - Details array:', details);
+
+        // Extract remarks
+        remarksValue = hotFixesRecord.remarks || hotFixesRecord.Remarks || '';
+        console.log('HotFixes_Details - Remarks:', remarksValue);
+
+        // Transform details data
+        const transformedData = details.map((detail, index) => {
+          const transformed = {
+            id: detail.id || detail.ID || `hotfix-${index}`,
+            serialNo: detail.serialNo || detail.SerialNo || (index + 1).toString(),
+            machineName: detail.serverName || detail.ServerName || 'N/A',
+            latestHotfixesApplied: detail.hotFixName || detail.HotFixName || detail.latestHotFixsApplied || detail.LatestHotFixsApplied || 'N/A',
+            done: detail.resultStatusID || detail.ResultStatusID,
+            resultStatusName: detail.resultStatusName || detail.ResultStatusName || 'Unknown'
+          };
+          console.log(`HotFixes_Details - Transformed detail ${index}:`, transformed);
+          return transformed;
+        });
+
+        console.log('HotFixes_Details - Final transformed data:', transformedData);
+        setHotFixesData(transformedData);
+        setRemarks(remarksValue);
+      } else {
+        console.log('HotFixes_Details - No hotfixes array found or empty');
+        setHotFixesData([]);
+        setRemarks('');
+      }
+    } catch (error) {
+      console.error('HotFixes_Details - Error processing data:', error);
+      setHotFixesData([]);
+      setRemarks('');
     }
   }, [data]);
 
-  const getYesNoStatusLabel = (statusId) => {
-    const status = yesNoStatusOptions.find(option => option.id === statusId);
-    return status ? status.name : 'Unknown';
+  // Get result status name by ID
+  const getResultStatusName = (statusId) => {
+    if (!statusId) return 'N/A';
+    const status = resultStatusOptions.find(option => option.id === statusId);
+    return status ? status.name : statusId;
   };
 
-  const getStatusColor = (statusId) => {
-    const status = yesNoStatusOptions.find(option => option.id === statusId);
-    if (!status) return 'default';
+  // Get status color for chip
+  const getStatusColor = (statusName) => {
+    if (!statusName) return 'default';
     
-    switch (status.name.toLowerCase()) {
-      case 'yes':
-      case 'ok':
-      case 'good':
-        return 'success';
-      case 'no':
-      case 'error':
-      case 'bad':
-        return 'error';
-      default:
-        return 'default';
+    const statusLower = statusName.toString().toLowerCase();
+    
+    if (statusLower.includes('pass') || statusLower.includes('ok') || statusLower.includes('good') || statusLower.includes('success')) {
+      return 'success';
+    } else if (statusLower.includes('fail') || statusLower.includes('error') || statusLower.includes('bad') || statusLower.includes('critical')) {
+      return 'error';
+    } else if (statusLower.includes('warning') || statusLower.includes('caution') || statusLower.includes('pending')) {
+      return 'warning';
     }
+    
+    return 'default';
   };
 
+  // Field styling for disabled inputs
   const fieldStyle = {
     '& .MuiInputBase-input.Mui-disabled': {
       WebkitTextFillColor: '#000000',
@@ -67,94 +145,112 @@ const HotFixes_Details = ({ data, disabled = false }) => {
     }
   };
 
+  // Styling to match HotFixes.js
+  const sectionContainerStyle = {
+    padding: 3,
+    marginBottom: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+    border: '1px solid #e0e0e0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  };
+
+  const sectionHeaderStyle = {
+    color: '#1976d2',
+    fontWeight: 'bold',
+    marginBottom: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
+  };
+  
   return (
-    <Box sx={{ 
-      padding: 3, 
-      backgroundColor: '#ffffff', 
-      borderRadius: 2, 
-      border: '1px solid #e0e0e0',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      marginBottom: 3
-    }}>
+    <Paper sx={sectionContainerStyle}>
+      <Typography variant="h5" sx={sectionHeaderStyle}>
+        <BuildIcon /> Hotfixes / Service Packs
+      </Typography>
       
-      {/* Section Title */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        marginBottom: 3,
-        paddingBottom: 2,
-        borderBottom: '1px solid #e0e0e0'
-      }}>
-        <BuildIcon sx={{ 
-          color: '#1976d2', 
-          marginRight: 1,
-          fontSize: '1.5rem'
-        }} />
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: '#1976d2', 
-            fontWeight: 'bold'
-          }}
-        >
-          Hot Fixes Check
+      {/* HotFixes Instructions */}
+      <Box sx={{ marginBottom: 3 }}>
+        <Typography variant="body1" sx={{ marginBottom: 2 }}>
+          To review & apply the latest hotfixes, the service pack on all servers were applicable.
         </Typography>
       </Box>
-      {/* Instructions */}
-      <Typography variant="body1" sx={{ marginBottom: 2, fontStyle: 'italic' }}>
-        Check for available hotfixes and service packs that need to be applied to the system.
-      </Typography>
 
-      {/* Reference Image */}
-      {data?.referenceImagePath && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', marginBottom: 3 }}>
-          <img
-            src={data.referenceImagePath}
-            alt="Hotfixes Reference"
-            style={{
-              maxWidth: '100%',
-              height: 'auto',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-            }}
-          />
-        </Box>
-      )}
-
-      {/* Result */}
-      <Grid container spacing={2} sx={{ marginBottom: 2 }}>
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 1 }}>
-            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-              Result: Hotfixes and service packs are up to date.
-            </Typography>
-            {result && (
-              <Chip
-                label={getYesNoStatusLabel(result)}
-                color={getStatusColor(result)}
-                size="small"
-              />
+      {/* HotFixes Table */}
+      <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableCell sx={{ fontWeight: 'bold' }}>S/N</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Machine Name</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Latest Hotfixes Applied (e.g., KB4022719)</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Done</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {hotFixesData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
+                  No hotfixes data available
+                </TableCell>
+              </TableRow>
+            ) : (
+              hotFixesData.map((row, index) => (
+                <TableRow key={row.id || index}>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {row.serialNo}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {row.machineName}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {row.latestHotfixesApplied}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    {row.done ? (
+                      <Chip 
+                        label={row.resultStatusName || getResultStatusName(row.done)} 
+                        color={getStatusColor(row.resultStatusName || getResultStatusName(row.done))} 
+                        size="small"
+                      />
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        N/A
+                      </Typography>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
             )}
-          </Box>
-        </Grid>
-      </Grid>
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-      {/* Remarks */}
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            label="Remarks"
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-            disabled={disabled}
-            sx={fieldStyle}
-          />
-        </Grid>
-      </Grid>
-    </Box>
+      {/* Remarks Section */}
+      <Box sx={{ marginTop: 3 }}>
+        <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+          📝 Remarks
+        </Typography>
+        
+        <TextField
+          fullWidth
+          multiline
+          rows={3}
+          variant="outlined"
+          label="Remarks"
+          value={remarks}
+          disabled={disabled}
+          sx={fieldStyle}
+        />
+      </Box>
+    </Paper>
   );
 };
 

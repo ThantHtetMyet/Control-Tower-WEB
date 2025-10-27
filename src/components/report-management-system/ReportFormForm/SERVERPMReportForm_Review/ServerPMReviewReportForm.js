@@ -35,10 +35,12 @@ import {
   SwapHoriz as SwapHorizIcon,
   Security as SecurityIcon,
   SystemUpdate as SystemUpdateIcon,
+  Assignment as AssignmentIcon,
   AccessTime
 } from '@mui/icons-material';
 
 // Import individual review components
+import ServerPMReportFormSignOff_Review from './ServerPMReportFormSignOff_Review';
 import ServerHealth_Review from './ServerHealth_Review';
 import HardDriveHealth_Review from './HardDriveHealth_Review';
 import DiskUsage_Review from './DiskUsage_Review';
@@ -322,6 +324,7 @@ const ServerPMReviewReportForm = ({
   
   // Component configuration matching ServerPMReportForm
   const components = [
+    { key: 'signOff', title: 'Sign Off Information', icon: AssignmentIcon, Component: ServerPMReportFormSignOff_Review, dataKey: 'signOffData' },
     { key: 'serverHealth', title: 'Server Health Check', icon: ComputerIcon, Component: ServerHealth_Review, dataKey: 'serverHealthData' },
     { key: 'hardDriveHealth', title: 'Hard Drive Health Check', icon: StorageIcon, Component: HardDriveHealth_Review, dataKey: 'hardDriveHealthData' },
     { key: 'diskUsage', title: 'Disk Usage Check', icon: StorageIcon, Component: DiskUsage_Review, dataKey: 'diskUsageData' },
@@ -638,31 +641,6 @@ const ServerPMReviewReportForm = ({
 
             return componentsWithData.map(({ key, title, icon: Icon, Component, dataKey }) => (
               <Paper key={key} elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-                {/* Component Title Header */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 1, 
-                  mb: 2,
-                  pb: 1,
-                  borderBottom: '2px solid #e0e0e0'
-                }}>
-                  <Icon sx={{ color: '#1976d2', fontSize: 24 }} />
-                  <Typography variant="h6" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
-                    {title}
-                  </Typography>
-                  <Chip 
-                    label="Completed" 
-                    size="small" 
-                    sx={{ 
-                      ml: 'auto',
-                      backgroundColor: '#4caf50', 
-                      color: 'white',
-                      fontWeight: 'bold'
-                    }} 
-                  />
-                </Box>
-                
                 <Box sx={{ 
                   '& .MuiTextField-root': {
                     '& .MuiOutlinedInput-root': {

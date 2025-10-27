@@ -4,36 +4,31 @@ import {
   Typography,
   TextField,
   Chip,
-  Grid,
-  Divider,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
+  Paper
 } from '@mui/material';
 import {
-  Storage as StorageIcon,
-  ExpandMore as ExpandMoreIcon,
+  Backup as BackupIcon,
 } from '@mui/icons-material';
-import { format } from 'date-fns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
 
 const DatabaseBackup_Details = ({ data, disabled = false }) => {
-  const [databaseBackupData, setDatabaseBackupData] = useState([]);
-  const [remarks, setRemarks] = useState('');
+  const [databaseBackups, setDatabaseBackups] = useState([]);
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
 
   // Helper function for date formatting
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
-      return format(new Date(dateString), 'dd/MM/yyyy HH:mm');
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-GB') + ' ' + date.toLocaleTimeString('en-GB', { hour12: false });
     } catch (error) {
       return 'Invalid Date';
     }
@@ -42,7 +37,7 @@ const DatabaseBackup_Details = ({ data, disabled = false }) => {
   useEffect(() => {
     const fetchYesNoStatusOptions = async () => {
       try {
-        const options = await yesNoStatusService.getYesNoStatusOptions();
+        const options = await yesNoStatusService.getYesNoStatuses();
         setYesNoStatusOptions(options);
       } catch (error) {
         console.error('Error fetching yes/no status options:', error);
@@ -53,40 +48,55 @@ const DatabaseBackup_Details = ({ data, disabled = false }) => {
   }, []);
 
   useEffect(() => {
-    // Handle case where data is the array directly
-    if (Array.isArray(data) && data.length > 0) {
-      setDatabaseBackupData(data);
-    } else if (data && data.databaseBackupData && data.databaseBackupData.length > 0) {
-      setDatabaseBackupData(data.databaseBackupData);
-    }
+    console.log('DatabaseBackup_Details - Received data:', data);
     
-    if (data && data.remarks) {
-      setRemarks(data.remarks || data.Remarks || '');
+    if (data && data.pmServerDatabaseBackups) {
+      console.log('Setting database backups:', data.pmServerDatabaseBackups);
+      setDatabaseBackups(data.pmServerDatabaseBackups);
+    } else if (Array.isArray(data)) {
+      console.log('Setting database backups from array:', data);
+      setDatabaseBackups(data);
     }
   }, [data]);
 
-  const getStatusChip = (status) => {
-    if (!status) return null;
-    
-    const statusLower = status.toString().toLowerCase();
-    let color = 'default';
-    
-    if (statusLower.includes('pass') || statusLower.includes('ok') || statusLower.includes('good')) {
-      color = 'success';
-    } else if (statusLower.includes('fail') || statusLower.includes('error') || statusLower.includes('bad')) {
-      color = 'error';
-    } else if (statusLower.includes('warning') || statusLower.includes('caution')) {
-      color = 'warning';
+  const getYesNoStatusLabel = (statusId) => {
+    const status = yesNoStatusOptions.find(option => option.id === statusId);
+    return status ? status.name : 'Unknown';
+  };
+
+  const getStatusColor = (statusId) => {
+    const label = getYesNoStatusLabel(statusId);
+    switch (label.toLowerCase()) {
+      case 'yes':
+      case 'ok':
+      case 'good':
+        return 'success';
+      case 'no':
+      case 'error':
+      case 'bad':
+        return 'error';
+      default:
+        return 'default';
     }
-    
-    return (
-      <Chip 
-        label={status} 
-        color={color} 
-        size="small"
-        variant="outlined"
-      />
-    );
+  };
+
+  // Styling
+  const sectionContainerStyle = {
+    padding: 3,
+    marginBottom: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+    border: '1px solid #e0e0e0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  };
+
+  const sectionHeaderStyle = {
+    color: '#1976d2',
+    fontWeight: 'bold',
+    marginBottom: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
   };
 
   const fieldStyle = {
@@ -100,118 +110,190 @@ const DatabaseBackup_Details = ({ data, disabled = false }) => {
   };
 
   return (
-    <Box sx={{ 
-      padding: 3, 
-      backgroundColor: '#ffffff', 
-      borderRadius: 2, 
-      border: '1px solid #e0e0e0',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      marginBottom: 3
-    }}>
-      
-      {/* Section Title */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        marginBottom: 3,
-        paddingBottom: 2,
-        borderBottom: '1px solid #e0e0e0'
-      }}>
-        <StorageIcon sx={{ 
-          color: '#1976d2', 
-          marginRight: 1,
-          fontSize: '1.5rem'
-        }} />
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: '#1976d2', 
-            fontWeight: 'bold'
-          }}
-        >
-          Database Backup Check
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Paper sx={sectionContainerStyle}>
+        <Typography variant="h5" sx={sectionHeaderStyle}>
+          <BackupIcon /> Database Backup Check
         </Typography>
-      </Box>
-      {/* Database Backup Data */}
-      {databaseBackupData.length > 0 && (
+        
+        {/* Database Backup Instructions */}
         <Box sx={{ marginBottom: 3 }}>
-          {databaseBackupData.map((record, recordIndex) => (
-            <Accordion key={recordIndex} sx={{ marginBottom: 2 }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <StorageIcon />
-                  <Typography variant="h6">
-                    Database Backup Check - {formatDate(record.CreatedDate)}
-                  </Typography>
-                </Box>
-              </AccordionSummary>
-              <AccordionDetails>
-                {/* Record Remarks */}
-                {record.Remarks && (
-                  <Box sx={{ marginBottom: 2, padding: 2, backgroundColor: '#f9f9f9', borderRadius: 1 }}>
-                    <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-                      <strong>Remarks:</strong> {record.Remarks}
-                    </Typography>
-                  </Box>
-                )}
-                
-                {/* Details Table */}
-                {record.Details && record.Details.length > 0 ? (
-                  <TableContainer component={Paper}>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                          <TableCell sx={{ fontWeight: 'bold' }}>Server Name</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>Result Status</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {record.Details.map((detail, detailIndex) => (
-                          <TableRow key={detailIndex}>
-                            <TableCell>{detail.ServerName || 'N/A'}</TableCell>
-                            <TableCell>
-                              {detail.ResultStatusID ? getStatusChip(detail.ResultStatusID) : 'N/A'}
-                            </TableCell>
-                            <TableCell>{detail.Remarks || 'N/A'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No detail records available for this database backup check
-                  </Typography>
-                )}
-              </AccordionDetails>
-            </Accordion>
-          ))}
-        </Box>
-      )}
-
-      {/* Remarks */}
-      {remarks && (
-        <TextField
-          fullWidth
-          multiline
-          rows={3}
-          label="Remarks"
-          value={remarks}
-          disabled={disabled}
-          sx={fieldStyle}
-        />
-      )}
-
-      {/* No Data Message */}
-      {databaseBackupData.length === 0 && !remarks && (
-        <Box sx={{ textAlign: 'center', padding: 3, color: '#666' }}>
-          <Typography variant="body2">
-            No database backup data available
+          <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: 'bold' }}>
+            Database Backup
+          </Typography>
+          
+          <Typography variant="body1" sx={{ marginBottom: 2 }}>
+            Check <b> D:\MSSQLSERVER-BACKUP\Monthly </b> make sure the database is backup in this directory.
           </Typography>
         </Box>
-      )}
-    </Box>
+
+        {/* Database Backup Tables */}
+        {databaseBackups.length > 0 && (
+          <Box sx={{ marginBottom: 3 }}>
+            {databaseBackups.map((backup, backupIndex) => (
+              <Box key={backupIndex} sx={{ marginBottom: 3 }}>
+                {/* MSSQL Database Backup Table */}
+                {backup.mssqlDatabaseBackupDetails && backup.mssqlDatabaseBackupDetails.length > 0 ? (
+                  <Box sx={{ marginBottom: 3 }}>
+                    <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+                      🗄️ MSSQL Database Backup Check
+                    </Typography>
+                    <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
+                      <Table>
+                        <TableHead>
+                          <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                            <TableCell sx={{ fontWeight: 'bold' }}>S/N</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Item</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Monthly DB Backup are Created</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {backup.mssqlDatabaseBackupDetails.map((detail, detailIndex) => (
+                            <TableRow key={detailIndex}>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                  {detailIndex + 1}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>{detail.serverName || 'N/A'}</TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={getYesNoStatusLabel(detail.yesNoStatusID)}
+                                  color={getStatusColor(detail.yesNoStatusID)}
+                                  size="small"
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                ) : (
+                  <Box sx={{ marginBottom: 3 }}>
+                    <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+                      🗄️ MSSQL Database Backup Check
+                    </Typography>
+                    <Box sx={{ textAlign: 'center', padding: 3, color: '#666', marginBottom: 2 }}>
+                      <Typography variant="body2">
+                        No MSSQL database backup data available.
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+
+                {/* SCADA Database Backup Table */}
+                {backup.scadaDataBackupDetails && backup.scadaDataBackupDetails.length > 0 ? (
+                  <Box sx={{ marginBottom: 3 }}>
+                    <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+                      📊 SCADA Database Backup Check
+                    </Typography>
+                    <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
+                      <Table>
+                        <TableHead>
+                          <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                            <TableCell sx={{ fontWeight: 'bold' }}>S/N</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Item</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>SCADA DB Backup are Created</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {backup.scadaDataBackupDetails.map((detail, detailIndex) => (
+                            <TableRow key={detailIndex}>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                  {detailIndex + 1}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>{detail.serverName || 'N/A'}</TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={getYesNoStatusLabel(detail.yesNoStatusID)}
+                                  color={getStatusColor(detail.yesNoStatusID)}
+                                  size="small"
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                ) : (
+                  <Box sx={{ marginBottom: 3 }}>
+                    <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+                      📊 SCADA Database Backup Check
+                    </Typography>
+                    <Box sx={{ textAlign: 'center', padding: 3, color: '#666', marginBottom: 2 }}>
+                      <Typography variant="body2">
+                        No SCADA database backup data available.
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+            ))}
+          </Box>
+        )}
+
+        {/* Remarks Section */}
+        {databaseBackups.length > 0 && databaseBackups[0].remarks && (
+          <Box sx={{ marginTop: 3 }}>
+            <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+              📝 Remarks
+            </Typography>
+            
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              variant="outlined"
+              label="Remarks"
+              value={databaseBackups[0].remarks}
+              disabled
+              sx={{
+                ...fieldStyle,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f5f5f5',
+                }
+              }}
+            />
+          </Box>
+        )}
+
+        {/* Latest Backup File Name Section */}
+        {databaseBackups.length > 0 && databaseBackups[0].latestBackupFileName && (
+          <Box sx={{ marginTop: 3 }}>
+            <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
+              📁 Latest Backup File Name
+            </Typography>
+            
+            <TextField
+              fullWidth
+              variant="outlined"
+              label="Latest Backup File Name"
+              value={databaseBackups[0].latestBackupFileName}
+              disabled
+              sx={{
+                ...fieldStyle,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f5f5f5',
+                }
+              }}
+            />
+          </Box>
+        )}
+
+        {/* No Data Message */}
+        {databaseBackups.length === 0 && (
+          <Box sx={{ textAlign: 'center', padding: 3, color: '#666' }}>
+            <Typography variant="body2">
+              No database backup data available
+            </Typography>
+          </Box>
+        )}
+      </Paper>
+    </LocalizationProvider>
   );
 };
 

@@ -190,12 +190,7 @@ const ServerPMReportFormDetails = () => {
   };
 
   const handleBack = () => {
-    const currentIndex = steps.indexOf(currentStep);
-    if (currentIndex > 0) {
-      handleStepNavigation(steps[currentIndex - 1]);
-    } else {
-      navigate('/report-management-system/report-forms');
-    }
+    navigate('/report-management-system/report-forms');
   };
 
   // Component rendering - matching ServerPMReportForm exactly
@@ -577,27 +572,35 @@ const ServerPMReportFormDetails = () => {
                 👥 Personnel Information
               </Typography>
               
-              <Grid container spacing={3} sx={{ marginTop: 1 }}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Witnessed By"
-                    value={formData.witnessedBy || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Attended By"
-                    value={formData.attendedBy || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-              </Grid>
+              <TextField
+                fullWidth
+                variant="outlined"
+                label="Attended By"
+                value={formData.attendedBy || ''}
+                disabled
+                placeholder="Enter maintenance personnel name"
+                sx={{
+                  marginBottom: 2,
+                  marginTop: 1,
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'white',
+                  }
+                }}
+              />
+              
+              <TextField
+                fullWidth
+                variant="outlined"
+                label="Witnessed By"
+                value={formData.witnessedBy || ''}
+                disabled
+                placeholder="Enter witness name"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'white',
+                  }
+                }}
+              />
             </Paper>
 
             {/* Schedule Information Section */}
@@ -644,46 +647,55 @@ const ServerPMReportFormDetails = () => {
             </Paper>
 
             {/* Remarks Section */}
-            <Paper sx={{
-              padding: 3,
-              marginBottom: 3,
-              backgroundColor: '#ffffff',
-              borderRadius: 2,
+            <Box sx={{ 
+              padding: 3, 
+              backgroundColor: '#ffffff', 
+              borderRadius: 2, 
               border: '1px solid #e0e0e0',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              marginBottom: 3
             }}>
-              <Typography variant="h5" sx={{
-                color: '#1976d2',
-                fontWeight: 'bold',
-                marginBottom: 2,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: '#1976d2', 
+                  fontWeight: 'bold', 
+                  marginBottom: 2,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
                 📝 Remarks
               </Typography>
-              
-              <Grid container spacing={3} sx={{ marginTop: 1 }}>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={4}
-                    label="Remarks"
-                    value={formData.remarks || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-              </Grid>
-            </Paper>
+              <TextField
+                label="Additional Notes"
+                fullWidth
+                multiline
+                rows={4}
+                value={formData.remarks || ''}
+                disabled
+                placeholder="Enter any additional remarks or observations..."
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: '#f5f5f5',
+                    '& fieldset': {
+                      borderColor: '#d0d0d0'
+                    }
+                  },
+                  '& .MuiInputBase-input.Mui-disabled': {
+                    WebkitTextFillColor: 'rgba(0, 0, 0, 0.6)',
+                    color: 'rgba(0, 0, 0, 0.6)'
+                  }
+                }}
+              />
+            </Box>
 
             {/* Current Step Content */}
             <Box sx={stepContainerStyle}>
               {renderCurrentStep()}
             </Box>
 
-            {/* Footer with Dot Navigation */}
+            {/* Navigation Footer */}
             <Paper sx={{
               backgroundColor: '#ffffff',
               borderRadius: '12px',
@@ -695,11 +707,57 @@ const ServerPMReportFormDetails = () => {
               bottom: 0,
               zIndex: 1000
             }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                <Typography variant="h6" sx={{ color: '#2C3E50', fontWeight: 600 }}>
-                  {stepTitles[currentStep]}
-                </Typography>
-                {renderProgressDots()}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Button
+                  variant="contained"
+                  onClick={handleBack}
+                  disabled={isTransitioning}
+                  sx={{
+                    background: RMSTheme.components.button.primary.background,
+                    color: RMSTheme.components.button.primary.text,
+                    padding: '12px 32px',
+                    borderRadius: RMSTheme.borderRadius.small,
+                    border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                    boxShadow: RMSTheme.components.button.primary.shadow,
+                    '&:hover': {
+                      background: RMSTheme.components.button.primary.hover
+                    },
+                    '&:disabled': {
+                      opacity: 0.6
+                    }
+                  }}
+                >
+                  ← Back
+                </Button>
+                
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="h6" sx={{ color: '#2C3E50', fontWeight: 600 }}>
+                    {stepTitles[currentStep]}
+                  </Typography>
+                  {renderProgressDots()}
+                </Box>
+                
+                <Button
+                  variant="contained"
+                  onClick={handleNext}
+                  disabled={isTransitioning || currentStep === 'softwarePatch'}
+                  sx={{
+                    background: RMSTheme.components.button.primary.background,
+                    color: RMSTheme.components.button.primary.text,
+                    padding: '12px 32px',
+                    borderRadius: RMSTheme.borderRadius.small,
+                    border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                    boxShadow: RMSTheme.components.button.primary.shadow,
+                    '&:hover': {
+                      background: RMSTheme.components.button.primary.hover
+                    },
+                    '&:disabled': {
+                      opacity: 0.6
+                    }
+                  }}
+                >
+                  {currentStep === 'softwarePatch' ? 'End' : 'Next →'}
+                </Button>
               </Box>
             </Paper>
           </Box>

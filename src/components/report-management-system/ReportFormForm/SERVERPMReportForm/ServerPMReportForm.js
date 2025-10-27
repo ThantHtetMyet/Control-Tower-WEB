@@ -19,6 +19,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Component imports
+import ServerPMReportFormSignOff from './ServerPMReportFormSignOff';
 import ServerHealth from './ServerHealth';
 import HardDriveHealth from './HardDriveHealth';
 import DiskUsage from './DiskUsage';
@@ -42,11 +43,12 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
   // State management
   const [pmReportFormTypes, setPMReportFormTypes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentStep, setCurrentStep] = useState('serverHealth');
+  const [currentStep, setCurrentStep] = useState('signOff');
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Step configuration
   const steps = [
+    'signOff',
     'serverHealth',
     'hardDriveHealth', 
     'diskUsage',
@@ -68,6 +70,7 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
   ];
 
   const stepTitles = {
+    signOff: 'Sign Off Information',
     serverHealth: 'Server Health Check',
     networkHealth: 'Network Health Check',
     hardDriveHealth: 'Hard Drive Health Check',
@@ -110,6 +113,7 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
   };
 
   const dataChangeHandlers = {
+    signOff: createDataChangeHandler('signOffData'),
     serverHealth: createDataChangeHandler('serverHealthData'),
     networkHealth: createDataChangeHandler('networkHealthData'),
     hardDriveHealth: createDataChangeHandler('hardDriveHealthData'),
@@ -162,6 +166,7 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
   // Component rendering
   const renderCurrentStep = () => {
     const componentMap = {
+      signOff: ServerPMReportFormSignOff,
       serverHealth: ServerHealth,
       networkHealth: NetworkHealth,
       hardDriveHealth: HardDriveHealth,
@@ -185,7 +190,8 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
     const Component = componentMap[currentStep];
     if (!Component) return null;
 
-    const dataKey = currentStep === 'serverHealth' ? 'serverHealthData' :
+    const dataKey = currentStep === 'signOff' ? 'signOffData' :
+                   currentStep === 'serverHealth' ? 'serverHealthData' :
                    currentStep === 'networkHealth' ? 'networkHealthData' :
                    currentStep === 'hardDriveHealth' ? 'hardDriveHealthData' :
                    currentStep === 'diskUsage' ? 'diskUsageData' :
@@ -445,10 +451,15 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
 
             {/* Navigation Footer */}
             <Paper sx={{
-              ...sectionContainerStyle,
-              background: '#ffffff',
-              marginBottom: 0,
-              marginTop: 3
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              padding: '24px',
+              marginTop: '24px',
+              border: '1px solid #e0e0e0',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+              position: 'sticky',
+              bottom: 0,
+              zIndex: 1000
             }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Button
@@ -473,8 +484,8 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
                   ← Back
                 </Button>
                 
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body2" sx={{ color: '#666' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="h6" sx={{ color: '#2C3E50', fontWeight: 600 }}>
                     {stepTitles[currentStep]}
                   </Typography>
                   {renderProgressDots()}
