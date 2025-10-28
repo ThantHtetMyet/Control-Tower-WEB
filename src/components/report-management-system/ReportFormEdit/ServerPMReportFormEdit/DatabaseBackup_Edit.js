@@ -1,0 +1,382 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  MenuItem,
+  Box,
+  CircularProgress
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Backup as BackupIcon
+} from '@mui/icons-material';
+
+// Import the yes/no status service
+import yesNoStatusService from '../../../api-services/yesNoStatusService';
+
+
+const DatabaseBackup_Edit = ({ data, onDataChange }) => {
+  // State management
+  const [mssqlBackupData, setMssqlBackupData] = useState(data?.mssqlBackupData || []);
+  const [scadaBackupData, setScadaBackupData] = useState(data?.scadaBackupData || []);
+  const [latestBackupFileName, setLatestBackupFileName] = useState(data?.latestBackupFileName || '');
+  const [remarks, setRemarks] = useState(data?.remarks || '');
+  const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch yes/no status options
+  useEffect(() => {
+    const fetchYesNoStatusOptions = async () => {
+      try {
+        const response = await yesNoStatusService.getYesNoStatuses();
+        setYesNoStatusOptions(response || []);
+      } catch (error) {
+        console.error('Error fetching yes/no status options:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchYesNoStatusOptions();
+  }, []);
+
+  // Update parent component when data changes
+  useEffect(() => {
+    const updatedData = {
+      mssqlBackupData,
+      scadaBackupData,
+      latestBackupFileName,
+      remarks
+    };
+    onDataChange(updatedData);
+  }, [mssqlBackupData, scadaBackupData, latestBackupFileName, remarks, onDataChange]);
+
+  // MSSQL Backup handlers
+  const handleMssqlBackupChange = (index, field, value) => {
+    const updatedData = [...mssqlBackupData];
+    updatedData[index] = { ...updatedData[index], [field]: value };
+    setMssqlBackupData(updatedData);
+  };
+
+  const addMssqlBackupRow = () => {
+    setMssqlBackupData([...mssqlBackupData, { item: '', monthlyDBBackupCreated: '' }]);
+  };
+
+  const removeMssqlBackupRow = (index) => {
+    const updatedData = mssqlBackupData.filter((_, i) => i !== index);
+    setMssqlBackupData(updatedData);
+  };
+
+  // SCADA Backup handlers
+  const handleScadaBackupChange = (index, field, value) => {
+    const updatedData = [...scadaBackupData];
+    updatedData[index] = { ...updatedData[index], [field]: value };
+    setScadaBackupData(updatedData);
+  };
+
+  const addScadaBackupRow = () => {
+    setScadaBackupData([...scadaBackupData, { item: '', monthlyDBBackupCreated: '' }]);
+  };
+
+  const removeScadaBackupRow = (index) => {
+    const updatedData = scadaBackupData.filter((_, i) => i !== index);
+    setScadaBackupData(updatedData);
+  };
+
+  // Styling
+  const sectionContainerStyle = {
+    padding: 3,
+    marginBottom: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+    border: '1px solid #e0e0e0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  };
+
+  const sectionHeaderStyle = {
+    color: '#1976d2',
+    fontWeight: 'bold',
+    marginBottom: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
+  };
+
+  return (
+    <Paper sx={sectionContainerStyle}>
+      <Typography variant="h5" sx={sectionHeaderStyle}>
+        <BackupIcon /> Historical Database
+      </Typography>
+      
+      {/* Database Backup Instructions */}
+      <Box sx={{ marginBottom: 3 }}>
+        <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: 'bold' }}>
+          Database Backup
+        </Typography>
+        
+        <Typography variant="body1" sx={{ marginBottom: 2 }}>
+          Check <b> D:\MSSQLSERVER-BACKUP\Monthly </b> make sure the database is backup in this directory.
+        </Typography>
+      </Box>
+
+      {/* Add Item Button */}
+      <Button
+        variant="outlined"
+        startIcon={<AddIcon />}
+        onClick={addMssqlBackupRow}
+        sx={{ marginBottom: 2 }}
+      >
+        Add Item
+      </Button>
+
+      {/* MSSQL Database Backup Table */}
+      <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableCell sx={{ fontWeight: 'bold' }}>S/N</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Item</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Monthly DB Backup are Created</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {mssqlBackupData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
+                  No items added yet. Click "Add Item" to get started.
+                </TableCell>
+              </TableRow>
+            ) : (
+              mssqlBackupData.map((row, index) => (
+                <TableRow key={index}>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {index + 1}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      value={row.item}
+                      onChange={(e) => handleMssqlBackupChange(index, 'item', e.target.value)}
+                      placeholder="Enter item description"
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      fullWidth
+                      select
+                      variant="outlined"
+                      value={row.monthlyDBBackupCreated}
+                      onChange={(e) => handleMssqlBackupChange(index, 'monthlyDBBackupCreated', e.target.value)}
+                      size="small"
+                      disabled={loading}
+                      sx={{
+                        minWidth: 120,
+                        '& .MuiSelect-select': {
+                          display: 'flex',
+                          alignItems: 'center',
+                        }
+                      }}
+                    >
+                      <MenuItem value="">
+                        {loading ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CircularProgress size={16} />
+                            Loading...
+                          </Box>
+                        ) : (
+                          'Select Status'
+                        )}
+                      </MenuItem>
+                      {yesNoStatusOptions.map((option) => (
+                        <MenuItem key={option.id} value={option.id}>
+                          {option.name}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </TableCell>
+                  <TableCell>
+                    <IconButton
+                      onClick={() => removeMssqlBackupRow(index)}
+                      color="error"
+                      size="small"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* SCADA Database Backup Section */}
+      <Box sx={{ marginBottom: 3 }}>
+        <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: 'bold' }}>
+          SCADA Database Backup
+        </Typography>
+        
+        <Typography variant="body1" sx={{ marginBottom: 2 }}>
+          Check <b> D:\SCADA-BACKUP\Monthly </b> make sure the database is backup in this directory.
+        </Typography>
+      </Box>
+
+      {/* Add SCADA Item Button */}
+      <Button
+        variant="outlined"
+        startIcon={<AddIcon />}
+        onClick={addScadaBackupRow}
+        sx={{ marginBottom: 2 }}
+      >
+        Add SCADA Item
+      </Button>
+
+      {/* SCADA Database Backup Table */}
+      <TableContainer component={Paper} sx={{ marginBottom: 3 }}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableCell sx={{ fontWeight: 'bold' }}>S/N</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Item</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>SCADA DB Backup are Created</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {scadaBackupData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
+                  No items added yet. Click "Add SCADA Item" to get started.
+                </TableCell>
+              </TableRow>
+            ) : (
+              scadaBackupData.map((row, index) => (
+                <TableRow key={index}>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {index + 1}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      value={row.item}
+                      onChange={(e) => handleScadaBackupChange(index, 'item', e.target.value)}
+                      placeholder="Enter item description"
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      fullWidth
+                      select
+                      variant="outlined"
+                      value={row.monthlyDBBackupCreated}
+                      onChange={(e) => handleScadaBackupChange(index, 'monthlyDBBackupCreated', e.target.value)}
+                      size="small"
+                      disabled={loading}
+                      sx={{
+                        minWidth: 120,
+                        '& .MuiSelect-select': {
+                          display: 'flex',
+                          alignItems: 'center',
+                        }
+                      }}
+                    >
+                      <MenuItem value="">
+                        {loading ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CircularProgress size={16} />
+                            Loading...
+                          </Box>
+                        ) : (
+                          'Select Status'
+                        )}
+                      </MenuItem>
+                      {yesNoStatusOptions.map((option) => (
+                        <MenuItem key={option.id} value={option.id}>
+                          {option.name}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </TableCell>
+                  <TableCell>
+                    <IconButton
+                      onClick={() => removeScadaBackupRow(index)}
+                      color="error"
+                      size="small"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Latest Backup File Name */}
+      <Box sx={{ marginBottom: 3 }}>
+        <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: 'bold' }}>
+          Latest Backup File Name
+        </Typography>
+        
+        <TextField
+          fullWidth
+          variant="outlined"
+          label="Latest Backup File Name"
+          value={latestBackupFileName}
+          onChange={(e) => setLatestBackupFileName(e.target.value)}
+          placeholder="Enter the latest backup file name..."
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: 'white',
+            }
+          }}
+        />
+      </Box>
+
+      {/* Remarks Section */}
+      <Box sx={{ marginBottom: 2 }}>
+        <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: 'bold' }}>
+          Remarks
+        </Typography>
+        
+        <TextField
+          fullWidth
+          multiline
+          rows={4}
+          variant="outlined"
+          label="Additional remarks or observations"
+          value={remarks}
+          onChange={(e) => setRemarks(e.target.value)}
+          placeholder="Enter any additional remarks or observations..."
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: 'white',
+            }
+          }}
+        />
+      </Box>
+    </Paper>
+  );
+};
+
+export default DatabaseBackup_Edit;

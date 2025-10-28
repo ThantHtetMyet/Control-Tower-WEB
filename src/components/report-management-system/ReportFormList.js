@@ -553,23 +553,15 @@ const ReportFormList = () => {
               <TableRow 
                 key={form.id}
                 onDoubleClick={() => {
-                  console.log('Double-click - Form data:', form);
-                  console.log('Double-click - reportFormTypeName:', form.reportFormTypeName);
-                  console.log('Double-click - specificReportTypeName:', form.specificReportTypeName);
-                  console.log('Double-click - systemName:', form.systemNameWarehouseName);
                   
                   // Check if it's a Server PM report
                   if (form.specificReportTypeName === 'Server') {
-                    console.log('Navigating to Server PM details');
                     navigate(`/report-management-system/report-forms/server-pm-details/${form.id}`);
                   } else if (form.specificReportTypeName === 'RTU') {
-                    console.log('Navigating to RTU PM details');
                     navigate(`/report-management-system/report-forms/rtu-pm-details/${form.id}`);
                   } else if (form.reportFormTypeName === 'Corrective Maintenance') {
-                    console.log('Navigating to CM details');
                     navigate(`/report-management-system/report-forms/cm-details/${form.id}`);
                   } else {
-                    console.log('Navigating to generic details');
                     navigate(`/report-management-system/report-forms/details/${form.id}`);
                   }
                 }}
@@ -658,7 +650,19 @@ const ReportFormList = () => {
                     <Tooltip title="Edit">
                       <IconButton
                         size="small"
-                        onClick={() => navigate(`/report-management-system/rtu-pm-edit/${form.id}`)}
+                        onClick={() => {
+                          // Navigate to appropriate edit page based on report type
+                          if (form.specificReportTypeName === 'RTU') {
+                            navigate(`/report-management-system/rtu-pm-edit/${form.id}`);
+                          } else if (form.specificReportTypeName === 'Server') {
+                            navigate(`/report-management-system/server-pm-edit/${form.id}`);
+                          } else if (form.reportFormTypeName === 'Corrective Maintenance') {
+                            navigate(`/report-management-system/cm-edit/${form.id}`);
+                          } else {
+                            // Default fallback for other report types
+                            navigate(`/report-management-system/rtu-pm-edit/${form.id}`);
+                          }
+                        }}
                         sx={{
                           color: RMSTheme.status.warning,
                           '&:hover': {

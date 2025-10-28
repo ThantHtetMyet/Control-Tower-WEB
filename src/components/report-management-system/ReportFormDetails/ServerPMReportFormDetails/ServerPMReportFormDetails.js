@@ -116,9 +116,7 @@ const ServerPMReportFormDetails = () => {
       
       try {
         setLoading(true);
-        console.log('Fetching Server PM Report with ID:', id);
         const response = await getServerPMReportFormWithDetails(id);
-        console.log('API Response:', response);
         
         // Merge reportForm and pmReportFormServer data for form display
         const mergedFormData = {
@@ -158,7 +156,6 @@ const ServerPMReportFormDetails = () => {
           softwarePatchData: response.pmServerSoftwarePatchSummaries || []
         };
         
-        console.log('Mapped Server PM Data:', mappedServerPMData);
         setServerPMData(mappedServerPMData);
       } catch (err) {
         console.error('Error fetching report form details:', err);
