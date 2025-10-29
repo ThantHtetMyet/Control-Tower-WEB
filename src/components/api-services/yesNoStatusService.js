@@ -12,6 +12,11 @@ const yesNoStatusService = {
     }
   },
 
+  // Alias for backward compatibility
+  getYesNoStatusOptions: async () => {
+    return yesNoStatusService.getYesNoStatuses();
+  },
+
   // Get Yes/No Status by ID
   getYesNoStatus: async (id) => {
     try {

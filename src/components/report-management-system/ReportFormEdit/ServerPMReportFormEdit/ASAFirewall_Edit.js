@@ -14,11 +14,15 @@ import {
   IconButton,
   CircularProgress,
   MenuItem,
-  Divider
+  Divider,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
+  Add as AddIcon,
   Delete as DeleteIcon,
-  Security as SecurityIcon
+  Security as SecurityIcon,
+  Undo as UndoIcon
 } from '@mui/icons-material';
 
 // Import the API services
@@ -31,52 +35,97 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
   const [asaFirewallStatusOptions, setAsaFirewallStatusOptions] = useState([]);
   const [resultStatusOptions, setResultStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const isInitialized = useRef(false);
 
-  // Initialize data from props when meaningful data is available
+  // Initialize data when meaningful data is available
   useEffect(() => {
     // Check if we have meaningful data to initialize with
-    const hasData = data && ((data.details && data.details.length > 0) ||
-                            (data.asaFirewallData && data.asaFirewallData.length > 0) ||
-                            (data.remarks && data.remarks.trim() !== ''));
+    const hasData = data && (
+      (data.pmServerASAFirewalls && data.pmServerASAFirewalls.length > 0) ||
+      (data.asaFirewallData && data.asaFirewallData.length > 0) ||
+      data.remarks || 
+      (data.result && data.result.trim() !== '')
+    );
     
     if (hasData && !isInitialized.current) {
-      if (data.details && data.details.length > 0) {
-        // Map from legacy format
-        const mappedData = data.details.map(item => ({
-          serialNumber: item.serialNumber,
-          commandInput: item.commandInput,
-          expectedResultId: item.asaFirewallStatusID || '',
-          doneId: item.resultStatusID || ''
-        }));
-        setAsaFirewallData(mappedData);
-      } else if (data.asaFirewallData && data.asaFirewallData.length > 0) {
-        setAsaFirewallData(data.asaFirewallData);
-      } else {
-        // Initialize with default data and auto-select expected results
-        setAsaFirewallData([
-          { 
-            serialNumber: 1,
-            commandInput: 'show cpu usage',
-            expectedResultId: 'cpu-usage-ok', // Auto-select appropriate result
-            doneId: ''
-          },
-          { 
-            serialNumber: 2,
-            commandInput: 'show environment',
-            expectedResultId: 'hardware-health-ok', // Auto-select appropriate result
-            doneId: ''
-          }
-        ]);
-      }
+      console.log('ASAFirewall_Edit - Initializing with data:', JSON.stringify(data, null, 2));
       
-      if (data.remarks) {
-        setRemarks(data.remarks);
+      // Handle new API structure with pmServerASAFirewalls
+      if (data.pmServerASAFirewalls && data.pmServerASAFirewalls.length > 0) {
+        const transformedData = data.pmServerASAFirewalls.map((item, index) => ({
+          id: item.id || item.ID,
+          serialNumber: item.serialNumber || item.SerialNumber || (index + 1),
+          commandInput: item.commandInput || item.CommandInput || '',
+          asaFirewallStatusID: item.asaFirewallStatusID || item.ASAFirewallStatusID || '',
+          asaFirewallStatusName: item.asaFirewallStatusName || item.ASAFirewallStatusName || '',
+          resultStatusID: item.resultStatusID || item.ResultStatusID || '',
+          resultStatusName: item.resultStatusName || item.ResultStatusName || '',
+          remarks: item.remarks || item.Remarks || '',
+          isNew: !item.id && !item.ID,
+          isModified: false,
+          isDeleted: false
+        }));
+        
+        setAsaFirewallData(transformedData);
+        setRemarks(data.remarks || data.pmServerASAFirewalls[0]?.remarks || '');
+      }
+      // Handle legacy asaFirewallData structure
+      else if (data.asaFirewallData && data.asaFirewallData.length > 0) {
+        const transformedData = data.asaFirewallData.map((item, index) => ({
+          ...item,
+          isNew: !item.id,
+          isModified: false,
+          isDeleted: false
+        }));
+        setAsaFirewallData(transformedData);
+        setRemarks(data.remarks || '');
+      }
+      // Handle direct data structure
+      else {
+        setRemarks(data.remarks || '');
       }
       
       isInitialized.current = true;
     }
+    // Initialize with default data if no data
+    else if (!hasData && !isInitialized.current) {
+      const defaultData = [
+        { 
+          serialNumber: 1,
+          commandInput: 'show cpu usage',
+          asaFirewallStatusID: '',
+          asaFirewallStatusName: '',
+          resultStatusID: '',
+          resultStatusName: '',
+          remarks: '',
+          isNew: true,
+          isModified: false,
+          isDeleted: false
+        },
+        { 
+          serialNumber: 2,
+          commandInput: 'show environment',
+          asaFirewallStatusID: '',
+          asaFirewallStatusName: '',
+          resultStatusID: '',
+          resultStatusName: '',
+          remarks: '',
+          isNew: true,
+          isModified: false,
+          isDeleted: false
+        }
+      ];
+      setAsaFirewallData(defaultData);
+      setRemarks('');
+      isInitialized.current = true;
+    }
   }, [data]);
+
+  // Snackbar helper function
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
 
   // Fetch ASA Firewall Status options
   useEffect(() => {
@@ -149,36 +198,37 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
   // Update parent component when data changes (but not on initial load)
   useEffect(() => {
     if (isInitialized.current && onDataChange) {
-      // Validate and clean data before sending to parent
-      const validatedData = asaFirewallData.map(item => ({
-        ...item,
-        // Only send expectedResultId if it exists in the options
-        expectedResultId: asaFirewallStatusOptions.some(option => option.id === item.expectedResultId) 
-          ? item.expectedResultId 
-          : '',
-        // Only send doneId if it exists in the options  
-        doneId: resultStatusOptions.some(option => option.id === item.doneId)
-          ? item.doneId
-          : ''
-      }));
-
-      console.log('Sending validated data to parent:', validatedData);
-      
-      onDataChange({
-        asaFirewallData: validatedData,
+      // Transform data back to API format for saving
+      const dataToSend = {
+        pmServerASAFirewalls: asaFirewallData.map(item => ({
+          id: item.id,
+          serialNumber: item.serialNumber,
+          commandInput: item.commandInput,
+          asaFirewallStatusID: item.asaFirewallStatusID,
+          asaFirewallStatusName: item.asaFirewallStatusName,
+          resultStatusID: item.resultStatusID,
+          resultStatusName: item.resultStatusName,
+          remarks: item.remarks || remarks,
+          isNew: item.isNew,
+          isModified: item.isModified,
+          isDeleted: item.isDeleted
+        })),
+        asaFirewallData: asaFirewallData,
         remarks
-      });
+      };
+      onDataChange(dataToSend);
     }
-  }, [asaFirewallData, remarks, onDataChange, asaFirewallStatusOptions, resultStatusOptions]);
+  }, [asaFirewallData, remarks, onDataChange]);
 
   // Calculate completion status
   useEffect(() => {
-    const hasData = asaFirewallData.some(item => 
-      item.expectedResultId || item.doneId
+    const activeItems = asaFirewallData.filter(item => !item.isDeleted);
+    const hasResults = activeItems.some(item => 
+      item.asaFirewallStatusID && item.resultStatusID
     );
     const hasRemarks = remarks && remarks.trim() !== '';
     
-    const isCompleted = hasData && hasRemarks;
+    const isCompleted = hasResults && hasRemarks;
     
     if (onStatusChange) {
       onStatusChange('ASAFirewall_Edit', isCompleted);
@@ -188,47 +238,28 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
   // Event handlers
   const handleInputChange = (index, field, value) => {
     const updatedData = [...asaFirewallData];
+    const item = updatedData[index];
     
-    // Validate the value before setting
-    if (field === 'expectedResultId') {
-      // Only allow valid expectedResultId values
-      const isValidOption = value === '' || asaFirewallStatusOptions.some(option => option.id === value);
-      if (!isValidOption) {
-        console.warn('Invalid expectedResultId:', value);
-        return;
-      }
+    // Mark existing items as modified when changed
+    if (item.id && !item.isNew) {
+      item.isModified = true;
     }
     
-    if (field === 'doneId') {
-      // Only allow valid doneId values
-      const isValidOption = value === '' || resultStatusOptions.some(option => option.id === value);
-      if (!isValidOption) {
-        console.warn('Invalid doneId:', value);
-        return;
-      }
-    }
-    
+    // Update the field value
     updatedData[index] = {
-      ...updatedData[index],
+      ...item,
       [field]: value
     };
 
-    // Auto-set expected result based on command input
-    if (field === 'commandInput') {
-      const expectedResultMapping = {
-        'show cpu usage': 'CPU Usage <80%',
-        'show environment': 'Overall hardware health'
-      };
-      
-      const expectedResultName = expectedResultMapping[value.toLowerCase()];
-      if (expectedResultName) {
-        const expectedResultOption = asaFirewallStatusOptions.find(
-          option => option.name === expectedResultName
-        );
-        if (expectedResultOption) {
-          updatedData[index].expectedResultId = expectedResultOption.id;
-        }
-      }
+    // Update status name when ID changes
+    if (field === 'asaFirewallStatusID') {
+      const selectedOption = asaFirewallStatusOptions.find(option => option.id === value);
+      updatedData[index].asaFirewallStatusName = selectedOption ? selectedOption.name : '';
+    }
+    
+    if (field === 'resultStatusID') {
+      const selectedOption = resultStatusOptions.find(option => option.id === value);
+      updatedData[index].resultStatusName = selectedOption ? selectedOption.name : '';
     }
 
     setAsaFirewallData(updatedData);
@@ -238,24 +269,55 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
     setRemarks(e.target.value);
   };
 
-  const handleAddRow = () => {
+  const addAsaFirewallRow = () => {
     const newRow = {
       serialNumber: asaFirewallData.length + 1,
       commandInput: '',
-      expectedResultId: '',
-      doneId: ''
+      asaFirewallStatusID: '',
+      asaFirewallStatusName: '',
+      resultStatusID: '',
+      resultStatusName: '',
+      remarks: '',
+      isNew: true,
+      isModified: false,
+      isDeleted: false
     };
     setAsaFirewallData([...asaFirewallData, newRow]);
+    showSnackbar('New ASA Firewall item added');
   };
 
-  const handleRemoveRow = (index) => {
-    const updatedData = asaFirewallData.filter((_, i) => i !== index);
-    // Update serial numbers after removal
-    const reNumberedData = updatedData.map((item, i) => ({
-      ...item,
-      serialNumber: i + 1
-    }));
-    setAsaFirewallData(reNumberedData);
+  const removeAsaFirewallRow = (index) => {
+    const updatedData = [...asaFirewallData];
+    const itemToRemove = updatedData[index];
+    
+    if (itemToRemove.id) {
+      // If it has an ID, mark as deleted
+      updatedData[index] = {
+        ...itemToRemove,
+        isDeleted: true,
+        isModified: true
+      };
+      showSnackbar('ASA Firewall item deleted. Click undo to restore.', 'warning');
+    } else {
+      // If it's a new item (no ID), remove it completely
+      updatedData.splice(index, 1);
+      // Re-index serial numbers
+      updatedData.forEach((item, idx) => {
+        item.serialNumber = idx + 1;
+      });
+      showSnackbar('New ASA Firewall item removed');
+    }
+    
+    setAsaFirewallData(updatedData);
+  };
+
+  const restoreAsaFirewallRow = (index) => {
+    const updatedData = [...asaFirewallData];
+    const item = updatedData[index];
+    
+    updatedData[index] = { ...item, isDeleted: false };
+    setAsaFirewallData(updatedData);
+    showSnackbar('ASA Firewall item restored');
   };
 
   // Styling constants
@@ -305,15 +367,22 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
               <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>S/N</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>Command Input</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>Expected Result</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', width: '25%' }}>Command Input</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', width: '25%' }}>Expected Result</TableCell>
               <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>Done</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>Actions</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {asaFirewallData.map((row, index) => (
-              <TableRow key={index}>
+              <TableRow 
+                key={index}
+                sx={{
+                  textDecoration: row.isDeleted ? 'line-through' : 'none',
+                  opacity: row.isDeleted ? 0.6 : 1,
+                  backgroundColor: row.isDeleted ? '#ffebee' : 'inherit'
+                }}
+              >
                 <TableCell>{row.serialNumber}</TableCell>
                 <TableCell>
                   <TextField
@@ -322,6 +391,7 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
                     value={row.commandInput}
                     onChange={(e) => handleInputChange(index, 'commandInput', e.target.value)}
                     placeholder="Enter command"
+                    disabled={true}
                   />
                 </TableCell>
                 <TableCell>
@@ -329,8 +399,9 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
                     select
                     fullWidth
                     size="small"
-                    value={row.expectedResultId}
-                    onChange={(e) => handleInputChange(index, 'expectedResultId', e.target.value)}
+                    value={row.asaFirewallStatusID}
+                    onChange={(e) => handleInputChange(index, 'asaFirewallStatusID', e.target.value)}
+                    disabled={true}
                   >
                     <MenuItem value="">
                       {loading ? (
@@ -354,9 +425,9 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
                     select
                     fullWidth
                     size="small"
-                    value={row.doneId}
-                    onChange={(e) => handleInputChange(index, 'doneId', e.target.value)}
-                    disabled={loading}
+                    value={row.resultStatusID}
+                    onChange={(e) => handleInputChange(index, 'resultStatusID', e.target.value)}
+                    disabled={loading || row.isDeleted}
                   >
                     <MenuItem value="">
                       {loading ? (
@@ -376,19 +447,26 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
                   </TextField>
                 </TableCell>
                 <TableCell>
-                  <IconButton
-                    onClick={() => handleRemoveRow(index)}
-                    color="error"
-                    size="small"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    {row.isDeleted ? (
+                      <IconButton
+                        size="small"
+                        onClick={() => restoreAsaFirewallRow(index)}
+                        color="primary"
+                        title="Undo Delete"
+                      >
+                        <UndoIcon />
+                      </IconButton>
+                    ) : null}
+                  </Box>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
+
+
 
       {/* Additional Steps */}
       <Box sx={{ marginBottom: 3, padding: 2, backgroundColor: '#fff3e0', borderRadius: 1 }}>
@@ -422,6 +500,22 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
           }}
         />
       </Box>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };

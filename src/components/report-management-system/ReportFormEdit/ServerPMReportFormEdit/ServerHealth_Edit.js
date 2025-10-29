@@ -16,12 +16,15 @@ import {
   InputLabel,
   Button,
   IconButton,
-  CircularProgress
+  CircularProgress,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Computer as ComputerIcon,
+  Undo as UndoIcon,
 } from '@mui/icons-material';
 
 // Import the server health image
@@ -34,6 +37,7 @@ const ServerHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
   const [remarks, setRemarks] = useState('');
   const [resultStatusOptions, setResultStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const isInitialized = useRef(false);
 
   // Initialize data from props when meaningful data is available
@@ -120,6 +124,15 @@ const ServerHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
     setServerHealthData(updatedData);
   };
 
+  // Utility functions for toast messages
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const addServerHealthRow = () => {
     setServerHealthData([...serverHealthData, { 
       id: null, // null indicates new row
@@ -127,6 +140,7 @@ const ServerHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
       result: '',
       isNew: true // flag to track new rows
     }]);
+    showSnackbar('New server health row added');
   };
 
   const removeServerHealthRow = (index) => {
@@ -140,12 +154,30 @@ const ServerHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
         isDeleted: true,
         isModified: true
       };
+      showSnackbar('Server health row deleted. Click undo to restore.', 'warning');
     } else {
       // If it's a new item (no ID), remove it completely
       updatedData.splice(index, 1);
+      showSnackbar('New server health row removed');
     }
     
     setServerHealthData(updatedData);
+  };
+
+  const restoreServerHealthRow = (index) => {
+    const updatedData = [...serverHealthData];
+    const itemToRestore = updatedData[index];
+    
+    // Only restore if item is currently deleted
+    if (itemToRestore.isDeleted) {
+      updatedData[index] = {
+        ...itemToRestore,
+        isDeleted: false,
+        isModified: true // Keep as modified since we're changing the delete status
+      };
+      setServerHealthData(updatedData);
+      showSnackbar('Server health row restored');
+    }
   };
 
   // Styling
@@ -299,37 +331,71 @@ const ServerHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
                     </TextField>
                   </TableCell>
                   <TableCell>
-                    <IconButton
-                      onClick={() => removeServerHealthRow(index)}
-                      color="error"
-                      disabled={row.isDeleted}
-                      sx={{
-                        backgroundColor: row.isDeleted ? 'transparent' : '#ffebee',
-                        border: row.isDeleted ? 'none' : '2px solid #f44336',
-                        borderRadius: '8px',
-                        padding: '12px',
-                        minWidth: '48px',
-                        minHeight: '48px',
-                        boxShadow: row.isDeleted ? 'none' : '0 4px 8px rgba(244, 67, 54, 0.3)',
-                        transition: 'all 0.3s ease',
-                        animation: row.isDeleted ? 'none' : 'pulse 2s infinite',
-                        '&:hover': {
-                          backgroundColor: row.isDeleted ? 'transparent' : '#ffcdd2',
-                          transform: row.isDeleted ? 'none' : 'scale(1.1)',
-                          boxShadow: row.isDeleted ? 'none' : '0 6px 12px rgba(244, 67, 54, 0.4)'
-                        },
-                        '@keyframes pulse': {
-                          '0%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' },
-                          '50%': { boxShadow: '0 6px 16px rgba(244, 67, 54, 0.5)' },
-                          '100%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' }
-                        }
-                      }}
-                    >
-                      <DeleteIcon sx={{ 
-                        fontSize: '24px',
-                        color: row.isDeleted ? '#ccc' : '#f44336'
-                      }} />
-                    </IconButton>
+                    {!row.isDeleted ? (
+                      <IconButton
+                        onClick={() => removeServerHealthRow(index)}
+                        color="error"
+                        sx={{
+                          backgroundColor: '#ffebee',
+                          border: '2px solid #f44336',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          minWidth: '48px',
+                          minHeight: '48px',
+                          boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)',
+                          transition: 'all 0.3s ease',
+                          animation: 'pulse 2s infinite',
+                          '&:hover': {
+                            backgroundColor: '#ffcdd2',
+                            transform: 'scale(1.1)',
+                            boxShadow: '0 6px 12px rgba(244, 67, 54, 0.4)'
+                          },
+                          '@keyframes pulse': {
+                            '0%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' },
+                            '50%': { boxShadow: '0 6px 16px rgba(244, 67, 54, 0.5)' },
+                            '100%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' }
+                          }
+                        }}
+                      >
+                        <DeleteIcon sx={{ 
+                          fontSize: '24px',
+                          color: '#f44336'
+                        }} />
+                      </IconButton>
+                    ) : (
+                      <IconButton
+                        onClick={() => restoreServerHealthRow(index)}
+                        color="success"
+                        sx={{
+                          backgroundColor: '#e8f5e8',
+                          border: '2px solid #4caf50',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          minWidth: '48px',
+                          minHeight: '48px',
+                          boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)',
+                          transition: 'all 0.3s ease',
+                          animation: 'undoPulse 2s infinite',
+                          position: 'relative',
+                          zIndex: 2, // Above the strikethrough line
+                          '&:hover': {
+                            backgroundColor: '#c8e6c9',
+                            transform: 'scale(1.1)',
+                            boxShadow: '0 6px 12px rgba(76, 175, 80, 0.4)'
+                          },
+                          '@keyframes undoPulse': {
+                            '0%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' },
+                            '50%': { boxShadow: '0 6px 16px rgba(76, 175, 80, 0.5)' },
+                            '100%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' }
+                          }
+                        }}
+                      >
+                        <UndoIcon sx={{ 
+                          fontSize: '24px',
+                          color: '#4caf50'
+                        }} />
+                      </IconButton>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -360,6 +426,22 @@ const ServerHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
           }}
         />
       </Box>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };

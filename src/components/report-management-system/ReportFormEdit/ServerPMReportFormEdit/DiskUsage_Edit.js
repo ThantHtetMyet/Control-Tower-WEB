@@ -16,13 +16,16 @@ import {
   TableRow,
   IconButton,
   MenuItem,
-  CircularProgress
+  CircularProgress,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Storage as StorageIcon,
-  ExpandMore as ExpandMoreIcon
+  ExpandMore as ExpandMoreIcon,
+  Undo as UndoIcon,
 } from '@mui/icons-material';
 import serverDiskStatusService from '../../../api-services/serverDiskStatusService';
 import resultStatusService from '../../../api-services/resultStatusService';
@@ -33,6 +36,7 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
   const [serverDiskStatusOptions, setServerDiskStatusOptions] = useState([]);
   const [resultStatusOptions, setResultStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const isInitialized = useRef(false);
 
   // Initialize data from props when meaningful data is available
@@ -185,6 +189,18 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
     fetchResultStatusOptions();
   }, []);
 
+  // Utility functions for snackbar
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar({ ...snackbar, open: false });
+  };
+
   // Update parent component when data changes (but not on initial load)
   useEffect(() => {
     if (isInitialized.current && onDataChange) {
@@ -222,6 +238,7 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
       isNew: true // flag to track new servers
     };
     setServers([...servers, newServer]);
+    showSnackbar('Server added successfully', 'success');
   };
 
   const removeServer = (serverIndex) => {
@@ -235,12 +252,30 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
         isDeleted: true,
         isModified: true
       };
+      showSnackbar('Server deleted. Click undo to restore.', 'warning');
     } else {
       // Remove new server completely
       updatedServers.splice(serverIndex, 1);
+      showSnackbar('New server removed');
     }
     
     setServers(updatedServers);
+  };
+
+  const restoreServer = (serverIndex) => {
+    const updatedServers = [...servers];
+    const server = updatedServers[serverIndex];
+    
+    // Only restore if server is currently deleted
+    if (server.isDeleted) {
+      updatedServers[serverIndex] = {
+        ...server,
+        isDeleted: false,
+        isModified: true // Keep as modified since we're changing the delete status
+      };
+      setServers(updatedServers);
+      showSnackbar('Server restored successfully', 'success');
+    }
   };
 
   const updateServerName = (serverIndex, serverName) => {
@@ -280,6 +315,7 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
     };
     
     setServers(updatedServers);
+    showSnackbar('Disk added successfully', 'success');
   };
 
   const removeDisk = (serverIndex, diskIndex) => {
@@ -299,6 +335,7 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
         ...server,
         disks: updatedDisks
       };
+      showSnackbar('Disk deleted. Click undo to restore.', 'warning');
     } else {
       // Remove new disk completely
       const updatedDisks = server.disks.filter((_, index) => index !== diskIndex);
@@ -306,9 +343,32 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
         ...server,
         disks: updatedDisks
       };
+      showSnackbar('New disk removed');
     }
     
     setServers(updatedServers);
+  };
+
+  const restoreDisk = (serverIndex, diskIndex) => {
+    const updatedServers = [...servers];
+    const server = updatedServers[serverIndex];
+    const disk = server.disks[diskIndex];
+    
+    // Only restore if disk is currently deleted
+    if (disk.isDeleted) {
+      const updatedDisks = [...server.disks];
+      updatedDisks[diskIndex] = {
+        ...disk,
+        isDeleted: false,
+        isModified: true // Keep as modified since we're changing the delete status
+      };
+      updatedServers[serverIndex] = {
+        ...server,
+        disks: updatedDisks
+      };
+      setServers(updatedServers);
+      showSnackbar('Disk restored successfully', 'success');
+    }
   };
 
   const updateDiskField = (serverIndex, diskIndex, field, value) => {
@@ -496,34 +556,73 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
                   }
                 }}
               />
-              <IconButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeServer(serverIndex);
-                }}
-                color="error"
-                size="medium"
-                sx={{
-                  backgroundColor: '#ffebee',
-                  border: '2px solid #f44336',
-                  borderRadius: '8px',
-                  padding: '8px',
-                  minWidth: '44px',
-                  minHeight: '44px',
-                  '&:hover': {
-                    backgroundColor: '#f44336',
-                    color: 'white',
-                    transform: 'scale(1.1)',
-                    boxShadow: '0 4px 12px rgba(244, 67, 54, 0.4)',
-                  },
-                  '&:active': {
-                    transform: 'scale(0.95)',
-                  },
-                  transition: 'all 0.2s ease-in-out',
-                }}
-              >
-                <DeleteIcon sx={{ fontSize: '20px' }} />
-              </IconButton>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <IconButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeServer(serverIndex);
+                  }}
+                  color="error"
+                  size="medium"
+                  disabled={server.isDeleted}
+                  sx={{
+                    backgroundColor: server.isDeleted ? 'transparent' : '#ffebee',
+                    border: server.isDeleted ? 'none' : '2px solid #f44336',
+                    borderRadius: '8px',
+                    padding: '8px',
+                    minWidth: '44px',
+                    minHeight: '44px',
+                    '&:hover': {
+                      backgroundColor: server.isDeleted ? 'transparent' : '#f44336',
+                      color: server.isDeleted ? 'inherit' : 'white',
+                      transform: server.isDeleted ? 'none' : 'scale(1.1)',
+                      boxShadow: server.isDeleted ? 'none' : '0 4px 12px rgba(244, 67, 54, 0.4)',
+                    },
+                    '&:active': {
+                      transform: server.isDeleted ? 'none' : 'scale(0.95)',
+                    },
+                    transition: 'all 0.2s ease-in-out',
+                  }}
+                >
+                  <DeleteIcon sx={{ 
+                    fontSize: '20px',
+                    color: server.isDeleted ? '#ccc' : 'inherit'
+                  }} />
+                </IconButton>
+                
+                {server.isDeleted && (
+                  <IconButton
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      restoreServer(serverIndex);
+                    }}
+                    color="success"
+                    size="medium"
+                    sx={{
+                      backgroundColor: '#e8f5e8',
+                      border: '2px solid #4caf50',
+                      borderRadius: '8px',
+                      padding: '8px',
+                      minWidth: '44px',
+                      minHeight: '44px',
+                      position: 'relative',
+                      zIndex: 2, // Above the strikethrough line
+                      '&:hover': {
+                        backgroundColor: '#4caf50',
+                        color: 'white',
+                        transform: 'scale(1.1)',
+                        boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)',
+                      },
+                      '&:active': {
+                        transform: 'scale(0.95)',
+                      },
+                      transition: 'all 0.2s ease-in-out',
+                    }}
+                  >
+                    <UndoIcon sx={{ fontSize: '20px' }} />
+                  </IconButton>
+                )}
+              </Box>
             </Box>
           </AccordionSummary>
           <AccordionDetails sx={{ 
@@ -680,38 +779,74 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
                           </TextField>
                         </TableCell>
                         <TableCell>
-                          <IconButton
-                            onClick={() => removeDisk(serverIndex, diskIndex)}
-                            color="error"
-                            size="small"
-                            disabled={server.isDeleted || disk.isDeleted}
-                            sx={{
-                              backgroundColor: (disk.isDeleted || server.isDeleted) ? 'transparent' : '#ffebee',
-                              border: (disk.isDeleted || server.isDeleted) ? 'none' : '2px solid #f44336',
-                              borderRadius: '8px',
-                              padding: '8px',
-                              minWidth: '40px',
-                              minHeight: '40px',
-                              boxShadow: (disk.isDeleted || server.isDeleted) ? 'none' : '0 4px 8px rgba(244, 67, 54, 0.3)',
-                              transition: 'all 0.3s ease',
-                              animation: (disk.isDeleted || server.isDeleted) ? 'none' : 'pulse 2s infinite',
-                              '&:hover': {
-                                backgroundColor: (disk.isDeleted || server.isDeleted) ? 'transparent' : '#ffcdd2',
-                                transform: (disk.isDeleted || server.isDeleted) ? 'none' : 'scale(1.1)',
-                                boxShadow: (disk.isDeleted || server.isDeleted) ? 'none' : '0 6px 12px rgba(244, 67, 54, 0.4)'
-                              },
-                              '@keyframes pulse': {
-                                '0%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' },
-                                '50%': { boxShadow: '0 6px 16px rgba(244, 67, 54, 0.5)' },
-                                '100%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' }
-                              }
-                            }}
-                          >
-                            <DeleteIcon sx={{ 
-                              fontSize: '20px',
-                              color: (disk.isDeleted || server.isDeleted) ? '#ccc' : '#f44336'
-                            }} />
-                          </IconButton>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            {!disk.isDeleted && !server.isDeleted && (
+                              <IconButton
+                                onClick={() => removeDisk(serverIndex, diskIndex)}
+                                color="error"
+                                size="small"
+                                disabled={server.isDeleted || disk.isDeleted}
+                                sx={{
+                                  backgroundColor: (disk.isDeleted || server.isDeleted) ? 'transparent' : '#ffebee',
+                                  border: (disk.isDeleted || server.isDeleted) ? 'none' : '2px solid #f44336',
+                                  borderRadius: '8px',
+                                  padding: '8px',
+                                  minWidth: '40px',
+                                  minHeight: '40px',
+                                  boxShadow: (disk.isDeleted || server.isDeleted) ? 'none' : '0 4px 8px rgba(244, 67, 54, 0.3)',
+                                  transition: 'all 0.3s ease',
+                                  animation: (disk.isDeleted || server.isDeleted) ? 'none' : 'pulse 2s infinite',
+                                  '&:hover': {
+                                    backgroundColor: (disk.isDeleted || server.isDeleted) ? 'transparent' : '#ffcdd2',
+                                    transform: (disk.isDeleted || server.isDeleted) ? 'none' : 'scale(1.1)',
+                                    boxShadow: (disk.isDeleted || server.isDeleted) ? 'none' : '0 6px 12px rgba(244, 67, 54, 0.4)'
+                                  },
+                                  '@keyframes pulse': {
+                                    '0%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' },
+                                    '50%': { boxShadow: '0 6px 16px rgba(244, 67, 54, 0.5)' },
+                                    '100%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' }
+                                  }
+                                }}
+                              >
+                                <DeleteIcon sx={{ 
+                                  fontSize: '20px',
+                                  color: (disk.isDeleted || server.isDeleted) ? '#ccc' : '#f44336'
+                                }} />
+                              </IconButton>
+                            )}
+                            {disk.isDeleted && !server.isDeleted && (
+                              <IconButton
+                                onClick={() => restoreDisk(serverIndex, diskIndex)}
+                                sx={{
+                                  backgroundColor: '#e8f5e8',
+                                  border: '2px solid #4caf50',
+                                  borderRadius: '8px',
+                                  padding: '8px',
+                                  minWidth: '40px',
+                                  minHeight: '40px',
+                                  boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)',
+                                  transition: 'all 0.3s ease',
+                                  animation: 'pulse 2s infinite',
+                                  zIndex: 2,
+                                  '&:hover': {
+                                    backgroundColor: '#c8e6c9',
+                                    transform: 'scale(1.1)',
+                                    boxShadow: '0 6px 12px rgba(76, 175, 80, 0.4)'
+                                  },
+                                  '@keyframes pulse': {
+                                    '0%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' },
+                                    '50%': { boxShadow: '0 6px 16px rgba(76, 175, 80, 0.5)' },
+                                    '100%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' }
+                                  }
+                                }}
+                              >
+                                <UndoIcon sx={{ 
+                                  fontSize: '20px',
+                                  color: '#4caf50'
+                                }} />
+                              </IconButton>
+                            )}
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))
@@ -745,6 +880,18 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
           }}
         />
       </Box>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };

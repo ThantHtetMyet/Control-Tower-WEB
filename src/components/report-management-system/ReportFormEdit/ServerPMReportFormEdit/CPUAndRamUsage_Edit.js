@@ -16,12 +16,15 @@ import {
   InputLabel,
   Button,
   IconButton,
-  CircularProgress
+  CircularProgress,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Memory as MemoryIcon,
+  Undo as UndoIcon,
 } from '@mui/icons-material';
 
 // Import the CPU and RAM usage image
@@ -35,6 +38,7 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
   const [remarks, setRemarks] = useState('');
   const [resultStatusOptions, setResultStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const isInitialized = useRef(false);
 
   // Initialize data from props when meaningful data is available
@@ -57,6 +61,7 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
         if (apiData.memoryUsageDetails && apiData.memoryUsageDetails.length > 0) {
           const mappedMemoryData = apiData.memoryUsageDetails.map(detail => ({
             id: detail.id || null,
+            serialNo: detail.serialNo || '',
             machineName: detail.serverName || '',
             memorySize: detail.memorySize || '',
             memoryInUse: detail.memoryUsagePercentage || '',
@@ -65,6 +70,12 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
             isModified: false,
             isDeleted: false
           }));
+          // Sort by serialNo in ascending order
+          mappedMemoryData.sort((a, b) => {
+            const serialA = parseInt(a.serialNo) || 0;
+            const serialB = parseInt(b.serialNo) || 0;
+            return serialA - serialB;
+          });
           console.log('CPUAndRamUsage_Edit - Mapped memory data from API:', mappedMemoryData); // Debug log
           setMemoryUsageData(mappedMemoryData);
         }
@@ -73,6 +84,7 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
         if (apiData.cpuUsageDetails && apiData.cpuUsageDetails.length > 0) {
           const mappedCpuData = apiData.cpuUsageDetails.map(detail => ({
             id: detail.id || null,
+            serialNo: detail.serialNo || '',
             machineName: detail.serverName || '',
             cpuUsage: detail.cpuUsagePercentage || '',
             cpuUsageCheck: detail.resultStatusID || '',
@@ -80,6 +92,12 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
             isModified: false,
             isDeleted: false
           }));
+          // Sort by serialNo in ascending order
+          mappedCpuData.sort((a, b) => {
+            const serialA = parseInt(a.serialNo) || 0;
+            const serialB = parseInt(b.serialNo) || 0;
+            return serialA - serialB;
+          });
           console.log('CPUAndRamUsage_Edit - Mapped CPU data from API:', mappedCpuData); // Debug log
           setCpuUsageData(mappedCpuData);
         }
@@ -92,8 +110,9 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
       // Handle legacy/direct data format
       else {
         if (data.memoryUsageData && data.memoryUsageData.length > 0) {
-          const mappedMemoryData = data.memoryUsageData.map(memory => ({
+          const mappedMemoryData = data.memoryUsageData.map((memory, index) => ({
             id: memory.id || null,
+            serialNo: memory.serialNo || (index + 1).toString(),
             machineName: memory.machineName || '',
             memorySize: memory.memorySize || '',
             memoryInUse: memory.memoryInUse || '',
@@ -102,13 +121,20 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
             isModified: memory.isModified || false,
             isDeleted: memory.isDeleted || false
           }));
+          // Sort by serialNo in ascending order
+          mappedMemoryData.sort((a, b) => {
+            const serialA = parseInt(a.serialNo) || 0;
+            const serialB = parseInt(b.serialNo) || 0;
+            return serialA - serialB;
+          });
           console.log('CPUAndRamUsage_Edit - Mapped memory data from legacy:', mappedMemoryData); // Debug log
           setMemoryUsageData(mappedMemoryData);
         }
         
         if (data.cpuUsageData && data.cpuUsageData.length > 0) {
-          const mappedCpuData = data.cpuUsageData.map(cpu => ({
+          const mappedCpuData = data.cpuUsageData.map((cpu, index) => ({
             id: cpu.id || null,
+            serialNo: cpu.serialNo || (index + 1).toString(),
             machineName: cpu.machineName || '',
             cpuUsage: cpu.cpuUsage || '',
             cpuUsageCheck: cpu.cpuUsageCheck || '',
@@ -116,6 +142,12 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
             isModified: cpu.isModified || false,
             isDeleted: cpu.isDeleted || false
           }));
+          // Sort by serialNo in ascending order
+          mappedCpuData.sort((a, b) => {
+            const serialA = parseInt(a.serialNo) || 0;
+            const serialB = parseInt(b.serialNo) || 0;
+            return serialA - serialB;
+          });
           console.log('CPUAndRamUsage_Edit - Mapped CPU data from legacy:', mappedCpuData); // Debug log
           setCpuUsageData(mappedCpuData);
         }
@@ -200,9 +232,19 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
     setMemoryUsageData(updatedData);
   };
 
+  // Utility functions for toast messages
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const addMemoryUsageRow = () => {
     const newRow = { 
       id: null,
+      serialNo: (memoryUsageData.length + 1).toString(),
       machineName: '', 
       memorySize: '', 
       memoryInUse: '', 
@@ -212,6 +254,7 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
       isDeleted: false
     };
     setMemoryUsageData([...memoryUsageData, newRow]);
+    showSnackbar('New memory usage row added');
   };
 
   const removeMemoryUsageRow = (index) => {
@@ -226,10 +269,28 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
         isModified: true
       };
       setMemoryUsageData(updatedData);
+      showSnackbar('Memory usage row deleted. Click undo to restore.', 'warning');
     } else {
       // If it's a new item (no ID), remove it completely
       const filteredData = memoryUsageData.filter((_, i) => i !== index);
       setMemoryUsageData(filteredData);
+      showSnackbar('New memory usage row removed');
+    }
+  };
+
+  const restoreMemoryUsageRow = (index) => {
+    const updatedData = [...memoryUsageData];
+    const itemToRestore = updatedData[index];
+    
+    // Only restore if the item is currently deleted
+    if (itemToRestore.isDeleted) {
+      updatedData[index] = {
+        ...itemToRestore,
+        isDeleted: false,
+        isModified: true
+      };
+      setMemoryUsageData(updatedData);
+      showSnackbar('Memory usage row restored');
     }
   };
 
@@ -256,6 +317,7 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
   const addCpuUsageRow = () => {
     const newRow = { 
       id: null,
+      serialNo: (cpuUsageData.length + 1).toString(),
       machineName: '', 
       cpuUsage: '', 
       cpuUsageCheck: '',
@@ -264,6 +326,7 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
       isDeleted: false
     };
     setCpuUsageData([...cpuUsageData, newRow]);
+    showSnackbar('New CPU usage row added');
   };
 
   const removeCpuUsageRow = (index) => {
@@ -278,10 +341,28 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
         isModified: true
       };
       setCpuUsageData(updatedData);
+      showSnackbar('CPU usage row deleted. Click undo to restore.', 'warning');
     } else {
       // If it's a new item (no ID), remove it completely
       const filteredData = cpuUsageData.filter((_, i) => i !== index);
       setCpuUsageData(filteredData);
+      showSnackbar('New CPU usage row removed');
+    }
+  };
+
+  const restoreCpuUsageRow = (index) => {
+    const updatedData = [...cpuUsageData];
+    const itemToRestore = updatedData[index];
+    
+    // Only restore if item is currently deleted
+    if (itemToRestore.isDeleted) {
+      updatedData[index] = {
+        ...itemToRestore,
+        isDeleted: false,
+        isModified: true // Keep as modified since we're changing the delete status
+      };
+      setCpuUsageData(updatedData);
+      showSnackbar('CPU usage row restored');
     }
   };
 
@@ -401,7 +482,11 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
                       } : {}
                     }}
                   >
-                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        {row.serialNo}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <TextField
                         fullWidth
@@ -469,37 +554,70 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
                       </TextField>
                     </TableCell>
                     <TableCell>
-                      <IconButton
-                        onClick={() => removeMemoryUsageRow(memoryUsageData.indexOf(row))}
-                        color="error"
-                        disabled={row.isDeleted}
-                        sx={{
-                          backgroundColor: row.isDeleted ? 'transparent' : '#ffebee',
-                          border: row.isDeleted ? 'none' : '2px solid #f44336',
-                          borderRadius: '8px',
-                          padding: '12px',
-                          minWidth: '48px',
-                          minHeight: '48px',
-                          boxShadow: row.isDeleted ? 'none' : '0 4px 8px rgba(244, 67, 54, 0.3)',
-                          transition: 'all 0.3s ease',
-                          animation: row.isDeleted ? 'none' : 'pulse 2s infinite',
-                          '&:hover': {
-                            backgroundColor: row.isDeleted ? 'transparent' : '#ffcdd2',
-                            transform: row.isDeleted ? 'none' : 'scale(1.1)',
-                            boxShadow: row.isDeleted ? 'none' : '0 6px 12px rgba(244, 67, 54, 0.4)'
-                          },
-                          '@keyframes pulse': {
-                            '0%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' },
-                            '50%': { boxShadow: '0 6px 16px rgba(244, 67, 54, 0.5)' },
-                            '100%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' }
-                          }
-                        }}
-                      >
-                        <DeleteIcon sx={{ 
-                          fontSize: '24px',
-                          color: row.isDeleted ? '#ccc' : '#f44336'
-                        }} />
-                      </IconButton>
+                      {!row.isDeleted ? (
+                        <IconButton
+                          onClick={() => removeMemoryUsageRow(memoryUsageData.indexOf(row))}
+                          color="error"
+                          disabled={row.isDeleted}
+                          sx={{
+                            backgroundColor: row.isDeleted ? 'transparent' : '#ffebee',
+                            border: row.isDeleted ? 'none' : '2px solid #f44336',
+                            borderRadius: '8px',
+                            padding: '12px',
+                            minWidth: '48px',
+                            minHeight: '48px',
+                            boxShadow: row.isDeleted ? 'none' : '0 4px 8px rgba(244, 67, 54, 0.3)',
+                            transition: 'all 0.3s ease',
+                            animation: row.isDeleted ? 'none' : 'pulse 2s infinite',
+                            '&:hover': {
+                              backgroundColor: row.isDeleted ? 'transparent' : '#ffcdd2',
+                              transform: row.isDeleted ? 'none' : 'scale(1.1)',
+                              boxShadow: row.isDeleted ? 'none' : '0 6px 12px rgba(244, 67, 54, 0.4)'
+                            },
+                            '@keyframes pulse': {
+                              '0%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' },
+                              '50%': { boxShadow: '0 6px 16px rgba(244, 67, 54, 0.5)' },
+                              '100%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' }
+                            }
+                          }}
+                        >
+                          <DeleteIcon sx={{ 
+                            fontSize: '24px',
+                            color: row.isDeleted ? '#ccc' : '#f44336'
+                          }} />
+                        </IconButton>
+                      ) : (
+                        <IconButton
+                          onClick={() => restoreMemoryUsageRow(memoryUsageData.indexOf(row))}
+                          sx={{
+                            backgroundColor: '#e8f5e8',
+                            border: '2px solid #4caf50',
+                            borderRadius: '8px',
+                            padding: '12px',
+                            minWidth: '48px',
+                            minHeight: '48px',
+                            boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)',
+                            transition: 'all 0.3s ease',
+                            animation: 'pulse 2s infinite',
+                            zIndex: 2,
+                            '&:hover': {
+                              backgroundColor: '#c8e6c9',
+                              transform: 'scale(1.1)',
+                              boxShadow: '0 6px 12px rgba(76, 175, 80, 0.4)'
+                            },
+                            '@keyframes pulse': {
+                              '0%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' },
+                              '50%': { boxShadow: '0 6px 16px rgba(76, 175, 80, 0.5)' },
+                              '100%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' }
+                            }
+                          }}
+                        >
+                          <UndoIcon sx={{ 
+                            fontSize: '24px',
+                            color: '#4caf50'
+                          }} />
+                        </IconButton>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -563,7 +681,11 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
                       } : {}
                     }}
                   >
-                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        {row.serialNo}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <TextField
                         fullWidth
@@ -621,37 +743,72 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
                       </TextField>
                     </TableCell>
                     <TableCell>
-                      <IconButton
-                        onClick={() => removeCpuUsageRow(cpuUsageData.indexOf(row))}
-                        color="error"
-                        disabled={row.isDeleted}
-                        sx={{
-                          backgroundColor: row.isDeleted ? 'transparent' : '#ffebee',
-                          border: row.isDeleted ? 'none' : '2px solid #f44336',
-                          borderRadius: '8px',
-                          padding: '12px',
-                          minWidth: '48px',
-                          minHeight: '48px',
-                          boxShadow: row.isDeleted ? 'none' : '0 4px 8px rgba(244, 67, 54, 0.3)',
-                          transition: 'all 0.3s ease',
-                          animation: row.isDeleted ? 'none' : 'pulse 2s infinite',
-                          '&:hover': {
-                            backgroundColor: row.isDeleted ? 'transparent' : '#ffcdd2',
-                            transform: row.isDeleted ? 'none' : 'scale(1.1)',
-                            boxShadow: row.isDeleted ? 'none' : '0 6px 12px rgba(244, 67, 54, 0.4)'
-                          },
-                          '@keyframes pulse': {
-                            '0%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' },
-                            '50%': { boxShadow: '0 6px 16px rgba(244, 67, 54, 0.5)' },
-                            '100%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' }
-                          }
-                        }}
-                      >
-                        <DeleteIcon sx={{ 
-                          fontSize: '24px',
-                          color: row.isDeleted ? '#ccc' : '#f44336'
-                        }} />
-                      </IconButton>
+                      {!row.isDeleted ? (
+                        <IconButton
+                          onClick={() => removeCpuUsageRow(cpuUsageData.indexOf(row))}
+                          color="error"
+                          disabled={row.isDeleted}
+                          sx={{
+                            backgroundColor: row.isDeleted ? 'transparent' : '#ffebee',
+                            border: row.isDeleted ? 'none' : '2px solid #f44336',
+                            borderRadius: '8px',
+                            padding: '12px',
+                            minWidth: '48px',
+                            minHeight: '48px',
+                            boxShadow: row.isDeleted ? 'none' : '0 4px 8px rgba(244, 67, 54, 0.3)',
+                            transition: 'all 0.3s ease',
+                            animation: row.isDeleted ? 'none' : 'pulse 2s infinite',
+                            '&:hover': {
+                              backgroundColor: row.isDeleted ? 'transparent' : '#ffcdd2',
+                              transform: row.isDeleted ? 'none' : 'scale(1.1)',
+                              boxShadow: row.isDeleted ? 'none' : '0 6px 12px rgba(244, 67, 54, 0.4)'
+                            },
+                            '@keyframes pulse': {
+                              '0%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' },
+                              '50%': { boxShadow: '0 6px 16px rgba(244, 67, 54, 0.5)' },
+                              '100%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' }
+                            }
+                          }}
+                        >
+                          <DeleteIcon sx={{ 
+                            fontSize: '24px',
+                            color: row.isDeleted ? '#ccc' : '#f44336'
+                          }} />
+                        </IconButton>
+                      ) : (
+                        <IconButton
+                          onClick={() => restoreCpuUsageRow(cpuUsageData.indexOf(row))}
+                          color="success"
+                          sx={{
+                            backgroundColor: '#e8f5e8',
+                            border: '2px solid #4caf50',
+                            borderRadius: '8px',
+                            padding: '12px',
+                            minWidth: '48px',
+                            minHeight: '48px',
+                            boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)',
+                            transition: 'all 0.3s ease',
+                            animation: 'undoPulse 2s infinite',
+                            position: 'relative',
+                            zIndex: 2,
+                            '&:hover': {
+                              backgroundColor: '#c8e6c9',
+                              transform: 'scale(1.1)',
+                              boxShadow: '0 6px 12px rgba(76, 175, 80, 0.4)'
+                            },
+                            '@keyframes undoPulse': {
+                              '0%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' },
+                              '50%': { boxShadow: '0 6px 16px rgba(76, 175, 80, 0.5)' },
+                              '100%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' }
+                            }
+                          }}
+                        >
+                          <UndoIcon sx={{ 
+                            fontSize: '24px',
+                            color: '#4caf50'
+                          }} />
+                        </IconButton>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -683,6 +840,22 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
           }}
         />
       </Box>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };

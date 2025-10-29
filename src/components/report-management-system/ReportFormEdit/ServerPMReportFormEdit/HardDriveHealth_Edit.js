@@ -16,12 +16,15 @@ import {
   InputLabel,
   Button,
   IconButton,
-  CircularProgress
+  CircularProgress,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Storage as StorageIcon,
+  Undo as UndoIcon,
 } from '@mui/icons-material';
 
 // Import the hard drive health image
@@ -34,6 +37,7 @@ const HardDriveHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
   const [remarks, setRemarks] = useState('');
   const [resultStatusOptions, setResultStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const isInitialized = useRef(false);
 
   // Initialize data from props when meaningful data is available
@@ -120,6 +124,15 @@ const HardDriveHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
     setHardDriveHealthData(updatedData);
   };
 
+  // Utility functions for toast messages
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const addHardDriveHealthRow = () => {
     setHardDriveHealthData([...hardDriveHealthData, { 
       id: null, // null indicates new row
@@ -127,6 +140,7 @@ const HardDriveHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
       result: '',
       isNew: true // flag to track new rows
     }]);
+    showSnackbar('New hard drive health row added');
   };
 
   const removeHardDriveHealthRow = (index) => {
@@ -140,12 +154,30 @@ const HardDriveHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
         isDeleted: true,
         isModified: true
       };
+      showSnackbar('Hard drive health row deleted. Click undo to restore.', 'warning');
     } else {
       // If it's a new item (no ID), remove it completely
       updatedData.splice(index, 1);
+      showSnackbar('New hard drive health row removed');
     }
     
     setHardDriveHealthData(updatedData);
+  };
+
+  const restoreHardDriveHealthRow = (index) => {
+    const updatedData = [...hardDriveHealthData];
+    const itemToRestore = updatedData[index];
+    
+    // Only restore if item is currently deleted
+    if (itemToRestore.isDeleted) {
+      updatedData[index] = {
+        ...itemToRestore,
+        isDeleted: false,
+        isModified: true // Keep as modified since we're changing the delete status
+      };
+      setHardDriveHealthData(updatedData);
+      showSnackbar('Hard drive health row restored');
+    }
   };
 
   // Styling
@@ -310,37 +342,72 @@ const HardDriveHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
                     </TextField>
                   </TableCell>
                   <TableCell>
-                    <IconButton
-                      onClick={() => removeHardDriveHealthRow(index)}
-                      color="error"
-                      disabled={row.isDeleted}
-                      sx={{
-                        backgroundColor: row.isDeleted ? 'transparent' : '#ffebee',
-                        border: row.isDeleted ? 'none' : '2px solid #f44336',
-                        borderRadius: '8px',
-                        padding: '12px',
-                        minWidth: '48px',
-                        minHeight: '48px',
-                        boxShadow: row.isDeleted ? 'none' : '0 4px 8px rgba(244, 67, 54, 0.3)',
-                        transition: 'all 0.3s ease',
-                        animation: row.isDeleted ? 'none' : 'pulse 2s infinite',
-                        '&:hover': {
-                          backgroundColor: row.isDeleted ? 'transparent' : '#ffcdd2',
-                          transform: row.isDeleted ? 'none' : 'scale(1.1)',
-                          boxShadow: row.isDeleted ? 'none' : '0 6px 12px rgba(244, 67, 54, 0.4)'
-                        },
-                        '@keyframes pulse': {
-                          '0%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' },
-                          '50%': { boxShadow: '0 6px 16px rgba(244, 67, 54, 0.5)' },
-                          '100%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' }
-                        }
-                      }}
-                    >
-                      <DeleteIcon sx={{ 
-                        fontSize: '24px',
-                        color: row.isDeleted ? '#ccc' : '#f44336'
-                      }} />
-                    </IconButton>
+                    {!row.isDeleted ? (
+                      <IconButton
+                        onClick={() => removeHardDriveHealthRow(index)}
+                        color="error"
+                        disabled={row.isDeleted}
+                        sx={{
+                          backgroundColor: row.isDeleted ? 'transparent' : '#ffebee',
+                          border: row.isDeleted ? 'none' : '2px solid #f44336',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          minWidth: '48px',
+                          minHeight: '48px',
+                          boxShadow: row.isDeleted ? 'none' : '0 4px 8px rgba(244, 67, 54, 0.3)',
+                          transition: 'all 0.3s ease',
+                          animation: row.isDeleted ? 'none' : 'pulse 2s infinite',
+                          '&:hover': {
+                            backgroundColor: row.isDeleted ? 'transparent' : '#ffcdd2',
+                            transform: row.isDeleted ? 'none' : 'scale(1.1)',
+                            boxShadow: row.isDeleted ? 'none' : '0 6px 12px rgba(244, 67, 54, 0.4)'
+                          },
+                          '@keyframes pulse': {
+                            '0%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' },
+                            '50%': { boxShadow: '0 6px 16px rgba(244, 67, 54, 0.5)' },
+                            '100%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' }
+                          }
+                        }}
+                      >
+                        <DeleteIcon sx={{ 
+                          fontSize: '24px',
+                          color: row.isDeleted ? '#ccc' : '#f44336'
+                        }} />
+                      </IconButton>
+                    ) : (
+                      <IconButton
+                        onClick={() => restoreHardDriveHealthRow(index)}
+                        color="success"
+                        sx={{
+                          backgroundColor: '#e8f5e8',
+                          border: '2px solid #4caf50',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          minWidth: '48px',
+                          minHeight: '48px',
+                          boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)',
+                          transition: 'all 0.3s ease',
+                          animation: 'undoPulse 2s infinite',
+                          position: 'relative',
+                          zIndex: 2,
+                          '&:hover': {
+                            backgroundColor: '#c8e6c9',
+                            transform: 'scale(1.1)',
+                            boxShadow: '0 6px 12px rgba(76, 175, 80, 0.4)'
+                          },
+                          '@keyframes undoPulse': {
+                            '0%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' },
+                            '50%': { boxShadow: '0 6px 16px rgba(76, 175, 80, 0.5)' },
+                            '100%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' }
+                          }
+                        }}
+                      >
+                        <UndoIcon sx={{ 
+                          fontSize: '24px',
+                          color: '#4caf50'
+                        }} />
+                      </IconButton>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -371,6 +438,22 @@ const HardDriveHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
           }}
         />
       </Box>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };

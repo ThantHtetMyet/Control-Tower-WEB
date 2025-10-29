@@ -13,12 +13,15 @@ import {
   Button,
   IconButton,
   MenuItem,
-  CircularProgress
+  CircularProgress,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Storage as StorageIcon,
+  Undo as UndoIcon,
 } from '@mui/icons-material';
 
 // Import the yes/no status service
@@ -29,20 +32,79 @@ const MonthlyDatabaseCreation_Edit = ({ data, onDataChange, onStatusChange }) =>
   const [remarks, setRemarks] = useState('');
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const isInitialized = useRef(false);
 
-  // Initialize data from props when meaningful data is available
+  // Utility functions for snackbar
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar({ ...snackbar, open: false });
+  };
+  // Initialize data from props - handle both API array format and legacy format
   useEffect(() => {
-    // Check if we have meaningful data to initialize with
-    const hasData = data && ((data.monthlyDatabaseData && data.monthlyDatabaseData.length > 0) || 
-                            (data.remarks && data.remarks.trim() !== ''));
-    
-    if (hasData && !isInitialized.current) {
-      if (data.monthlyDatabaseData && data.monthlyDatabaseData.length > 0) {
-        setMonthlyDatabaseData(data.monthlyDatabaseData);
+    if (data && !isInitialized.current) {
+      // Handle API array format (pmServerMonthlyDatabaseCreations)
+      if (data.pmServerMonthlyDatabaseCreations && Array.isArray(data.pmServerMonthlyDatabaseCreations)) {
+        const mappedData = data.pmServerMonthlyDatabaseCreations.flatMap(item => 
+          (item.details || []).map(detail => ({
+            id: detail.id || null,
+            serialNo: detail.serialNo || '',
+            item: detail.serverName || '',
+            monthlyDBCreated: detail.yesNoStatusID || '',
+            isNew: !detail.id,
+            isModified: false
+          }))
+        );
+        // Sort by serialNo in ascending order
+        mappedData.sort((a, b) => {
+          const serialA = parseInt(a.serialNo) || 0;
+          const serialB = parseInt(b.serialNo) || 0;
+          return serialA - serialB;
+        });
+        setMonthlyDatabaseData(mappedData);
+        setRemarks(data.pmServerMonthlyDatabaseCreations[0]?.remarks || '');
       }
-      if (data.remarks) {
-        setRemarks(data.remarks);
+      // Handle legacy format for backward compatibility
+      else if (Array.isArray(data)) {
+        const mappedData = data.map((item, index) => ({
+          id: null,
+          serialNo: item.serialNo || (index + 1).toString(),
+          item: '',
+          monthlyDBCreated: item.result || '',
+          isNew: true,
+          isModified: false
+        }));
+        // Sort by serialNo in ascending order
+        mappedData.sort((a, b) => {
+          const serialA = parseInt(a.serialNo) || 0;
+          const serialB = parseInt(b.serialNo) || 0;
+          return serialA - serialB;
+        });
+        setMonthlyDatabaseData(mappedData);
+        setRemarks(data[0]?.remarks || '');
+      }
+      // Handle direct object format
+      else if (data.monthlyDatabaseData) {
+        const monthlyData = data.monthlyDatabaseData || [];
+        // Ensure serialNo is present and sort
+        const processedData = monthlyData.map((item, index) => ({
+          ...item,
+          serialNo: item.serialNo || (index + 1).toString()
+        }));
+        // Sort by serialNo in ascending order
+        processedData.sort((a, b) => {
+          const serialA = parseInt(a.serialNo) || 0;
+          const serialB = parseInt(b.serialNo) || 0;
+          return serialA - serialB;
+        });
+        setMonthlyDatabaseData(processedData);
+        setRemarks(data.remarks || '');
       }
       isInitialized.current = true;
     }
@@ -70,39 +132,91 @@ const MonthlyDatabaseCreation_Edit = ({ data, onDataChange, onStatusChange }) =>
     if (isInitialized.current && onDataChange) {
       onDataChange({
         monthlyDatabaseData,
-        remarks
+        remarks,
+        yesNoStatusOptions
       });
     }
-  }, [monthlyDatabaseData, remarks]);
+  }, [monthlyDatabaseData, remarks, yesNoStatusOptions]);
 
   // Calculate completion status
   useEffect(() => {
-    const hasMonthlyDatabaseData = monthlyDatabaseData.some(item => 
-      item.item.trim() !== '' && item.monthlyDBCreated !== ''
-    );
-    const hasRemarks = remarks.trim() !== '';
-    
-    const isCompleted = hasMonthlyDatabaseData && hasRemarks;
+    const hasData = Array.isArray(monthlyDatabaseData) && monthlyDatabaseData.length > 0 && 
+                   monthlyDatabaseData.some(item => 
+                     item && (
+                       (item.item && item.item.trim() !== '') ||
+                       (item.monthlyDBCreated && item.monthlyDBCreated.trim() !== '')
+                     )
+                   );
+    const hasRemarks = remarks && remarks.trim() !== '';
+    const isCompleted = hasData || hasRemarks;
     
     if (onStatusChange) {
-      onStatusChange('MonthlyDatabaseCreation', isCompleted);
+      onStatusChange('MonthlyDatabaseCreation_Edit', isCompleted);
     }
   }, [monthlyDatabaseData, remarks]);
 
   // Monthly Database Creation handlers
   const handleMonthlyDatabaseChange = (index, field, value) => {
     const updatedData = [...monthlyDatabaseData];
-    updatedData[index] = { ...updatedData[index], [field]: value };
+    const currentItem = updatedData[index];
+    
+    // Mark as modified if it's an existing item (has ID) and value changed
+    const isModified = currentItem.id && currentItem[field] !== value;
+    
+    updatedData[index] = { 
+      ...currentItem, 
+      [field]: value,
+      isModified: isModified || currentItem.isModified
+    };
     setMonthlyDatabaseData(updatedData);
   };
 
   const addMonthlyDatabaseRow = () => {
-    setMonthlyDatabaseData([...monthlyDatabaseData, { item: '', monthlyDBCreated: '' }]);
+    setMonthlyDatabaseData([...monthlyDatabaseData, { 
+      id: null, // null indicates new row
+      serialNo: (monthlyDatabaseData.length + 1).toString(),
+      item: '', 
+      monthlyDBCreated: '',
+      isNew: true // flag to track new rows
+    }]);
+    showSnackbar('Database row added successfully', 'success');
   };
 
   const removeMonthlyDatabaseRow = (index) => {
-    const updatedData = monthlyDatabaseData.filter((_, i) => i !== index);
+    const updatedData = [...monthlyDatabaseData];
+    const itemToRemove = updatedData[index];
+    
+    // If item has an ID (existing record), mark as deleted instead of removing
+    if (itemToRemove.id) {
+      updatedData[index] = {
+        ...itemToRemove,
+        isDeleted: true,
+        isModified: true
+      };
+      showSnackbar('Database row deleted. Click undo to restore.', 'warning');
+    } else {
+      // If it's a new item (no ID), remove it completely
+      updatedData.splice(index, 1);
+      showSnackbar('New database row removed');
+    }
+    
     setMonthlyDatabaseData(updatedData);
+  };
+
+  const restoreMonthlyDatabaseRow = (index) => {
+    const updatedData = [...monthlyDatabaseData];
+    const itemToRestore = updatedData[index];
+    
+    // Only restore if item is currently deleted
+    if (itemToRestore.isDeleted) {
+      updatedData[index] = {
+        ...itemToRestore,
+        isDeleted: false,
+        isModified: true // Keep as modified since we're changing the delete status
+      };
+      setMonthlyDatabaseData(updatedData);
+      showSnackbar('Database row restored successfully', 'success');
+    }
   };
 
   // Styling
@@ -171,10 +285,28 @@ const MonthlyDatabaseCreation_Edit = ({ data, onDataChange, onStatusChange }) =>
               </TableRow>
             ) : (
               monthlyDatabaseData.map((row, index) => (
-                <TableRow key={index}>
+                <TableRow 
+                  key={row.id || index}
+                  sx={{
+                    position: 'relative',
+                    opacity: row.isDeleted ? 0.6 : 1,
+                    backgroundColor: row.isDeleted ? '#ffebee' : 'transparent',
+                    '&::after': row.isDeleted ? {
+                      content: '""',
+                      position: 'absolute',
+                      top: '50%',
+                      left: 0,
+                      right: 0,
+                      height: '2px',
+                      backgroundColor: '#d32f2f',
+                      zIndex: 1,
+                      pointerEvents: 'none'
+                    } : {}
+                  }}
+                >
                   <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {index + 1}
+                      {row.serialNo}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -185,6 +317,7 @@ const MonthlyDatabaseCreation_Edit = ({ data, onDataChange, onStatusChange }) =>
                       onChange={(e) => handleMonthlyDatabaseChange(index, 'item', e.target.value)}
                       placeholder="Enter item description"
                       size="small"
+                      disabled={row.isDeleted}
                     />
                   </TableCell>
                   <TableCell>
@@ -195,7 +328,7 @@ const MonthlyDatabaseCreation_Edit = ({ data, onDataChange, onStatusChange }) =>
                       value={row.monthlyDBCreated}
                       onChange={(e) => handleMonthlyDatabaseChange(index, 'monthlyDBCreated', e.target.value)}
                       size="small"
-                      disabled={loading}
+                      disabled={loading || row.isDeleted}
                       sx={{
                         minWidth: 120,
                         '& .MuiSelect-select': {
@@ -222,12 +355,71 @@ const MonthlyDatabaseCreation_Edit = ({ data, onDataChange, onStatusChange }) =>
                     </TextField>
                   </TableCell>
                   <TableCell>
-                    <IconButton
-                      onClick={() => removeMonthlyDatabaseRow(index)}
-                      color="error"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
+                    {!row.isDeleted ? (
+                      <IconButton
+                        onClick={() => removeMonthlyDatabaseRow(index)}
+                        color="error"
+                        sx={{
+                          backgroundColor: '#ffebee',
+                          border: '2px solid #f44336',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          minWidth: '48px',
+                          minHeight: '48px',
+                          boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)',
+                          transition: 'all 0.3s ease',
+                          animation: 'pulse 2s infinite',
+                          '&:hover': {
+                            backgroundColor: '#ffcdd2',
+                            transform: 'scale(1.1)',
+                            boxShadow: '0 6px 12px rgba(244, 67, 54, 0.4)'
+                          },
+                          '@keyframes pulse': {
+                            '0%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' },
+                            '50%': { boxShadow: '0 6px 16px rgba(244, 67, 54, 0.5)' },
+                            '100%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' }
+                          }
+                        }}
+                      >
+                        <DeleteIcon sx={{ 
+                          fontSize: '24px',
+                          color: '#f44336'
+                        }} />
+                      </IconButton>
+                    ) : (
+                      <IconButton
+                        onClick={() => restoreMonthlyDatabaseRow(index)}
+                        color="success"
+                        sx={{
+                          backgroundColor: '#e8f5e8',
+                          border: '2px solid #4caf50',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          minWidth: '48px',
+                          minHeight: '48px',
+                          boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)',
+                          transition: 'all 0.3s ease',
+                          animation: 'undoPulse 2s infinite',
+                          position: 'relative',
+                          zIndex: 2, // Above the strikethrough line
+                          '&:hover': {
+                            backgroundColor: '#c8e6c9',
+                            transform: 'scale(1.1)',
+                            boxShadow: '0 6px 12px rgba(76, 175, 80, 0.4)'
+                          },
+                          '@keyframes undoPulse': {
+                            '0%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' },
+                            '50%': { boxShadow: '0 6px 16px rgba(76, 175, 80, 0.5)' },
+                            '100%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' }
+                          }
+                        }}
+                      >
+                        <UndoIcon sx={{ 
+                          fontSize: '24px',
+                          color: '#4caf50'
+                        }} />
+                      </IconButton>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -258,6 +450,18 @@ const MonthlyDatabaseCreation_Edit = ({ data, onDataChange, onStatusChange }) =>
           }}
         />
       </Box>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };

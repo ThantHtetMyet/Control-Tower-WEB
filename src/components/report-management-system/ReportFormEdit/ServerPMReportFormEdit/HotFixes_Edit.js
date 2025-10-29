@@ -13,12 +13,15 @@ import {
   Button,
   IconButton,
   CircularProgress,
-  MenuItem
+  MenuItem,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Build as BuildIcon,
+  Undo as UndoIcon
 } from '@mui/icons-material';
 
 // Import the result status service
@@ -29,21 +32,82 @@ const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
   const [remarks, setRemarks] = useState('');
   const [resultStatusOptions, setResultStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [undoStack, setUndoStack] = useState([]);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const isInitialized = useRef(false);
 
   // Initialize data from props when meaningful data is available
   useEffect(() => {
     // Check if we have meaningful data to initialize with
-    const hasData = data && ((data.hotFixesData && data.hotFixesData.length > 0) || 
-                            (data.remarks && data.remarks.trim() !== ''));
+    const hasData = data && (
+      (Array.isArray(data) && data.length > 0) ||
+      (data.pmServerHotFixes && data.pmServerHotFixes.length > 0) ||
+      (data.hotFixesData && data.hotFixesData.length > 0) ||
+      (data.remarks && data.remarks.trim() !== '')
+    );
     
     if (hasData && !isInitialized.current) {
-      if (data.hotFixesData && data.hotFixesData.length > 0) {
-        setHotFixesData(data.hotFixesData);
+      // Handle API response format (from ServerPMReportForm_Edit)
+      if (data.pmServerHotFixes && Array.isArray(data.pmServerHotFixes)) {
+        const hotFixesRecord = data.pmServerHotFixes[0];
+        
+        // Initialize hotfixes data from details array
+        if (hotFixesRecord && hotFixesRecord.details && hotFixesRecord.details.length > 0) {
+          const mappedData = hotFixesRecord.details.map(detail => ({
+            id: detail.id || null,
+            machineName: detail.serverName || '',
+            hotFixName: detail.hotFixName || '',
+            done: detail.resultStatusID || '',
+            serialNo: detail.serialNo || '',
+            isNew: !detail.id,
+            isModified: false,
+            isDeleted: false
+          }));
+          
+          // Sort by serialNo (convert to number for proper sorting)
+          const sortedData = mappedData.sort((a, b) => {
+            const serialA = parseInt(a.serialNo) || 0;
+            const serialB = parseInt(b.serialNo) || 0;
+            return serialA - serialB;
+          });
+          
+          setHotFixesData(sortedData);
+          console.log('HotFixes_Edit - Mapped and sorted data from API:', sortedData);
+        }
+        
+        // Set remarks from the hotfixes record
+        if (hotFixesRecord.remarks) {
+          setRemarks(hotFixesRecord.remarks);
+        }
       }
+      // Handle direct hotFixesData format
+      else if (data.hotFixesData && data.hotFixesData.length > 0) {
+        const mappedData = data.hotFixesData.map((item, index) => ({
+          id: item.id || null,
+          machineName: item.machineName || '',
+          hotFixName: item.latestHotfixesApplied || item.hotFixName || '',
+          done: item.done || '',
+          serialNo: item.serialNo || (index + 1).toString(),
+          isNew: !item.id,
+          isModified: item.isModified || false,
+          isDeleted: item.isDeleted || false
+        }));
+        
+        // Sort by serialNo (convert to number for proper sorting)
+        const sortedData = mappedData.sort((a, b) => {
+          const serialA = parseInt(a.serialNo) || 0;
+          const serialB = parseInt(b.serialNo) || 0;
+          return serialA - serialB;
+        });
+        
+        setHotFixesData(sortedData);
+      }
+      
+      // Handle direct remarks from data object
       if (data.remarks) {
         setRemarks(data.remarks);
       }
+      
       isInitialized.current = true;
     }
   }, [data]);
@@ -77,9 +141,10 @@ const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
 
   // Calculate completion status
   useEffect(() => {
-    const hasHotFixesData = hotFixesData.some(item => 
+    const activeHotFixesData = hotFixesData.filter(item => !item.isDeleted);
+    const hasHotFixesData = activeHotFixesData.some(item => 
       item.machineName && item.machineName.trim() !== '' && 
-      item.latestHotfixesApplied && item.latestHotfixesApplied.trim() !== '' && 
+      item.hotFixName && item.hotFixName.trim() !== '' && 
       item.done !== ''
     );
     const hasRemarks = remarks && remarks.trim() !== '';
@@ -87,34 +152,89 @@ const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
     const isCompleted = hasHotFixesData && hasRemarks;
     
     if (onStatusChange) {
-      onStatusChange('HotFixes', isCompleted);
+      onStatusChange('HotFixes_Edit', isCompleted);
     }
-  }, [hotFixesData, remarks]);
+  }, [hotFixesData, remarks, onStatusChange]);
+
+  // Utility functions
+  const saveToUndoStack = (action, data) => {
+    setUndoStack(prev => [...prev, { action, data, timestamp: Date.now() }]);
+  };
+
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
 
   // HotFixes handlers
   const handleHotFixesChange = (index, field, value) => {
     const updatedData = [...hotFixesData];
-    updatedData[index] = { ...updatedData[index], [field]: value };
+    const currentItem = updatedData[index];
+    
+    // Mark as modified if it's an existing item (has ID) and value changed
+    const isModified = currentItem.id && currentItem[field] !== value;
+    
+    updatedData[index] = { 
+      ...currentItem, 
+      [field]: value,
+      isModified: isModified || currentItem.isModified
+    };
     setHotFixesData(updatedData);
   };
 
   const addHotFixesRow = () => {
-    setHotFixesData([...hotFixesData, { 
-      serialNumber: hotFixesData.length + 1,
-      machineName: '', 
-      latestHotfixesApplied: '', 
-      done: '' 
-    }]);
+    const newRow = {
+      id: null, // null indicates new row
+      serialNo: (hotFixesData.length + 1).toString(),
+      machineName: '',
+      hotFixName: '',
+      done: '',
+      isNew: true, // flag to track new rows
+      isModified: false,
+      isDeleted: false
+    };
+    
+    setHotFixesData([...hotFixesData, newRow]);
+    showSnackbar('New hotfix item added');
   };
 
   const removeHotFixesRow = (index) => {
-    const updatedData = hotFixesData.filter((_, i) => i !== index);
-    // Update serial numbers
-    const reindexedData = updatedData.map((item, i) => ({
-      ...item,
-      serialNumber: i + 1
-    }));
-    setHotFixesData(reindexedData);
+    const updatedData = [...hotFixesData];
+    const itemToRemove = updatedData[index];
+    
+    // Save current state for undo
+    saveToUndoStack('delete', { index, item: { ...itemToRemove } });
+    
+    // If item has an ID (existing record), mark as deleted instead of removing
+    if (itemToRemove.id) {
+      updatedData[index] = {
+        ...itemToRemove,
+        isDeleted: true,
+        isModified: true
+      };
+      showSnackbar('Hotfix item deleted. Click undo to restore.', 'warning');
+    } else {
+      // If it's a new item (no ID), remove it completely
+      updatedData.splice(index, 1);
+      showSnackbar('New hotfix item removed');
+    }
+    
+    setHotFixesData(updatedData);
+  };
+
+  const restoreHotFixesRow = (index) => {
+    const updatedData = [...hotFixesData];
+    const item = updatedData[index];
+    
+    updatedData[index] = { ...item, isDeleted: false };
+    setHotFixesData(updatedData);
+    showSnackbar('Hotfix item restored');
   };
 
   const handleRemarksChange = (e) => {
@@ -184,10 +304,28 @@ const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
               </TableRow>
             ) : (
               hotFixesData.map((row, index) => (
-                <TableRow key={index}>
+                <TableRow 
+                  key={row.id || index}
+                  sx={{
+                    position: 'relative',
+                    opacity: row.isDeleted ? 0.6 : 1,
+                    backgroundColor: row.isDeleted ? '#ffebee' : 'transparent',
+                    '&::after': row.isDeleted ? {
+                      content: '""',
+                      position: 'absolute',
+                      top: '50%',
+                      left: 0,
+                      right: 0,
+                      height: '2px',
+                      backgroundColor: '#d32f2f',
+                      zIndex: 1,
+                      pointerEvents: 'none'
+                    } : {}
+                  }}
+                >
                   <TableCell>
-                    <Typography variant="body2" sx={{ textAlign: 'center' }}>
-                      {row.serialNumber}
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {row.serialNo}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -198,16 +336,18 @@ const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
                       onChange={(e) => handleHotFixesChange(index, 'machineName', e.target.value)}
                       placeholder="Enter machine name"
                       size="small"
+                      disabled={row.isDeleted}
                     />
                   </TableCell>
                   <TableCell>
                     <TextField
                       fullWidth
                       variant="outlined"
-                      value={row.latestHotfixesApplied}
-                      onChange={(e) => handleHotFixesChange(index, 'latestHotfixesApplied', e.target.value)}
+                      value={row.hotFixName}
+                      onChange={(e) => handleHotFixesChange(index, 'hotFixName', e.target.value)}
                       placeholder="e.g., KB4022719"
                       size="small"
+                      disabled={row.isDeleted}
                     />
                   </TableCell>
                   <TableCell>
@@ -218,7 +358,7 @@ const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
                       value={row.done}
                       onChange={(e) => handleHotFixesChange(index, 'done', e.target.value)}
                       size="small"
-                      disabled={loading}
+                      disabled={loading || row.isDeleted}
                       sx={{
                         minWidth: 120,
                         '& .MuiSelect-select': {
@@ -245,12 +385,73 @@ const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
                     </TextField>
                   </TableCell>
                   <TableCell>
-                    <IconButton
-                      onClick={() => removeHotFixesRow(index)}
-                      color="error"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
+                    {!row.isDeleted ? (
+                      <IconButton
+                        onClick={() => removeHotFixesRow(index)}
+                        color="error"
+                        title="Delete hotfix"
+                        sx={{
+                          backgroundColor: '#ffebee',
+                          border: '2px solid #f44336',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          minWidth: '48px',
+                          minHeight: '48px',
+                          boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)',
+                          transition: 'all 0.3s ease',
+                          animation: 'pulse 2s infinite',
+                          '&:hover': {
+                            backgroundColor: '#ffcdd2',
+                            transform: 'scale(1.1)',
+                            boxShadow: '0 6px 12px rgba(244, 67, 54, 0.4)'
+                          },
+                          '@keyframes pulse': {
+                            '0%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' },
+                            '50%': { boxShadow: '0 6px 16px rgba(244, 67, 54, 0.5)' },
+                            '100%': { boxShadow: '0 4px 8px rgba(244, 67, 54, 0.3)' }
+                          }
+                        }}
+                      >
+                        <DeleteIcon sx={{ 
+                          fontSize: '24px',
+                          color: '#f44336'
+                        }} />
+                      </IconButton>
+                    ) : (
+                      <IconButton
+                        onClick={() => restoreHotFixesRow(index)}
+                        title="Restore hotfix"
+                        color="success"
+                        sx={{
+                          backgroundColor: '#e8f5e8',
+                          border: '2px solid #4caf50',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          minWidth: '48px',
+                          minHeight: '48px',
+                          boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)',
+                          transition: 'all 0.3s ease',
+                          animation: 'undoPulse 2s infinite',
+                          position: 'relative',
+                          zIndex: 2, // Above the strikethrough line
+                          '&:hover': {
+                            backgroundColor: '#c8e6c9',
+                            transform: 'scale(1.1)',
+                            boxShadow: '0 6px 12px rgba(76, 175, 80, 0.4)'
+                          },
+                          '@keyframes undoPulse': {
+                            '0%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' },
+                            '50%': { boxShadow: '0 6px 16px rgba(76, 175, 80, 0.5)' },
+                            '100%': { boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)' }
+                          }
+                        }}
+                      >
+                        <UndoIcon sx={{ 
+                          fontSize: '24px',
+                          color: '#4caf50'
+                        }} />
+                      </IconButton>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -281,6 +482,22 @@ const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
           }}
         />
       </Box>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={handleSnackbarClose} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };

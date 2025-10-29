@@ -33,31 +33,84 @@ const AutoFailOver_Edit = ({ data, onDataChange, onStatusChange }) => {
   const [loading, setLoading] = useState(false);
   const isInitialized = useRef(false);
 
-  // Initialize data from props when meaningful data is available
+  // Initialize data when meaningful data is available
   useEffect(() => {
     // Check if we have meaningful data to initialize with
-    const hasData = data && ((data.autoFailOverData && data.autoFailOverData.length > 0) || 
-                            (data.remarks && data.remarks.trim() !== ''));
+    const hasData = data && (
+      (data.pmServerFailOvers && data.pmServerFailOvers.length > 0) ||
+      (data.autoFailOverData && data.autoFailOverData.length > 0) ||
+      data.remarks || 
+      (data.result && data.result.trim() !== '')
+    );
     
     if (hasData && !isInitialized.current) {
-      if (data.autoFailOverData && data.autoFailOverData.length > 0) {
-        setAutoFailOverData(data.autoFailOverData);
-      } else {
-        // Initialize with proper server data for each scenario
-        setAutoFailOverData(failoverScenarios.map((scenario, index) => ({ 
-          serialNumber: index + 1,
-          failoverType: scenario.type,
-          toServer: index === 0 ? 'SCA-SR2' : 'SCA-SR1',  // First scenario: SCA-SR1 to SCA-SR2, Second: SCA-SR2 to SCA-SR1
-          fromServer: index === 0 ? 'SCA-SR1' : 'SCA-SR2', // First scenario: from SCA-SR1, Second: from SCA-SR2
-          expectedResult: scenario.expectedResult,
-          result: '' 
-        })));
+      console.log('AutoFailOver_Edit - Initializing with data:', JSON.stringify(data, null, 2));
+      
+      // Handle new API structure with pmServerFailOvers
+      if (data.pmServerFailOvers && data.pmServerFailOvers.length > 0) {
+        const failOverRecord = data.pmServerFailOvers[0];
+        const details = failOverRecord.details || failOverRecord.Details || [];
+        
+        // Transform API data to component format
+        const transformedData = details.map((detail, index) => {
+          // Determine failover type based on fromServer and toServer
+          let failoverType = 'N/A';
+          if (detail.fromServer === 'SCA-SR1' && detail.toServer === 'SCA-SR2') {
+            failoverType = 'Failover from SCA-SR1 to SCA-SR2';
+          } else if (detail.fromServer === 'SCA-SR2' && detail.toServer === 'SCA-SR1') {
+            failoverType = 'Failover from SCA-SR2 to SCA-SR1';
+          }
+
+          return {
+            id: detail.id || detail.ID,
+            serialNumber: detail.serialNo || detail.SerialNo || (index + 1),
+            failoverType: failoverType,
+            fromServer: detail.fromServer || detail.FromServer,
+            toServer: detail.toServer || detail.ToServer,
+            expectedResult: detail.expectedResult || detail.ExpectedResult || failoverScenarios[index]?.expectedResult || 'N/A',
+            result: detail.yesNoStatusID || detail.YesNoStatusID || detail.result || detail.Result || '',
+            resultStatusName: detail.yesNoStatusName || detail.YesNoStatusName || detail.resultStatusName || detail.ResultStatusName,
+            isNew: !detail.id && !detail.ID,
+            isModified: false,
+            isDeleted: false
+          };
+        });
+        
+        setAutoFailOverData(transformedData);
+        setRemarks(failOverRecord.remarks || failOverRecord.Remarks || '');
+      }
+      // Handle legacy autoFailOverData structure
+      else if (data.autoFailOverData && data.autoFailOverData.length > 0) {
+        const transformedData = data.autoFailOverData.map((item, index) => ({
+          ...item,
+          isNew: !item.id,
+          isModified: false,
+          isDeleted: false
+        }));
+        setAutoFailOverData(transformedData);
+        setRemarks(data.remarks || '');
+      }
+      // Handle direct data structure
+      else {
+        setRemarks(data.remarks || '');
       }
       
-      if (data.remarks) {
-        setRemarks(data.remarks);
-      }
-      
+      isInitialized.current = true;
+    }
+    // Initialize with default scenarios if no data
+    else if (!hasData && !isInitialized.current) {
+      setAutoFailOverData(failoverScenarios.map((scenario, index) => ({ 
+        serialNumber: index + 1,
+        failoverType: scenario.type,
+        toServer: index === 0 ? 'SCA-SR2' : 'SCA-SR1',
+        fromServer: index === 0 ? 'SCA-SR1' : 'SCA-SR2',
+        expectedResult: scenario.expectedResult,
+        result: '',
+        isNew: true,
+        isModified: false,
+        isDeleted: false
+      })));
+      setRemarks('');
       isInitialized.current = true;
     }
   }, [data]);
@@ -83,16 +136,21 @@ const AutoFailOver_Edit = ({ data, onDataChange, onStatusChange }) => {
   // Update parent component when data changes (but not on initial load)
   useEffect(() => {
     if (isInitialized.current && onDataChange) {
-      onDataChange({
-        autoFailOverData,
+      // Transform data back to API format for saving
+      const activeData = autoFailOverData.filter(item => !item.isDeleted);
+      
+      const dataToSend = {
+        autoFailOverData: autoFailOverData.filter(item => !item.isDeleted),
         remarks
-      });
+      };
+      onDataChange(dataToSend);
     }
   }, [autoFailOverData, remarks, onDataChange]);
 
   // Calculate completion status
   useEffect(() => {
-    const hasResults = autoFailOverData.some(item => 
+    const activeItems = autoFailOverData.filter(item => !item.isDeleted);
+    const hasResults = activeItems.some(item => 
       item.result && item.result !== ''
     );
     const hasRemarks = remarks && remarks.trim() !== '';
@@ -107,26 +165,46 @@ const AutoFailOver_Edit = ({ data, onDataChange, onStatusChange }) => {
   // AutoFailOver handlers
   const handleAutoFailOverChange = (index, field, value) => {
     const updatedData = [...autoFailOverData];
-    updatedData[index] = { ...updatedData[index], [field]: value };
+    updatedData[index] = { 
+      ...updatedData[index], 
+      [field]: value,
+      isModified: updatedData[index].id ? true : updatedData[index].isModified
+    };
     setAutoFailOverData(updatedData);
   };
 
   const addAutoFailOverRow = () => {
     const newRow = { 
       serialNumber: autoFailOverData.length + 1,
-      result: ''
+      result: '',
+      isNew: true,
+      isModified: false,
+      isDeleted: false
     };
     setAutoFailOverData([...autoFailOverData, newRow]);
+    console.log('AutoFailOver_Edit - Added new row');
   };
 
   const removeAutoFailOverRow = (index) => {
-    const updatedData = autoFailOverData.filter((_, i) => i !== index);
-    // Update serial numbers after removal
-    const reNumberedData = updatedData.map((item, i) => ({
-      ...item,
-      serialNumber: i + 1
-    }));
-    setAutoFailOverData(reNumberedData);
+    const updatedData = [...autoFailOverData];
+    const item = updatedData[index];
+    
+    if (item.id) {
+      // Mark existing item as deleted
+      updatedData[index] = { ...item, isDeleted: true, isModified: true };
+      setAutoFailOverData(updatedData);
+      console.log('AutoFailOver_Edit - Marked item as deleted');
+    } else {
+      // Remove new item completely
+      const filteredData = updatedData.filter((_, i) => i !== index);
+      // Update serial numbers after removal
+      const reNumberedData = filteredData.map((item, i) => ({
+        ...item,
+        serialNumber: i + 1
+      }));
+      setAutoFailOverData(reNumberedData);
+      console.log('AutoFailOver_Edit - Removed new item');
+    }
   };
 
   // Predefined failover scenarios for display
@@ -149,6 +227,13 @@ const AutoFailOver_Edit = ({ data, onDataChange, onStatusChange }) => {
       expectedResult: 'SCA-SR1 will become master. RTUs continue reporting data to SCADA'
     }
   ];
+
+  const restoreAutoFailOverRow = (index) => {
+    const updatedData = [...autoFailOverData];
+    updatedData[index] = { ...updatedData[index], isDeleted: false };
+    setAutoFailOverData(updatedData);
+    console.log('AutoFailOver_Edit - Restored item');
+  };
 
   // Styling constants
   const sectionContainerStyle = {
@@ -187,106 +272,103 @@ const AutoFailOver_Edit = ({ data, onDataChange, onStatusChange }) => {
       </Box>
 
       {/* Failover Test Sections */}
-      {failoverScenarios.map((scenario, index) => {
-        // Ensure we have data for this scenario
-        if (!autoFailOverData[index]) {
-          const newRow = { 
-            serialNumber: index + 1,
-            failoverType: scenario.type,
-            toServer: index === 0 ? 'SCA-SR2' : 'SCA-SR1',  // First scenario: SCA-SR1 to SCA-SR2, Second: SCA-SR2 to SCA-SR1
-            fromServer: index === 0 ? 'SCA-SR1' : 'SCA-SR2', // First scenario: from SCA-SR1, Second: from SCA-SR2
-            expectedResult: scenario.expectedResult,
-            result: ''
+      {autoFailOverData.filter(item => !item.isDeleted).length === 0 ? (
+        <Box sx={{ textAlign: 'center', padding: 4, color: '#666' }}>
+          <Typography variant="body2">
+            No auto failover data available
+          </Typography>
+        </Box>
+      ) : (
+        autoFailOverData.filter(item => !item.isDeleted).map((failoverItem, index) => {
+          const scenario = failoverScenarios[index] || {
+            type: failoverItem.failoverType || `Failover Test ${index + 1}`,
+            procedure: ['Check failover functionality'],
+            expectedResult: failoverItem.expectedResult || 'System should failover successfully'
           };
-          setAutoFailOverData(prev => {
-            const updated = [...prev];
-            updated[index] = newRow;
-            return updated;
-          });
-        }
-        
-        return (
-          <Box key={index} sx={{ marginBottom: 3, padding: 2, backgroundColor: '#f8f9fa', borderRadius: 1, border: '1px solid #e9ecef' }}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', marginBottom: 1, color: '#1976d2' }}>
-              <ComputerIcon sx={{ fontSize: 20, marginRight: 1, verticalAlign: 'middle' }} />
-              {scenario.type}
-            </Typography>
-            
-            <Typography variant="body2" sx={{ fontWeight: 'bold', marginBottom: 1, color: '#555' }}>
-              Procedure:
-            </Typography>
-            <Box component="ol" sx={{ paddingLeft: 2, marginBottom: 2 }}>
-              {scenario.procedure.map((step, stepIndex) => (
-                <Typography component="li" key={stepIndex} variant="body2" sx={{ marginBottom: 0.5, color: '#666' }}>
-                  {step}
-                </Typography>
-              ))}
-            </Box>
-            
-            {/* Expected Result and Result in horizontal layout */}
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', marginBottom: 1, color: '#555' }}>
-                  Expected Result:
-                </Typography>
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  value={scenario.expectedResult}
-                  multiline
-                  rows={2}
-                  size="small"
-                  InputProps={{
-                    readOnly: true,
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: '#ffffff',
-                    }
-                  }}
-                />
+          
+          return (
+            <Box key={failoverItem.id || index} sx={{ marginBottom: 3, padding: 2, backgroundColor: '#f8f9fa', borderRadius: 1, border: '1px solid #e9ecef' }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', marginBottom: 1, color: '#1976d2' }}>
+                <ComputerIcon sx={{ fontSize: 20, marginRight: 1, verticalAlign: 'middle' }} />
+                {scenario.type}
+              </Typography>
+              
+              <Typography variant="body2" sx={{ fontWeight: 'bold', marginBottom: 1, color: '#555' }}>
+                Procedure:
+              </Typography>
+              <Box component="ol" sx={{ paddingLeft: 2, marginBottom: 2 }}>
+                {scenario.procedure.map((step, stepIndex) => (
+                  <Typography component="li" key={stepIndex} variant="body2" sx={{ marginBottom: 0.5, color: '#666' }}>
+                    {step}
+                  </Typography>
+                ))}
               </Box>
               
-              <Box sx={{ width: 200 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', marginBottom: 1, color: '#555' }}>
-                  Result
-                </Typography>
-                <TextField
-                  fullWidth
-                  select
-                  variant="outlined"
-                  value={autoFailOverData[index]?.result || ''}
-                  onChange={(e) => handleAutoFailOverChange(index, 'result', e.target.value)}
-                  size="small"
-                  disabled={loading}
-                  sx={{
-                    '& .MuiSelect-select': {
-                      display: 'flex',
-                      alignItems: 'center',
-                    }
-                  }}
-                >
-                  <MenuItem value="">
-                    {loading ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CircularProgress size={16} />
-                        Loading...
-                      </Box>
-                    ) : (
-                      '-'
-                    )}
-                  </MenuItem>
-                  {yesNoStatusOptions.map((option) => (
-                    <MenuItem key={option.id} value={option.id}>
-                          {option.name}
-                        </MenuItem>
-                  ))}
-                </TextField>
+              {/* Expected Result and Result in horizontal layout */}
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', marginBottom: 1, color: '#555' }}>
+                    Expected Result:
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    variant="outlined"
+                    value={scenario.expectedResult}
+                    multiline
+                    rows={2}
+                    size="small"
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: '#ffffff',
+                      }
+                    }}
+                  />
+                </Box>
+                
+                <Box sx={{ width: 200 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', marginBottom: 1, color: '#555' }}>
+                    Result
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    select
+                    variant="outlined"
+                    value={failoverItem.result || ''}
+                    onChange={(e) => handleAutoFailOverChange(autoFailOverData.findIndex(item => item === failoverItem), 'result', e.target.value)}
+                    size="small"
+                    disabled={loading}
+                    sx={{
+                      '& .MuiSelect-select': {
+                        display: 'flex',
+                        alignItems: 'center',
+                      }
+                    }}
+                  >
+                    <MenuItem value="">
+                      {loading ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CircularProgress size={16} />
+                          Loading...
+                        </Box>
+                      ) : (
+                        '-'
+                      )}
+                    </MenuItem>
+                    {yesNoStatusOptions.map((option) => (
+                      <MenuItem key={option.id} value={option.id}>
+                            {option.name}
+                          </MenuItem>
+                    ))}
+                  </TextField>
+                </Box>
               </Box>
             </Box>
-          </Box>
-        );
-      })}
+          );
+        })
+      )}
 
       {/* Remarks Section */}
       <Box sx={{ marginTop: 3 }}>

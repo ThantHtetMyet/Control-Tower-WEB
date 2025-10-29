@@ -402,7 +402,7 @@ const DiskUsage = ({ data = {}, onDataChange }) => {
       {/* Remarks Section */}
       <Box sx={{ marginTop: 3 }}>
         <Typography variant="h6" sx={{ 
-          color: '#ff9800', 
+          color: '#1976d2', 
           fontWeight: 'bold', 
           marginBottom: 2,
           display: 'flex',

@@ -305,40 +305,42 @@ const ServerPMReportForm_Edit = () => {
             result: response.pmServerWillowlynxCCTVCameras?.[0]?.yesNoStatusID || '',
             remarks: response.pmServerWillowlynxCCTVCameras?.[0]?.remarks || ''
           },
-          monthlyDatabaseCreationData: (response.pmServerMonthlyDatabaseCreations || []).map(item => ({
-            dateChecked: item.dateChecked || '',
-            result: item.yesNoStatusID || '',
-            remarks: item.remarks || ''
-          })),
-          databaseBackupData: (response.pmServerDatabaseBackups || []).map(item => ({
-            dateChecked: item.dateChecked || '',
-            result: item.yesNoStatusID || '',
-            remarks: item.remarks || ''
-          })),
-          timeSyncData: (response.pmServerTimeSyncs || []).map(item => ({
-            dateChecked: item.dateChecked || '',
-            result: item.yesNoStatusID || '',
-            remarks: item.remarks || ''
-          })),
-          hotFixesData: (response.pmServerHotFixes || []).map(item => ({
-            dateChecked: item.dateChecked || '',
-            result: item.yesNoStatusID || '',
-            remarks: item.remarks || ''
-          })),
-          autoFailOverData: (response.pmServerFailOvers || []).map(item => ({
-            dateChecked: item.dateChecked || '',
-            result: item.yesNoStatusID || '',
-            remarks: item.remarks || ''
-          })),
-          asaFirewallData: (response.pmServerASAFirewalls || []).map(item => ({
-            details: item.pmServerASAFirewallDetails || [],
-            remarks: item.remarks || ''
-          })),
-          softwarePatchData: (response.pmServerSoftwarePatchSummaries || []).map(item => ({
-            dateChecked: item.dateChecked || '',
-            result: item.yesNoStatusID || '',
-            remarks: item.remarks || ''
-          }))
+          monthlyDatabaseCreationData: {
+            pmServerMonthlyDatabaseCreations: response.pmServerMonthlyDatabaseCreations || [],
+            // Legacy format for backward compatibility
+            monthlyDatabaseData: (response.pmServerMonthlyDatabaseCreations || []).flatMap(item => 
+              (item.details || []).map(detail => ({
+                id: detail.id || null,
+                item: detail.serverName || '',
+                monthlyDBCreated: detail.yesNoStatusID || '',
+                isNew: !detail.id,
+                isModified: false
+              }))
+            ),
+            remarks: response.pmServerMonthlyDatabaseCreations?.[0]?.remarks || ''
+          },
+          databaseBackupData: {
+            pmServerDatabaseBackups: response.pmServerDatabaseBackups || []
+          },
+          timeSyncData: {
+            pmServerTimeSyncs: response.pmServerTimeSyncs || [],
+            remarks: response.pmServerTimeSyncs?.[0]?.remarks || ''
+          },
+          hotFixesData: {
+            pmServerHotFixes: response.pmServerHotFixes || [],
+            remarks: response.pmServerHotFixes?.[0]?.remarks || ''
+          },
+          autoFailOverData: {
+            pmServerFailOvers: response.pmServerFailOvers || []
+          },
+          asaFirewallData: {
+            pmServerASAFirewalls: response.pmServerASAFirewalls || [],
+            remarks: response.pmServerASAFirewalls?.[0]?.remarks || ''
+          },
+          softwarePatchData: {
+            pmServerSoftwarePatchSummaries: response.pmServerSoftwarePatchSummaries || [],
+            remarks: response.pmServerSoftwarePatchSummaries?.[0]?.remarks || ''
+          }
         };
 
         //console.log('Mapped Server PM Data for Edit:', mappedServerPMData);

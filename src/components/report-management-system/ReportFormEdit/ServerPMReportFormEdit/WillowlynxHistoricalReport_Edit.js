@@ -10,16 +10,12 @@ import {
 import {
   Assessment as AssessmentIcon,
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Import the yes/no status service
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
 import WillowlynxHistoricalReportImage from '../../../resources/ServerPMReportForm/WillowlynxHistoricalReport.png';
 
 const WillowlynxHistoricalReport_Edit = ({ data, onDataChange, onStatusChange }) => {
-  const [dateChecked, setDateChecked] = useState(null);
   const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
@@ -31,7 +27,6 @@ const WillowlynxHistoricalReport_Edit = ({ data, onDataChange, onStatusChange })
     // Check if we have meaningful data to initialize with
     const hasData = data && (
       (data.pmServerWillowlynxHistoricalReports && data.pmServerWillowlynxHistoricalReports.length > 0) ||
-      data.dateChecked || 
       (data.result && data.result.trim() !== '') || 
       (data.remarks && data.remarks.trim() !== '')
     );
@@ -41,13 +36,11 @@ const WillowlynxHistoricalReport_Edit = ({ data, onDataChange, onStatusChange })
       if (data.pmServerWillowlynxHistoricalReports && data.pmServerWillowlynxHistoricalReports.length > 0) {
         const historicalReportData = data.pmServerWillowlynxHistoricalReports[0];
         
-        if (historicalReportData.dateChecked) setDateChecked(new Date(historicalReportData.dateChecked));
         if (historicalReportData.yesNoStatusID) setResult(historicalReportData.yesNoStatusID);
         if (historicalReportData.remarks) setRemarks(historicalReportData.remarks);
       }
       // Handle legacy data structure
       else {
-        if (data.dateChecked) setDateChecked(new Date(data.dateChecked));
         if (data.result) setResult(data.result);
         if (data.remarks) setRemarks(data.remarks);
       }
@@ -81,25 +74,23 @@ const WillowlynxHistoricalReport_Edit = ({ data, onDataChange, onStatusChange })
     if (isInitialized.current && onDataChange) {
       const dataToSend = {
         pmServerWillowlynxHistoricalReports: [{
-          dateChecked: dateChecked ? dateChecked.toISOString() : null,
           yesNoStatusID: result,
           remarks: remarks
         }],
         // Legacy format for backward compatibility
-        dateChecked: dateChecked ? dateChecked.toISOString() : null,
         result: result,
         remarks: remarks
       };
       
       onDataChange(dataToSend);
     }
-  }, [dateChecked, result, remarks, onDataChange]);
+  }, [result, remarks, onDataChange]);
 
   // Check completion status
   useEffect(() => {
-    const isCompleted = dateChecked && result && remarks.trim() !== '';
+    const isCompleted = result && remarks.trim() !== '';
     if (onStatusChange) onStatusChange('WillowlynxHistoricalReport', isCompleted);
-  }, [dateChecked, result, remarks, onStatusChange]);
+  }, [result, remarks, onStatusChange]);
 
   // Styling
   const sectionContainerStyle = {
@@ -120,54 +111,53 @@ const WillowlynxHistoricalReport_Edit = ({ data, onDataChange, onStatusChange })
     gap: 1
   };
 
+  const inlineField = {
+    minWidth: 200,
+    '& .MuiOutlinedInput-root': { backgroundColor: 'white' },
+  };
+
   return (
     <Paper sx={sectionContainerStyle}>
+      {/* Header */}
       <Typography variant="h5" sx={sectionHeaderStyle}>
         <AssessmentIcon /> Willowlynx Historical Report Check
       </Typography>
-      
-      {/* Instructions */}
-      <Box sx={{ marginBottom: 3 }}>
-        <Typography variant="body1" sx={{ marginBottom: 2 }}>
-          To check the historical report is working properly by checking the historical report in Willowlynx.
-        </Typography>
+
+      <Typography variant="body1" sx={{ ml: 2, mb: 2 }}>
+        Click the CTHistReport icon on an HMI, which will load the Historical Report
+        Module. Try to load Analog History Report and Digital History Report and Alarm
+        History Report.
+      </Typography>
+
+      {/* Screenshot */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+        <img 
+          src={WillowlynxHistoricalReportImage} 
+          alt="Willowlynx Historical Report" 
+          style={{ 
+            maxWidth: '100%', 
+            height: 'auto',
+            border: '1px solid #ddd',
+            borderRadius: '8px'
+          }} 
+        />
       </Box>
 
-      {/* Image Section */}
-        <Box sx={{ marginBottom: 3, textAlign: 'center' }}>
-          <img 
-            src={WillowlynxHistoricalReportImage} 
-            alt="Willowlynx Historical Report" 
-            style={{ 
-              maxWidth: '100%', 
-              height: 'auto',
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-            }} 
-          />
-        </Box>
+      {/* Result */}
+      <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+        Result:
+      </Typography>
 
-      {/* Result Selection */}
-      <Box sx={{ marginBottom: 3 }}>
-        <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
-          ✅ Check Result
-        </Typography>
-        
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, ml: 2, mb: 2 }}>
+        <Typography>All reports can be displayed without issues. </Typography>
         <TextField
-          fullWidth
           select
-          variant="outlined"
-          label="Historical Report Status"
+          size="small"
           value={result}
           onChange={(e) => setResult(e.target.value)}
+          variant="outlined"
           disabled={loading}
-          sx={{
-            '& .MuiSelect-select': {
-              display: 'flex',
-              alignItems: 'center',
-            }
-          }}
+          sx={inlineField}
         >
           <MenuItem value="">
             {loading ? (
@@ -176,13 +166,13 @@ const WillowlynxHistoricalReport_Edit = ({ data, onDataChange, onStatusChange })
                 Loading...
               </Box>
             ) : (
-              'Select Status'
+              'Select Result'
             )}
           </MenuItem>
           {yesNoStatusOptions.map((option) => (
             <MenuItem key={option.id} value={option.id}>
-              {option.name}
-            </MenuItem>
+                          {option.name}
+                        </MenuItem>
           ))}
         </TextField>
       </Box>
@@ -201,11 +191,11 @@ const WillowlynxHistoricalReport_Edit = ({ data, onDataChange, onStatusChange })
           label="Remarks"
           value={remarks}
           onChange={(e) => setRemarks(e.target.value)}
-          placeholder="Enter any additional remarks or observations..."
+          placeholder="Enter any observations about historical reports, loading issues, or functionality..."
           sx={{
             '& .MuiOutlinedInput-root': {
               backgroundColor: 'white',
-            },
+            }
           }}
         />
       </Box>
