@@ -16,11 +16,11 @@ import RMSTheme from '../../theme-resource/RMSTheme';
 import FirstContainer from './FirstContainer';
 import CMReportForm from './CMReportForm';
 import RTUPMReportForm from './RTUPMReportForm'; // Updated import
-import ServerPMReportForm from './SERVERPMReportForm/ServerPMReportForm'; // Add Server PM import
+import ServerPMReportForm from './Server_PMReportForm/ServerPMReportForm'; // Add Server PM import
 import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, submitServerPMReportForm, getNextJobNumber } from '../../api-services/reportFormService';
 import CMReviewReportForm from './CMReviewReportForm';
 import RTUPMReviewReportForm from './RTUPMReviewReportForm';
-import ServerPMReviewReportForm from './SERVERPMReportForm_Review/ServerPMReviewReportForm'; 
+import ServerPMReviewReportForm from './Server_PMReportForm_Review/ServerPMReviewReportForm'; // Add Server PM import
 
 const steps = [
   'Basic Information',

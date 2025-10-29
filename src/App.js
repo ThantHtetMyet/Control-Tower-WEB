@@ -95,7 +95,7 @@ import RTUPMReviewReportFormEdit from './components/report-management-system/Rep
 import CMReportFormEdit from './components/report-management-system/ReportFormEdit/CMReportFormEdit';
 import CMReviewReportFormEdit from './components/report-management-system/ReportFormEdit/CMReviewReportFormEdit';
 // Add Server PM Edit imports
-import ServerPMReportForm_Edit from './components/report-management-system/ReportFormEdit/ServerPMReportFormEdit/ServerPMReportForm_Edit';
+import ServerPMReportForm_Edit from './components/report-management-system/ReportFormEdit/Server_PMReportForm_Edit/ServerPMReportForm_Edit';
 
 function App() {
   return (
