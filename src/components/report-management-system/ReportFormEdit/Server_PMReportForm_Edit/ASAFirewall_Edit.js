@@ -346,7 +346,7 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
       </Typography>
       
       {/* Instructions */}
-      <Box sx={{ marginBottom: 3 }}>
+      <Box sx={{ marginBottom: 3, padding: 2, backgroundColor: '#fff3e0', borderRadius: 1 }}>
         <Typography variant="body1" sx={{ marginBottom: 2, fontWeight: 'bold', color: '#333' }}>
           To check for ASA firewall health and backup of running configuration
         </Typography>

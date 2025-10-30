@@ -67,7 +67,7 @@ const DatabaseBackup_Edit = ({ data, onDataChange, onStatusChange }) => {
           mssqlData = backupData.mssqlDatabaseBackupDetails.map(item => ({
             id: item.id || null,
             serialNo: item.serialNo || '',
-            item: `${item.serverName} - ${item.databaseName}` || '',
+            item: item.serverName || '',
             monthlyDBBackupCreated: item.yesNoStatusID || '',
             isNew: false,
             isModified: false,
@@ -87,7 +87,7 @@ const DatabaseBackup_Edit = ({ data, onDataChange, onStatusChange }) => {
           scadaData = backupData.scadaDataBackupDetails.map(item => ({
             id: item.id || null,
             serialNo: item.serialNo || '',
-            item: `${item.serverName} - ${item.scadaDataName}` || '',
+            item: item.serverName || '',
             monthlyDBBackupCreated: item.yesNoStatusID || '',
             isNew: false,
             isModified: false,

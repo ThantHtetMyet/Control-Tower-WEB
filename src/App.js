@@ -96,6 +96,7 @@ import CMReportFormEdit from './components/report-management-system/ReportFormEd
 import CMReviewReportFormEdit from './components/report-management-system/ReportFormEdit/CMReviewReportFormEdit';
 // Add Server PM Edit imports
 import ServerPMReportForm_Edit from './components/report-management-system/ReportFormEdit/Server_PMReportForm_Edit/ServerPMReportForm_Edit';
+import ServerPMReportForm_Edit_Review from './components/report-management-system/ReportFormEdit/Server_PMReportForm_Edit_Review/ServerPMReportForm_Edit_Review';
 
 function App() {
   return (
@@ -746,6 +747,19 @@ function App() {
                     <ReportFormNavBar />
                     <Box sx={{ flexGrow: 1, p: 3 }}>
                       <ServerPMReportForm_Edit />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* Server PM Review Edit Route */}
+              <Route
+                path="/report-management-system/server-pm-report-review-edit/:id"
+                element={
+                  <ProtectedRoute>
+                    <ReportFormNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <ServerPMReportForm_Edit_Review />
                     </Box>
                   </ProtectedRoute>
                 }

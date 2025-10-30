@@ -163,12 +163,21 @@ const SoftwarePatch_Edit = ({ data, onDataChange, onStatusChange }) => {
   };
 
   const addSoftwarePatchRow = () => {
+    // Calculate the next serial number based on existing non-deleted rows
+    const activeRows = softwarePatchData.filter(row => !row.isDeleted);
+    const maxSerialNo = activeRows.length > 0 
+      ? Math.max(...activeRows.map(row => parseInt(row.serialNo) || 0))
+      : 0;
+    const nextSerialNo = (maxSerialNo + 1).toString();
+    
     const newRow = { 
       id: Date.now(),
-      serialNumber: softwarePatchData.length + 1,
+      serialNo: nextSerialNo,
       machineName: '',
       previousPatch: '',
       currentPatch: '',
+      isNew: true,
+      isModified: false,
       isDeleted: false
     };
     setSoftwarePatchData([...softwarePatchData, newRow]);

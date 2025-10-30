@@ -206,10 +206,12 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
     if (isInitialized.current && onDataChange) {
       onDataChange({
         servers,
-        remarks
+        remarks,
+        resultStatusOptions,
+        serverDiskStatusOptions
       });
     }
-  }, [servers, remarks, onDataChange]);
+  }, [servers, remarks, resultStatusOptions, serverDiskStatusOptions, onDataChange]);
 
   // Calculate completion status
   useEffect(() => {

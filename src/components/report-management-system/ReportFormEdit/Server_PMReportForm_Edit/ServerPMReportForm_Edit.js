@@ -411,8 +411,51 @@ const ServerPMReportForm_Edit = () => {
     if (currentIndex < steps.length - 1) {
       handleStepNavigation(steps[currentIndex + 1]);
     } else {
-      // Navigate back to report list when finished
-      navigate('/report-management-system/report-forms');
+      // Prepare the complete form data to pass to review - Following CM and RTU PM pattern
+      const reviewData = {
+        // Basic form data
+        reportTitle: formData.reportTitle,
+        systemDescription: formData.systemDescription,
+        systemNameWarehouseID: formData.systemNameWarehouseID,
+        stationName: formData.stationName,
+        stationNameWarehouseID: formData.stationNameWarehouseID,
+        jobNo: formData.jobNo,
+        projectNo: formData.projectNo,
+        customer: formData.customer,
+        reportFormTypeID: formData.reportFormTypeID,
+        pmReportFormTypeID: formData.pmReportFormTypeID,
+        pmReportFormTypeName: formData.pmReportFormTypeName,
+        dateOfService: formData.dateOfService,
+        remarks: formData.remarks,
+        approvedBy: formData.approvedBy,
+        attendedBy: formData.attendedBy,
+        
+        // All Server PM sub-component data
+        signOffData: serverPMData.signOffData,
+        serverHealthData: serverPMData.serverHealthData,
+        hardDriveHealthData: serverPMData.hardDriveHealthData,
+        diskUsageData: serverPMData.diskUsageData,
+        cpuAndRamUsageData: serverPMData.cpuAndRamUsageData,
+        networkHealthData: serverPMData.networkHealthData,
+        willowlynxProcessStatusData: serverPMData.willowlynxProcessStatusData,
+        willowlynxNetworkStatusData: serverPMData.willowlynxNetworkStatusData,
+        willowlynxRTUStatusData: serverPMData.willowlynxRTUStatusData,
+        willowlynxHistorialTrendData: serverPMData.willowlynxHistorialTrendData,
+        willowlynxHistoricalReportData: serverPMData.willowlynxHistoricalReportData,
+        willowlynxSumpPitCCTVCameraData: serverPMData.willowlynxSumpPitCCTVCameraData,
+        monthlyDatabaseCreationData: serverPMData.monthlyDatabaseCreationData,
+        databaseBackupData: serverPMData.databaseBackupData,
+        timeSyncData: serverPMData.timeSyncData,
+        hotFixesData: serverPMData.hotFixesData,
+        autoFailOverData: serverPMData.autoFailOverData,
+        asaFirewallData: serverPMData.asaFirewallData,
+        softwarePatchData: serverPMData.softwarePatchData
+      };
+      
+      // Navigate to review page with form data - Following CM and RTU PM pattern
+      navigate(`/report-management-system/server-pm-report-review-edit/${id}`, {
+        state: { formData: reviewData }
+      });
     }
   };
 
@@ -455,17 +498,9 @@ const ServerPMReportForm_Edit = () => {
     const Component = componentMap[currentStep];
     if (!Component) return null;
 
-    // For signOff step, pass signOffData from serverPMData
-    if (currentStep === 'signOff') {
-      return (
-        <Component
-          data={serverPMData.signOffData || {}}
-          onDataChange={dataChangeHandlers[currentStep]}
-        />
-      );
-    }
-
-    const dataKey = currentStep === 'serverHealth' ? 'serverHealthData' :
+    // Following reference pattern - use consistent dataKey mapping
+    const dataKey = currentStep === 'signOff' ? 'signOffData' :
+                   currentStep === 'serverHealth' ? 'serverHealthData' :
                    currentStep === 'networkHealth' ? 'networkHealthData' :
                    currentStep === 'hardDriveHealth' ? 'hardDriveHealthData' :
                    currentStep === 'diskUsage' ? 'diskUsageData' :
@@ -486,7 +521,7 @@ const ServerPMReportForm_Edit = () => {
 
     return (
       <Component
-        data={serverPMData[dataKey] || []}
+        data={serverPMData[dataKey] || {}}
         onDataChange={dataChangeHandlers[currentStep]}
       />
     );
