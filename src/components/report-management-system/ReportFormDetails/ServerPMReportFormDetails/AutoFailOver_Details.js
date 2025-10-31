@@ -33,10 +33,8 @@ const AutoFailOver_Details = ({ data, disabled = false }) => {
 
   // Transform API data when it changes
   useEffect(() => {
-    console.log('AutoFailOver_Details - Received data:', JSON.stringify(data, null, 2));
     
     if (!data) {
-      console.log('AutoFailOver_Details - No data provided');
       setAutoFailOverData([]);
       setRemarks('');
       return;
@@ -60,19 +58,14 @@ const AutoFailOver_Details = ({ data, disabled = false }) => {
         failOverArray = data.autoFailOverData;
       }
 
-      console.log('AutoFailOver_Details - Extracted failOverArray:', failOverArray);
-
       if (failOverArray && failOverArray.length > 0) {
         const failOverRecord = failOverArray[0];
-        console.log('AutoFailOver_Details - Processing record:', failOverRecord);
 
         // Extract details array
         const details = failOverRecord.details || failOverRecord.Details || [];
-        console.log('AutoFailOver_Details - Details array:', details);
 
         // Extract remarks
         remarksValue = failOverRecord.remarks || failOverRecord.Remarks || '';
-        console.log('AutoFailOver_Details - Remarks:', remarksValue);
 
         // Transform details data
         const transformedData = details.map((detail, index) => {
@@ -94,20 +87,16 @@ const AutoFailOver_Details = ({ data, disabled = false }) => {
             result: detail.result || detail.Result || detail.yesNoStatusID || detail.YesNoStatusID,
             resultStatusName: detail.yesNoStatusName || detail.YesNoStatusName || detail.resultStatusName || detail.ResultStatusName
           };
-          console.log(`AutoFailOver_Details - Transformed detail ${index}:`, transformed);
           return transformed;
         });
 
-        console.log('AutoFailOver_Details - Final transformed data:', transformedData);
         setAutoFailOverData(transformedData);
         setRemarks(remarksValue);
       } else {
-        console.log('AutoFailOver_Details - No failover array found or empty');
         setAutoFailOverData([]);
         setRemarks('');
       }
     } catch (error) {
-      console.error('AutoFailOver_Details - Error processing data:', error);
       setAutoFailOverData([]);
       setRemarks('');
     }
@@ -187,9 +176,6 @@ const AutoFailOver_Details = ({ data, disabled = false }) => {
     alignItems: 'center',
     gap: 1
   };
-
-  console.log('AutoFailOver_Details - Current state - autoFailOverData:', autoFailOverData);
-  console.log('AutoFailOver_Details - Current state - remarks:', remarks);
 
   return (
     <Paper sx={sectionContainerStyle}>

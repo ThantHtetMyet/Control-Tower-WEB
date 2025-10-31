@@ -66,18 +66,18 @@ const HotFixes_Edit_Review = ({ data, disabled = true, formData }) => {
       }
       
       // Get remarks from HotFixes-specific sources ONLY
-      console.log('=== HOTFIXES REMARKS DEBUG ===');
+      //console.log('=== HOTFIXES REMARKS DEBUG ===');
       if (formData && formData.hotFixesData && formData.hotFixesData.remarks) {
-        console.log('Setting remarks from formData.hotFixesData.remarks:', formData.hotFixesData.remarks);
+        //console.log('Setting remarks from formData.hotFixesData.remarks:', formData.hotFixesData.remarks);
         setRemarks(formData.hotFixesData.remarks);
       } else if (data && data.pmServerHotFixes && data.pmServerHotFixes[0]?.remarks) {
-        console.log('Setting remarks from data.pmServerHotFixes[0].remarks:', data.pmServerHotFixes[0].remarks);
+        //console.log('Setting remarks from data.pmServerHotFixes[0].remarks:', data.pmServerHotFixes[0].remarks);
         setRemarks(data.pmServerHotFixes[0].remarks);
       } else if (data && data.remarks) {
-        console.log('Setting remarks from data.remarks:', data.remarks);
+        //console.log('Setting remarks from data.remarks:', data.remarks);
         setRemarks(data.remarks);
       } else {
-        console.log('No HotFixes-specific remarks found');
+       //console.log('No HotFixes-specific remarks found');
         setRemarks('');
       }
       

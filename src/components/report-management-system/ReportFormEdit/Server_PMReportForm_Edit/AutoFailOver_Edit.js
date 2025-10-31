@@ -10,15 +10,11 @@ import {
   TableRow,
   Paper,
   TextField,
-  Button,
-  IconButton,
   CircularProgress,
   MenuItem,
   Divider
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
   SwapHoriz as SwapIcon,
   Computer as ComputerIcon
 } from '@mui/icons-material';
@@ -44,8 +40,6 @@ const AutoFailOver_Edit = ({ data, onDataChange, onStatusChange }) => {
     );
     
     if (hasData && !isInitialized.current) {
-      console.log('AutoFailOver_Edit - Initializing with data:', JSON.stringify(data, null, 2));
-      
       // Handle new API structure with pmServerFailOvers
       if (data.pmServerFailOvers && data.pmServerFailOvers.length > 0) {
         const failOverRecord = data.pmServerFailOvers[0];
@@ -173,39 +167,14 @@ const AutoFailOver_Edit = ({ data, onDataChange, onStatusChange }) => {
     setAutoFailOverData(updatedData);
   };
 
-  const addAutoFailOverRow = () => {
-    const newRow = { 
-      serialNumber: autoFailOverData.length + 1,
-      result: '',
-      isNew: true,
-      isModified: false,
-      isDeleted: false
-    };
-    setAutoFailOverData([...autoFailOverData, newRow]);
-    console.log('AutoFailOver_Edit - Added new row');
+  // Handle result change
+  const handleResultChange = (index, value) => {
+    const updatedData = [...autoFailOverData];
+    updatedData[index].result = value;
+    setAutoFailOverData(updatedData);
   };
 
-  const removeAutoFailOverRow = (index) => {
-    const updatedData = [...autoFailOverData];
-    const item = updatedData[index];
-    
-    if (item.id) {
-      // Mark existing item as deleted
-      updatedData[index] = { ...item, isDeleted: true, isModified: true };
-      setAutoFailOverData(updatedData);
-      console.log('AutoFailOver_Edit - Marked item as deleted');
-    } else {
-      // Remove new item completely
-      const filteredData = updatedData.filter((_, i) => i !== index);
-      // Update serial numbers after removal
-      const reNumberedData = filteredData.map((item, i) => ({
-        ...item,
-        serialNumber: i + 1
-      }));
-      setAutoFailOverData(reNumberedData);
-      console.log('AutoFailOver_Edit - Removed new item');
-    }
-  };
+
 
   // Predefined failover scenarios for display
   const failoverScenarios = [
@@ -232,7 +201,6 @@ const AutoFailOver_Edit = ({ data, onDataChange, onStatusChange }) => {
     const updatedData = [...autoFailOverData];
     updatedData[index] = { ...updatedData[index], isDeleted: false };
     setAutoFailOverData(updatedData);
-    console.log('AutoFailOver_Edit - Restored item');
   };
 
   // Styling constants
@@ -354,13 +322,13 @@ const AutoFailOver_Edit = ({ data, onDataChange, onStatusChange }) => {
                           Loading...
                         </Box>
                       ) : (
-                        '-'
+                        'Select Result'
                       )}
                     </MenuItem>
                     {yesNoStatusOptions.map((option) => (
                       <MenuItem key={option.id} value={option.id}>
-                            {option.name}
-                          </MenuItem>
+                        {option.name}
+                      </MenuItem>
                     ))}
                   </TextField>
                 </Box>

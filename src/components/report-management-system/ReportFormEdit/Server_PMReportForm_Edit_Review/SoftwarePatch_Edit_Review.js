@@ -23,14 +23,14 @@ const SoftwarePatch_Edit_Review = ({ data, disabled = true, formData }) => {
   // Initialize data from props only once
   useEffect(() => {
     if (!isInitialized.current) {
-      console.log('SoftwarePatch_Edit_Review - Initializing data:', { formData, data });
+      //console.log('SoftwarePatch_Edit_Review - Initializing data:', { formData, data });
       
       // Prioritize formData.softwarePatchData (from SoftwarePatch_Edit)
-      if (formData && formData.softwarePatchData && formData.softwarePatchData.length > 0) {
-        console.log('SoftwarePatch_Edit_Review - Using formData.softwarePatchData:', formData.softwarePatchData);
+      if (formData && formData.softwarePatchData && Array.isArray(formData.softwarePatchData) && formData.softwarePatchData.length > 0) {
+       //console.log('SoftwarePatch_Edit_Review - Using formData.softwarePatchData:', formData.softwarePatchData);
         setSoftwarePatchData(formData.softwarePatchData);
       } else if (data && data.pmServerSoftwarePatchSummaries && data.pmServerSoftwarePatchSummaries.length > 0) {
-        console.log('SoftwarePatch_Edit_Review - Using data.pmServerSoftwarePatchSummaries:', data.pmServerSoftwarePatchSummaries);
+        //console.log('SoftwarePatch_Edit_Review - Using data.pmServerSoftwarePatchSummaries:', data.pmServerSoftwarePatchSummaries);
         // Handle new API structure with pmServerSoftwarePatchSummaries
         const summary = data.pmServerSoftwarePatchSummaries[0];
         if (summary && summary.details && Array.isArray(summary.details)) {
@@ -48,7 +48,7 @@ const SoftwarePatch_Edit_Review = ({ data, disabled = true, formData }) => {
           setSoftwarePatchData(transformedData);
         }
       } else if (data && data.softwarePatchData && data.softwarePatchData.length > 0) {
-        console.log('SoftwarePatch_Edit_Review - Using data.softwarePatchData:', data.softwarePatchData);
+        //console.log('SoftwarePatch_Edit_Review - Using data.softwarePatchData:', data.softwarePatchData);
         // Handle legacy softwarePatchData structure
         const transformedData = data.softwarePatchData.map((item, index) => ({
           id: item.id,
@@ -65,17 +65,20 @@ const SoftwarePatch_Edit_Review = ({ data, disabled = true, formData }) => {
       }
       
       // Get SoftwarePatch-specific remarks (NOT SignOff remarks)
-      if (formData && formData.softwarePatchData && formData.softwarePatchData.remarks) {
-        console.log('SoftwarePatch_Edit_Review - Using SoftwarePatch-specific remarks from formData:', formData.softwarePatchData.remarks);
+      if (formData && formData.softwarePatchRemarks) {
+        //console.log('SoftwarePatch_Edit_Review - Using softwarePatchRemarks from formData:', formData.softwarePatchRemarks);
+        setRemarks(formData.softwarePatchRemarks);
+      } else if (formData && formData.softwarePatchData && formData.softwarePatchData.remarks) {
+        //console.log('SoftwarePatch_Edit_Review - Using SoftwarePatch-specific remarks from formData:', formData.softwarePatchData.remarks);
         setRemarks(formData.softwarePatchData.remarks);
       } else if (formData && formData.remarks) {
-        console.log('SoftwarePatch_Edit_Review - Using formData.remarks:', formData.remarks);
+        //console.log('SoftwarePatch_Edit_Review - Using formData.remarks:', formData.remarks);
         setRemarks(formData.remarks);
       } else if (data && data.pmServerSoftwarePatchSummaries && data.pmServerSoftwarePatchSummaries[0]?.remarks) {
-        console.log('SoftwarePatch_Edit_Review - Using API remarks:', data.pmServerSoftwarePatchSummaries[0].remarks);
+        //console.log('SoftwarePatch_Edit_Review - Using API remarks:', data.pmServerSoftwarePatchSummaries[0].remarks);
         setRemarks(data.pmServerSoftwarePatchSummaries[0].remarks);
       } else if (data && data.remarks) {
-        console.log('SoftwarePatch_Edit_Review - Using data.remarks as fallback:', data.remarks);
+        //console.log('SoftwarePatch_Edit_Review - Using data.remarks as fallback:', data.remarks);
         setRemarks(data.remarks);
       }
       

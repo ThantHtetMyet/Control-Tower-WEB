@@ -23,8 +23,8 @@ const NetworkHealth_Edit_Review = ({ data, disabled = true, formData }) => {
   // Initialize data from props
   useEffect(() => {
     if (!isInitialized.current) {
-      console.log('NetworkHealth_Edit_Review - Received data:', data);
-      console.log('NetworkHealth_Edit_Review - Received formData:', formData);
+     // console.log('NetworkHealth_Edit_Review - Received data:', data);
+      // console.log('NetworkHealth_Edit_Review - Received formData:', formData);
       
       // Handle data from NetworkHealth_Edit format
       if (data) {
@@ -55,7 +55,7 @@ const NetworkHealth_Edit_Review = ({ data, disabled = true, formData }) => {
         }
       }
       
-      console.log('Final network health data:', { dateChecked, result, remarks });
+     // console.log('Final network health data:', { dateChecked, result, remarks });
       isInitialized.current = true;
     }
   }, [data, formData]);

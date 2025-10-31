@@ -83,7 +83,7 @@ const ServerHealth_Details = ({ data, disabled = true, formData }) => {
         label={status} 
         color={color} 
         size="small"
-        variant="outlined"
+        sx={{ fontWeight: 'bold' }}
       />
     );
   };

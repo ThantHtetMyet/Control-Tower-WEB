@@ -49,7 +49,6 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
     );
     
     if (hasData && !isInitialized.current) {
-      console.log('ASAFirewall_Edit - Initializing with data:', JSON.stringify(data, null, 2));
       
       // Handle new API structure with pmServerASAFirewalls
       if (data.pmServerASAFirewalls && data.pmServerASAFirewalls.length > 0) {
@@ -174,7 +173,6 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
           const cpuOption = asaFirewallStatusOptions.find(option => 
             option.name && option.name.includes('CPU Usage <80%')
           );
-          console.log('CPU Option found:', cpuOption);
           return { ...item, expectedResultId: cpuOption ? cpuOption.id : '' };
         } else if (item.commandInput === 'show environment') {
           // Find "Overall hardware health" option

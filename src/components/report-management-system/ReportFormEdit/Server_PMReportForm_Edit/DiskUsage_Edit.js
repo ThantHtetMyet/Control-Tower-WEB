@@ -204,12 +204,14 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
   // Update parent component when data changes (but not on initial load)
   useEffect(() => {
     if (isInitialized.current && onDataChange) {
-      onDataChange({
+      const dataToSend = {
         servers,
         remarks,
         resultStatusOptions,
         serverDiskStatusOptions
-      });
+      };
+      console.log('DiskUsage_Edit - Sending data to parent:', dataToSend);
+      onDataChange(dataToSend);
     }
   }, [servers, remarks, resultStatusOptions, serverDiskStatusOptions, onDataChange]);
 
@@ -232,6 +234,33 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
   }, [servers, remarks, onStatusChange]);
 
   // Server management handlers
+  // Helper function to cascade operations to all disks in a server
+  const cascadeOperationToDisks = (server, operation) => {
+    return server.disks.map(disk => {
+      switch (operation) {
+        case 'delete':
+          return {
+            ...disk,
+            isDeleted: true,
+            isModified: disk.id ? true : disk.isModified
+          };
+        case 'restore':
+          return {
+            ...disk,
+            isDeleted: false,
+            isModified: disk.id ? true : disk.isModified
+          };
+        case 'markAsNew':
+          return {
+            ...disk,
+            isNew: true
+          };
+        default:
+          return disk;
+      }
+    });
+  };
+
   const addServer = () => {
     const newServer = {
       id: null, // null indicates new server
@@ -248,13 +277,16 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
     const server = updatedServers[serverIndex];
     
     if (server.id) {
-      // Mark existing server as deleted
+      // Mark existing server as deleted and cascade to all disks
+      const updatedDisks = cascadeOperationToDisks(server, 'delete');
+      
       updatedServers[serverIndex] = {
         ...server,
         isDeleted: true,
-        isModified: true
+        isModified: true,
+        disks: updatedDisks
       };
-      showSnackbar('Server deleted. Click undo to restore.', 'warning');
+      showSnackbar('Server and all its disks deleted. Click undo to restore.', 'warning');
     } else {
       // Remove new server completely
       updatedServers.splice(serverIndex, 1);
@@ -270,19 +302,29 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
     
     // Only restore if server is currently deleted
     if (server.isDeleted) {
+      // Restore server and cascade to all disks
+      const updatedDisks = cascadeOperationToDisks(server, 'restore');
+      
       updatedServers[serverIndex] = {
         ...server,
         isDeleted: false,
-        isModified: true // Keep as modified since we're changing the delete status
+        isModified: true, // Keep as modified since we're changing the delete status
+        disks: updatedDisks
       };
       setServers(updatedServers);
-      showSnackbar('Server restored successfully', 'success');
+      showSnackbar('Server and all its disks restored successfully', 'success');
     }
   };
 
   const updateServerName = (serverIndex, serverName) => {
     const updatedServers = [...servers];
     const server = updatedServers[serverIndex];
+    
+    // Prevent updates to deleted servers
+    if (server.isDeleted) {
+      showSnackbar('Cannot modify a deleted server. Please restore the server first.', 'error');
+      return;
+    }
     
     // Mark as modified if it's an existing server (has ID) and value changed
     const isModified = server.id && server.serverName !== serverName;
@@ -299,6 +341,14 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
   // Disk management handlers
   const addDisk = (serverIndex) => {
     const updatedServers = [...servers];
+    const server = updatedServers[serverIndex];
+    
+    // Prevent adding disks to deleted servers
+    if (server.isDeleted) {
+      showSnackbar('Cannot add disk to a deleted server. Please restore the server first.', 'error');
+      return;
+    }
+    
     const newDisk = {
       id: null, // null indicates new disk
       disk: '',
@@ -308,7 +358,7 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
       usage: '',
       check: '',
       remarks: '', // Add remarks field for new disks
-      isNew: true // flag to track new disks
+      isNew: server.isNew || true // Mark as new if server is new or disk is new
     };
     
     updatedServers[serverIndex] = {
@@ -324,6 +374,12 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
     const updatedServers = [...servers];
     const server = updatedServers[serverIndex];
     const disk = server.disks[diskIndex];
+    
+    // Prevent individual disk operations on deleted servers
+    if (server.isDeleted) {
+      showSnackbar('Cannot modify disks of a deleted server. Please restore the server first.', 'error');
+      return;
+    }
     
     if (disk.id) {
       // Mark existing disk as deleted
@@ -356,6 +412,12 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
     const server = updatedServers[serverIndex];
     const disk = server.disks[diskIndex];
     
+    // Prevent individual disk restoration if server is deleted
+    if (server.isDeleted) {
+      showSnackbar('Cannot restore individual disks of a deleted server. Please restore the server first.', 'error');
+      return;
+    }
+    
     // Only restore if disk is currently deleted
     if (disk.isDeleted) {
       const updatedDisks = [...server.disks];
@@ -377,6 +439,17 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
     const updatedServers = [...servers];
     const server = updatedServers[serverIndex];
     const disk = server.disks[diskIndex];
+    
+    // Prevent field updates on deleted servers or deleted disks
+    if (server.isDeleted) {
+      showSnackbar('Cannot modify disks of a deleted server. Please restore the server first.', 'error');
+      return;
+    }
+    
+    if (disk.isDeleted) {
+      showSnackbar('Cannot modify a deleted disk. Please restore the disk first.', 'error');
+      return;
+    }
     
     // Mark as modified if it's an existing disk (has ID) and value changed
     const isModified = disk.id && disk[field] !== value;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Grid,
@@ -19,6 +19,7 @@ import {
   CardContent,
   CircularProgress,
   Alert,
+  Snackbar,
   Divider
 } from '@mui/material';
 import { 
@@ -41,7 +42,8 @@ import {
   AccessTime
 } from '@mui/icons-material';
 import RMSTheme from '../../../theme-resource/RMSTheme';
-import { getPMReportFormTypes, getServerPMReportFormWithDetails, updateServerPMReportForm } from '../../../api-services/reportFormService';
+import { getPMReportFormTypes, getServerPMReportFormWithDetails } from '../../../api-services/reportFormService';
+import { updateServerPMReportForm } from '../../../api-services/reportFormService_Update';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
@@ -75,6 +77,12 @@ const ServerPMReportForm_Edit_Review = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  const isDataLoaded = useRef(false);
 
   // Component configuration matching ServerPMReviewReportForm
   const components = [
@@ -174,7 +182,7 @@ const ServerPMReportForm_Edit_Review = () => {
   // Load existing report data
   useEffect(() => {
     const fetchReportData = async () => {
-      if (!id) return;
+      if (!id || isDataLoaded.current) return;
 
       try {
         setLoading(true);
@@ -185,6 +193,7 @@ const ServerPMReportForm_Edit_Review = () => {
           
           // Use the passed form data directly - Following ServerPMReviewReportForm pattern
           setFormData(passedData);
+          isDataLoaded.current = true;
           setLoading(false);
           return;
         }
@@ -207,25 +216,17 @@ const ServerPMReportForm_Edit_Review = () => {
           pmReportFormTypeName: response.pmReportFormServer?.pmReportFormTypeName || '',
           dateOfService: response.pmReportFormServer?.dateOfService ? 
             new Date(response.pmReportFormServer.dateOfService).toISOString().slice(0, 16) : '',
-          remarks: response.pmReportFormServer?.remarks || '',
-          attendedBy: response.pmReportFormServer?.attendedBy || '',
-          witnessedBy: response.pmReportFormServer?.witnessedBy || '',
-          startDate: response.pmReportFormServer?.startDate ? 
-            new Date(response.pmReportFormServer.startDate).toISOString().slice(0, 16) : '',
-          completionDate: response.pmReportFormServer?.completionDate ? 
-            new Date(response.pmReportFormServer.completionDate).toISOString().slice(0, 16) : '',
-          approvedBy: response.pmReportFormServer?.approvedBy || '',
           
           // Map server PM data directly to formData - Following reference pattern
           signOffData: {
-            attendedBy: response.pmReportFormServer?.attendedBy || '',
-            witnessedBy: response.pmReportFormServer?.witnessedBy || '',
-            startDate: response.pmReportFormServer?.startDate ? 
-              new Date(response.pmReportFormServer.startDate).toISOString().slice(0, 16) : '',
-            completionDate: response.pmReportFormServer?.completionDate ? 
-              new Date(response.pmReportFormServer.completionDate).toISOString().slice(0, 16) : '',
-            approvedBy: response.pmReportFormServer?.approvedBy || '',
-            remarks: response.pmReportFormServer?.remarks || ''
+            attendedBy: response.pmReportFormServer?.signOffData?.attendedBy || '',
+            witnessedBy: response.pmReportFormServer?.signOffData?.witnessedBy || '',
+            startDate: response.pmReportFormServer?.signOffData?.startDate ? 
+              new Date(response.pmReportFormServer.signOffData.startDate).toISOString().slice(0, 16) : '',
+            completionDate: response.pmReportFormServer?.signOffData?.completionDate ? 
+              new Date(response.pmReportFormServer.signOffData.completionDate).toISOString().slice(0, 16) : '',
+            approvedBy: response.pmReportFormServer?.signOffData?.approvedBy || '',
+            remarks: response.pmReportFormServer?.signOffData?.remarks || ''
           },
           serverHealthData: {
             pmServerHealths: response.pmServerHealths || [],
@@ -295,11 +296,28 @@ const ServerPMReportForm_Edit_Review = () => {
             pmServerASAFirewalls: response.pmServerASAFirewalls || [],
             remarks: response.pmServerASAFirewalls?.[0]?.remarks || ''
           },
-          softwarePatchData: {
-            pmServerSoftwarePatchSummaries: response.pmServerSoftwarePatchSummaries || [],
-            remarks: response.pmServerSoftwarePatchSummaries?.[0]?.remarks || ''
-          }
+          softwarePatchData: (() => {
+            // Extract software patch details with proper structure for both component and API
+            if (response.pmServerSoftwarePatchSummaries && response.pmServerSoftwarePatchSummaries.length > 0) {
+              const softwarePatchRecord = response.pmServerSoftwarePatchSummaries[0];
+              if (softwarePatchRecord.details && softwarePatchRecord.details.length > 0) {
+                return softwarePatchRecord.details.map(detail => ({
+                  id: detail.id || null,
+                  serialNo: detail.serialNo || '',
+                  machineName: detail.serverName || '',
+                  previousPatch: detail.previousPatch || '',
+                  currentPatch: detail.currentPatch || '',
+                  isDeleted: detail.isDeleted || false,
+                  isNew: detail.isNew || false,
+                  isModified: detail.isModified || false
+                }));
+              }
+            }
+            return [];
+          })(),
+          softwarePatchRemarks: response.pmServerSoftwarePatchSummaries?.[0]?.remarks || ''
         });
+        isDataLoaded.current = true;
       } catch (err) {
         console.error('Error fetching report form details:', err);
         setError('Error fetching report form details: ' + err.message);
@@ -309,7 +327,7 @@ const ServerPMReportForm_Edit_Review = () => {
     };
 
     fetchReportData();
-  }, [id, location.state]);
+  }, [id]); // Remove location.state from dependencies
 
   const handleComplete = async () => {
     try {
@@ -319,24 +337,39 @@ const ServerPMReportForm_Edit_Review = () => {
       // Get user info from localStorage or context
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       
-      console.log('=== SUBMITTING REVIEW DATA ===');
-      console.log('Form Data:', JSON.stringify(formData, null, 2));
-
       // Update the report with all the form data
       const result = await updateServerPMReportForm(id, formData, user);
       
-      console.log('Update result:', result);
-
-      // Show success message and navigate
-      alert('Server PM report updated successfully!');
-      navigate('/report-management-system');
+      // Show beautiful success toast
+      setNotification({
+        open: true,
+        message: '🎉 Server PM report updated successfully! Redirecting to report list...',
+        severity: 'success'
+      });
+      
+      // Navigate after a short delay to show the toast
+      setTimeout(() => {
+        navigate('/report-management-system');
+      }, 2000);
       
     } catch (error) {
       console.error('Error updating report:', error);
       setError('Failed to update report: ' + (error.response?.data?.message || error.message));
+      
+      // Show error toast
+      setNotification({
+        open: true,
+        message: '❌ Failed to update report. Please try again.',
+        severity: 'error'
+      });
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Handle close notification
+  const handleCloseNotification = () => {
+    setNotification(prev => ({ ...prev, open: false }));
   };
 
   if (loading) {
@@ -472,6 +505,24 @@ const ServerPMReportForm_Edit_Review = () => {
               const hasData = (data, dataKey) => {
                 if (!data || typeof data !== 'object') return false;
                 
+                // Special handling for DatabaseBackup data structure
+                if (dataKey === 'databaseBackupData') {
+                  const hasMssqlData = Array.isArray(data.mssqlBackupData) && data.mssqlBackupData.length > 0 &&
+                    data.mssqlBackupData.some(item => 
+                      (item.item && item.item.trim() !== '') || 
+                      (item.monthlyDBBackupCreated && item.monthlyDBBackupCreated !== '')
+                    );
+                  const hasScadaData = Array.isArray(data.scadaBackupData) && data.scadaBackupData.length > 0 &&
+                    data.scadaBackupData.some(item => 
+                      (item.item && item.item.trim() !== '') || 
+                      (item.monthlyDBBackupCreated && item.monthlyDBBackupCreated !== '')
+                    );
+                  const hasRemarks = data.remarks && data.remarks.trim() !== '';
+                  const hasLatestBackupFileName = data.latestBackupFileName && data.latestBackupFileName.trim() !== '';
+                  
+                  return hasMssqlData || hasScadaData || hasRemarks || hasLatestBackupFileName;
+                }
+                
                 // Check for non-empty values
                 const hasNonEmptyValues = Object.values(data).some(value => {
                   if (Array.isArray(value)) {
@@ -499,9 +550,11 @@ const ServerPMReportForm_Edit_Review = () => {
               };
 
               // Filter components that have data
-              const componentsWithData = components.filter(({ dataKey }) => 
-                hasData(formData[dataKey], dataKey)
-              );
+              const componentsWithData = components.filter(({ dataKey }) => {
+                const hasDataResult = hasData(formData[dataKey], dataKey);
+                //console.log(`ServerPMReportForm_Edit_Review - Component ${dataKey} hasData:`, hasDataResult, 'Data:', formData[dataKey]);
+                return hasDataResult;
+              });
 
               if (componentsWithData.length === 0) {
                 return (
@@ -516,7 +569,9 @@ const ServerPMReportForm_Edit_Review = () => {
                 );
               }
 
-              return componentsWithData.map(({ key, title, icon: Icon, Component, dataKey }) => (
+              return componentsWithData.map(({ key, title, icon: Icon, Component, dataKey }) => {
+                
+                return (
                 <Paper key={key} elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
                   <Box sx={{ 
                     '& .MuiTextField-root': {
@@ -558,7 +613,7 @@ const ServerPMReportForm_Edit_Review = () => {
                     />
                   </Box>
                 </Paper>
-              ));
+              )});
             })()}
 
             {/* Error Display */}
@@ -598,6 +653,33 @@ const ServerPMReportForm_Edit_Review = () => {
             </Paper>
           </Box>
         </Paper>
+
+        {/* Beautiful Toast Notification */}
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={6000}
+          onClose={handleCloseNotification}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <Alert 
+            onClose={handleCloseNotification} 
+            severity={notification.severity}
+            sx={{ 
+              width: '100%',
+              fontSize: '1rem',
+              fontWeight: 500,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+              borderRadius: '12px',
+              backgroundColor: notification.severity === 'success' ? '#d4edda' : '#f8d7da',
+              color: notification.severity === 'success' ? '#155724' : '#721c24',
+              '& .MuiAlert-icon': {
+                color: notification.severity === 'success' ? '#28a745' : '#dc3545'
+              }
+            }}
+          >
+            {notification.message}
+          </Alert>
+        </Snackbar>
       </Box>
     </LocalizationProvider>
   );

@@ -186,7 +186,7 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon })
   };
   
   if (!images || images.length === 0) {
-    console.log(`No images found for ${title}`);
+    //console.log(`No images found for ${title}`);
     return (
       <Card sx={{ marginTop: 2, backgroundColor: '#f5f5f5' }}>
         <CardContent sx={{ textAlign: 'center', padding: 3 }}>
@@ -233,14 +233,14 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon })
               imageSrc = URL.createObjectURL(image.file);
               imageAlt = image.file.name || `Image ${index + 1}`;
               imageName = image.file.name || `Image ${index + 1}`;
-              console.log(`Using File object: ${imageName}`);
+              //console.log(`Using File object: ${imageName}`);
             } else if (typeof image.file === 'object' && image.file.name) {
               // File data object with name property
               try {
                 imageSrc = URL.createObjectURL(image.file);
                 imageAlt = image.file.name || `Image ${index + 1}`;
                 imageName = image.file.name || `Image ${index + 1}`;
-                console.log(`Using file object with name: ${imageName}`);
+                //console.log(`Using file object with name: ${imageName}`);
               } catch (error) {
                 console.warn('Could not create object URL for image:', error);
                 return null;
@@ -255,16 +255,16 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon })
             imageSrc = image.url;
             imageAlt = image.name || `Image ${index + 1}`;
             imageName = image.name || `Image ${index + 1}`;
-            console.log(`Using direct URL: ${imageSrc}`);
+            //console.log(`Using direct URL: ${imageSrc}`);
           } else if (image.id && image.isNew === false) {
             // Handle case where image might be from database but structured differently
-            console.log('Attempting to handle database image with different structure:', image);
+            //console.log('Attempting to handle database image with different structure:', image);
             // Try to construct URL from id or other properties
             if (image.imageName) {
               imageSrc = `${API_BASE_URL}/uploads/${image.imageName}`;
               imageAlt = image.imageName;
               imageName = image.imageName;
-              console.log(`Constructed URL from imageName: ${imageSrc}`);
+              //console.log(`Constructed URL from imageName: ${imageSrc}`);
             }
           } else {
             // Skip invalid image entries
@@ -502,7 +502,7 @@ const RTUPMReviewReportFormEdit = () => {
         // Delete removed images
         for (const deletedImage of deletedImages) {
           if (deletedImage.id) {
-            console.log(`Deleting image: ${deletedImage.imageName}`);
+            //console.log(`Deleting image: ${deletedImage.imageName}`);
             await deleteReportFormImage(deletedImage.id);
           }
         }
@@ -510,7 +510,7 @@ const RTUPMReviewReportFormEdit = () => {
         // Upload new images using the correct API function signature
         for (const newImage of newImages) {
           if (newImage.file) {
-            console.log(`Uploading new image for type ${imageMapping.typeName}`);
+            //console.log(`Uploading new image for type ${imageMapping.typeName}`);
             
             // Use the correct createReportFormImage function signature
             await createReportFormImage(
@@ -548,7 +548,7 @@ const RTUPMReviewReportFormEdit = () => {
         pmReportFormRTUID = location.state.formData.pmReportFormRTUID;
       } else {
         // If we still don't have it, we need to fetch the data from the API
-        console.log('PM Report Form RTU ID not found in form data, fetching from API...');
+        //console.log('PM Report Form RTU ID not found in form data, fetching from API...');
         const apiResponse = await getRTUPMReportForm(id);
         pmReportFormRTUID = apiResponse.pmReportFormRTU?.id || apiResponse.pmReportFormRTUID;
       }
@@ -561,8 +561,8 @@ const RTUPMReviewReportFormEdit = () => {
         throw new Error('PM Report Form RTU ID not found. Please ensure the report has been properly created.');
       }
 
-      console.log('Starting sequential API updates for Report Form ID:', reportFormId);
-      console.log('PM Report Form RTU ID:', pmReportFormRTUID);
+      //console.log('Starting sequential API updates for Report Form ID:', reportFormId);
+      //console.log('PM Report Form RTU ID:', pmReportFormRTUID);
 
       // Step 1: Update ReportForm table first
       setSaveProgress('Updating Report Form basic data...');
@@ -577,9 +577,9 @@ const RTUPMReviewReportFormEdit = () => {
         FormStatus: rtuPMData.formStatus || 'Draft'
       };
       
-      console.log('Step 1: Updating Report Form with data:', reportFormData);
+      //console.log('Step 1: Updating Report Form with data:', reportFormData);
       const reportFormResponse = await updateReportForm(reportFormId, reportFormData);
-      console.log('Step 1 completed:', reportFormResponse);
+      //console.log('Step 1 completed:', reportFormResponse);
 
       // Step 2: Update PM Report Form RTU basic data
       setSaveProgress('Updating RTU PM basic data...');
@@ -594,9 +594,9 @@ const RTUPMReviewReportFormEdit = () => {
         pmReportFormTypeID: rtuPMData.pmReportFormRTU?.pmReportFormTypeID || rtuPMData.pmReportFormTypeID
       };
       
-      console.log('Step 2: Updating PM Report Form RTU with data:', pmReportFormRTUData);
+      //console.log('Step 2: Updating PM Report Form RTU with data:', pmReportFormRTUData);
       const pmReportFormRTUResponse = await updatePMReportFormRTU(pmReportFormRTUID, pmReportFormRTUData);
-      console.log('Step 2 completed:', pmReportFormRTUResponse);
+      //console.log('Step 2 completed:', pmReportFormRTUResponse);
 
       // Step 3: Handle deletions first
     setSaveProgress('Processing deletions...');
@@ -605,7 +605,7 @@ const RTUPMReviewReportFormEdit = () => {
     if (rtuPMData.pmMainRtuCabinet && rtuPMData.pmMainRtuCabinet.length > 0) {
       const recordsToDelete = rtuPMData.pmMainRtuCabinet.filter(record => record.isDeleted && record.ID);
       if (recordsToDelete.length > 0) {
-        console.log('Deleting PM Main RTU Cabinet records:', recordsToDelete);
+        //console.log('Deleting PM Main RTU Cabinet records:', recordsToDelete);
         await Promise.all(recordsToDelete.map(record => deletePMMainRtuCabinet(record.ID)));
       }
     }
@@ -614,7 +614,7 @@ const RTUPMReviewReportFormEdit = () => {
     if (rtuPMData.pmChamberMagneticContact && rtuPMData.pmChamberMagneticContact.length > 0) {
       const recordsToDelete = rtuPMData.pmChamberMagneticContact.filter(record => record.isDeleted && record.ID);
       if (recordsToDelete.length > 0) {
-        console.log('Deleting PM Chamber Magnetic Contact records:', recordsToDelete);
+        //console.log('Deleting PM Chamber Magnetic Contact records:', recordsToDelete);
         await Promise.all(recordsToDelete.map(record => deletePMChamberMagneticContact(record.ID)));
       }
     }
@@ -623,7 +623,7 @@ const RTUPMReviewReportFormEdit = () => {
     if (rtuPMData.pmRTUCabinetCooling && rtuPMData.pmRTUCabinetCooling.length > 0) {
       const recordsToDelete = rtuPMData.pmRTUCabinetCooling.filter(record => record.isDeleted && record.ID);
       if (recordsToDelete.length > 0) {
-        console.log('Deleting PM RTU Cabinet Cooling records:', recordsToDelete);
+        //console.log('Deleting PM RTU Cabinet Cooling records:', recordsToDelete);
         await Promise.all(recordsToDelete.map(record => deletePMRTUCabinetCooling(record.ID)));
       }
     }
@@ -632,7 +632,7 @@ const RTUPMReviewReportFormEdit = () => {
     if (rtuPMData.pmDVREquipment && rtuPMData.pmDVREquipment.length > 0) {
       const recordsToDelete = rtuPMData.pmDVREquipment.filter(record => record.isDeleted && record.ID);
       if (recordsToDelete.length > 0) {
-        console.log('Deleting PM DVR Equipment records:', recordsToDelete);
+        //console.log('Deleting PM DVR Equipment records:', recordsToDelete);
         await Promise.all(recordsToDelete.map(record => deletePMDVREquipment(record.ID)));
       }
     }
@@ -642,9 +642,9 @@ const RTUPMReviewReportFormEdit = () => {
       setSaveProgress('Updating Main RTU Cabinet data...');
       const activeRecords = rtuPMData.pmMainRtuCabinet.filter(record => !record.isDeleted);
       if (activeRecords.length > 0) {
-        console.log('Step 4: Updating PM Main RTU Cabinet with data:', activeRecords);
+        //console.log('Step 4: Updating PM Main RTU Cabinet with data:', activeRecords);
         const pmMainRtuCabinetResponse = await updatePMMainRtuCabinet(pmReportFormRTUID, activeRecords);
-        console.log('Step 4 completed:', pmMainRtuCabinetResponse);
+        //console.log('Step 4 completed:', pmMainRtuCabinetResponse);
       }
     }
 
@@ -653,9 +653,9 @@ const RTUPMReviewReportFormEdit = () => {
       setSaveProgress('Updating Chamber Magnetic Contact data...');
       const activeRecords = rtuPMData.pmChamberMagneticContact.filter(record => !record.isDeleted);
       if (activeRecords.length > 0) {
-        console.log('Step 5: Updating PM Chamber Magnetic Contact with data:', activeRecords);
+        //console.log('Step 5: Updating PM Chamber Magnetic Contact with data:', activeRecords);
         const pmChamberResponse = await updatePMChamberMagneticContact(pmReportFormRTUID, activeRecords);
-        console.log('Step 5 completed:', pmChamberResponse);
+        //console.log('Step 5 completed:', pmChamberResponse);
       }
     }
 
@@ -664,9 +664,9 @@ const RTUPMReviewReportFormEdit = () => {
       setSaveProgress('Updating RTU Cabinet Cooling data...');
       const activeRecords = rtuPMData.pmRTUCabinetCooling.filter(record => !record.isDeleted);
       if (activeRecords.length > 0) {
-        console.log('Step 6: Updating PM RTU Cabinet Cooling with data:', activeRecords);
+        //console.log('Step 6: Updating PM RTU Cabinet Cooling with data:', activeRecords);
         const pmCoolingResponse = await updatePMRTUCabinetCooling(pmReportFormRTUID, activeRecords);
-        console.log('Step 6 completed:', pmCoolingResponse);
+        //console.log('Step 6 completed:', pmCoolingResponse);
       }
     }
 
@@ -675,9 +675,9 @@ const RTUPMReviewReportFormEdit = () => {
       setSaveProgress('Updating DVR Equipment data...');
       const activeRecords = rtuPMData.pmDVREquipment.filter(record => !record.isDeleted);
       if (activeRecords.length > 0) {
-        console.log('Step 7: Updating PM DVR Equipment with data:', activeRecords);
+        //console.log('Step 7: Updating PM DVR Equipment with data:', activeRecords);
         const pmDVRResponse = await updatePMDVREquipment(pmReportFormRTUID, activeRecords);
-        console.log('Step 7 completed:', pmDVRResponse);
+        //console.log('Step 7 completed:', pmDVRResponse);
       }
     }
 

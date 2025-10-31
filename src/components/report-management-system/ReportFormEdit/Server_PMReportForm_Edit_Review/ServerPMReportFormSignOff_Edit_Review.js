@@ -34,7 +34,7 @@ const ServerPMReportFormSignOff_Edit_Review = ({ data, disabled = true, formData
     startDate: data?.startDate || '',
     completionDate: data?.completionDate || '',
     approvedBy: data?.approvedBy || '',
-    remarks: data?.remark || ''
+    remarks: data?.remarks || ''
   };
       
       setSignOffData(initialData);

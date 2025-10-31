@@ -67,20 +67,15 @@ const HotFixes_Details = ({ data, disabled = false }) => {
         hotFixesArray = data.hotFixes;
       }
 
-      console.log('HotFixes_Details - Extracted hotFixesArray:', hotFixesArray);
-
       if (hotFixesArray && hotFixesArray.length > 0) {
         const hotFixesRecord = hotFixesArray[0];
-        console.log('HotFixes_Details - Processing record:', hotFixesRecord);
-
+        
         // Extract details array
         const details = hotFixesRecord.details || hotFixesRecord.Details || [];
-        console.log('HotFixes_Details - Details array:', details);
-
+        
         // Extract remarks
         remarksValue = hotFixesRecord.remarks || hotFixesRecord.Remarks || '';
-        console.log('HotFixes_Details - Remarks:', remarksValue);
-
+        
         // Transform details data
         const transformedData = details.map((detail, index) => {
           const transformed = {
@@ -91,20 +86,16 @@ const HotFixes_Details = ({ data, disabled = false }) => {
             done: detail.resultStatusID || detail.ResultStatusID,
             resultStatusName: detail.resultStatusName || detail.ResultStatusName || 'Unknown'
           };
-          console.log(`HotFixes_Details - Transformed detail ${index}:`, transformed);
           return transformed;
         });
 
-        console.log('HotFixes_Details - Final transformed data:', transformedData);
         setHotFixesData(transformedData);
         setRemarks(remarksValue);
       } else {
-        console.log('HotFixes_Details - No hotfixes array found or empty');
         setHotFixesData([]);
         setRemarks('');
       }
     } catch (error) {
-      console.error('HotFixes_Details - Error processing data:', error);
       setHotFixesData([]);
       setRemarks('');
     }

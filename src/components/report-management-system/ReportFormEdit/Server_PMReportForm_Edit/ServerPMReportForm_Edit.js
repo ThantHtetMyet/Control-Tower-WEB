@@ -63,11 +63,7 @@ const ServerPMReportForm_Edit = () => {
     customer: '',
     reportFormTypeID: '',
     pmReportFormTypeID: '',
-    pmReportFormTypeName: '',
-    dateOfService: '',
-    remarks: '',
-    approvedBy: '',
-    attendedBy: ''
+    pmReportFormTypeName: ''
   });
 
   // Add signOffData to serverPMData state
@@ -174,22 +170,18 @@ const ServerPMReportForm_Edit = () => {
           customer: response.pmReportFormServer?.customer || '',
           reportFormTypeID: response.reportFormTypeID || '',
           pmReportFormTypeID: response.pmReportFormServer?.pmReportFormTypeID || '',
-          pmReportFormTypeName: response.pmReportFormServer?.pmReportFormTypeName || '',
-          dateOfService: response.pmReportFormServer?.dateOfService ? 
-            new Date(response.pmReportFormServer.dateOfService).toISOString().slice(0, 16) : '',
-          remarks: response.pmReportFormServer?.remarks || '',
-          approvedBy: response.pmReportFormServer?.approvedBy || '',
-          attendedBy: response.pmReportFormServer?.attendedBy || ''
+          pmReportFormTypeName: response.pmReportFormServer?.pmReportFormTypeName || ''
         });
 
         // Map the backend data to the expected frontend structure - matching Details component
         const mappedServerPMData = {
           signOffData: {
-            attendedBy: response.pmReportFormServer?.attendedBy || '',
-            witnessedBy: response.pmReportFormServer?.witnessedBy || '',
-            startDate: response.pmReportFormServer?.startDate ? new Date(response.pmReportFormServer.startDate) : null,
-            completionDate: response.pmReportFormServer?.completionDate ? new Date(response.pmReportFormServer.completionDate) : null,
-            remark: response.pmReportFormServer?.remarks || ''
+            attendedBy: response.pmReportFormServer?.signOffData?.attendedBy || '',
+            witnessedBy: response.pmReportFormServer?.signOffData?.witnessedBy || '',
+            startDate: response.pmReportFormServer?.signOffData?.startDate ? new Date(response.pmReportFormServer.signOffData.startDate) : null,
+            completionDate: response.pmReportFormServer?.signOffData?.completionDate ? new Date(response.pmReportFormServer.signOffData.completionDate) : null,
+            approvedBy: response.pmReportFormServer?.signOffData?.approvedBy || '',
+            remarks: response.pmReportFormServer?.signOffData?.remarks || ''
           },
           // Map API response arrays to the format expected by Edit components
           serverHealthData: {
@@ -338,7 +330,25 @@ const ServerPMReportForm_Edit = () => {
             remarks: response.pmServerASAFirewalls?.[0]?.remarks || ''
           },
           softwarePatchData: {
-            pmServerSoftwarePatchSummaries: response.pmServerSoftwarePatchSummaries || [],
+            softwarePatchData: (() => {
+              // Extract software patch details with proper tracking fields
+              if (response.pmServerSoftwarePatchSummaries && response.pmServerSoftwarePatchSummaries.length > 0) {
+                const softwarePatchRecord = response.pmServerSoftwarePatchSummaries[0];
+                if (softwarePatchRecord.details && softwarePatchRecord.details.length > 0) {
+                  return softwarePatchRecord.details.map(detail => ({
+                    id: detail.id || null,
+                    serialNo: detail.serialNo || '',
+                    machineName: detail.serverName || '',
+                    previousPatch: detail.previousPatch || '',
+                    currentPatch: detail.currentPatch || '',
+                    isNew: !detail.id, // Mark as new if no ID
+                    isModified: false, // Track modifications
+                    isDeleted: false // Track deletions
+                  }));
+                }
+              }
+              return [];
+            })(),
             remarks: response.pmServerSoftwarePatchSummaries?.[0]?.remarks || ''
           }
         };
@@ -425,10 +435,6 @@ const ServerPMReportForm_Edit = () => {
         reportFormTypeID: formData.reportFormTypeID,
         pmReportFormTypeID: formData.pmReportFormTypeID,
         pmReportFormTypeName: formData.pmReportFormTypeName,
-        dateOfService: formData.dateOfService,
-        remarks: formData.remarks,
-        approvedBy: formData.approvedBy,
-        attendedBy: formData.attendedBy,
         
         // All Server PM sub-component data
         signOffData: serverPMData.signOffData,

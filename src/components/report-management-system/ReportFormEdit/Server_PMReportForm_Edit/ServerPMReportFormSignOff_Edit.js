@@ -18,13 +18,13 @@ const ServerPMReportFormSignOff_Edit = ({ data, onDataChange, onStatusChange }) 
   const [witnessedBy, setWitnessedBy] = useState('');
   const [startDate, setStartDate] = useState(null);
   const [completionDate, setCompletionDate] = useState(null);
-  const [remark, setRemark] = useState('');
+  const [remarks, setRemarks] = useState('');
   const isInitialized = useRef(false);
 
   // Initialize data from props when meaningful data is available
   useEffect(() => {
     // Check if we have meaningful data to initialize with
-    const hasData = data && (data.attendedBy || data.witnessedBy || data.startDate || data.completionDate || data.remark);
+    const hasData = data && (data.attendedBy || data.witnessedBy || data.startDate || data.completionDate || data.remarks);
     
     if (hasData && !isInitialized.current) {
       if (data.attendedBy) {
@@ -39,8 +39,8 @@ const ServerPMReportFormSignOff_Edit = ({ data, onDataChange, onStatusChange }) 
       if (data.completionDate) {
         setCompletionDate(data.completionDate);
       }
-      if (data.remark) {
-        setRemark(data.remark);
+      if (data.remarks) {
+        setRemarks(data.remarks);
       }
       isInitialized.current = true;
     }
@@ -54,10 +54,10 @@ const ServerPMReportFormSignOff_Edit = ({ data, onDataChange, onStatusChange }) 
         witnessedBy,
         startDate,
         completionDate,
-        remark
+        remarks
       });
     }
-  }, [attendedBy, witnessedBy, startDate, completionDate, remark, onDataChange]);
+  }, [attendedBy, witnessedBy, startDate, completionDate, remarks, onDataChange]);
 
   // Calculate completion status
   useEffect(() => {
@@ -65,12 +65,12 @@ const ServerPMReportFormSignOff_Edit = ({ data, onDataChange, onStatusChange }) 
                        witnessedBy.trim() !== '' && 
                        startDate !== null && 
                        completionDate !== null && 
-                       remark.trim() !== '';
+                       remarks.trim() !== '';
     
     if (onStatusChange) {
       onStatusChange('ServerPMReportFormSignOff_Edit', isCompleted);
     }
-  }, [attendedBy, witnessedBy, startDate, completionDate, remark, onStatusChange]);
+  }, [attendedBy, witnessedBy, startDate, completionDate, remarks, onStatusChange]);
 
   // Styling constants matching ServerHealth component
   const sectionContainerStyle = {
@@ -193,8 +193,8 @@ const ServerPMReportFormSignOff_Edit = ({ data, onDataChange, onStatusChange }) 
             rows={4}
             variant="outlined"
             label="Remarks"
-            value={remark}
-            onChange={(e) => setRemark(e.target.value)}
+            value={remarks}
+            onChange={(e) => setRemarks(e.target.value)}
             placeholder="Enter any additional remarks or observations..."
             sx={{
               '& .MuiOutlinedInput-root': {

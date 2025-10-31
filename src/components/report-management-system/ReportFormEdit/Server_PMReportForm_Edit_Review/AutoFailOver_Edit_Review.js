@@ -44,16 +44,16 @@ const AutoFailOver_Edit_Review = ({ data, disabled = true, formData }) => {
   // Initialize data from props only once
   useEffect(() => {
     if (!isInitialized.current) {
-      console.log('=== AUTOFAILOVER EDIT REVIEW DEBUG ===');
-      console.log('formData:', formData);
-      console.log('data:', data);
+      //console.log('=== AUTOFAILOVER EDIT REVIEW DEBUG ===');
+      //console.log('formData:', formData);
+      //console.log('data:', data);
       
       // Get data from formData.autoFailOverData (from AutoFailOver_Edit)
       if (formData && formData.autoFailOverData && formData.autoFailOverData.autoFailOverData) {
-        console.log('Setting autoFailOverData from formData.autoFailOverData.autoFailOverData:', formData.autoFailOverData.autoFailOverData);
+        //console.log('Setting autoFailOverData from formData.autoFailOverData.autoFailOverData:', formData.autoFailOverData.autoFailOverData);
         setAutoFailOverData(formData.autoFailOverData.autoFailOverData);
       } else if (data && data.pmServerFailOvers && data.pmServerFailOvers.length > 0) {
-        console.log('Setting autoFailOverData from data.pmServerFailOvers:', data.pmServerFailOvers);
+        //console.log('Setting autoFailOverData from data.pmServerFailOvers:', data.pmServerFailOvers);
         // Transform API data to match expected format
         const failOverRecord = data.pmServerFailOvers[0];
         const details = failOverRecord.details || failOverRecord.Details || [];
@@ -69,11 +69,11 @@ const AutoFailOver_Edit_Review = ({ data, disabled = true, formData }) => {
         }));
         setAutoFailOverData(transformedData);
       } else if (data && data.autoFailOverData && data.autoFailOverData.length > 0) {
-        console.log('Setting autoFailOverData from data.autoFailOverData:', data.autoFailOverData);
+        //console.log('Setting autoFailOverData from data.autoFailOverData:', data.autoFailOverData);
         setAutoFailOverData(data.autoFailOverData);
       } else {
         // Initialize with default scenarios if no data
-        console.log('Initializing with default failover scenarios');
+        //console.log('Initializing with default failover scenarios');
         setAutoFailOverData(failoverScenarios.map((scenario, index) => ({ 
           serialNumber: index + 1,
           failoverType: scenario.type,
@@ -84,16 +84,16 @@ const AutoFailOver_Edit_Review = ({ data, disabled = true, formData }) => {
       
       // Get remarks from AutoFailOver-specific sources
       if (formData && formData.autoFailOverData && formData.autoFailOverData.remarks) {
-        console.log('Setting remarks from formData.autoFailOverData.remarks:', formData.autoFailOverData.remarks);
+        //console.log('Setting remarks from formData.autoFailOverData.remarks:', formData.autoFailOverData.remarks);
         setRemarks(formData.autoFailOverData.remarks);
       } else if (data && data.pmServerFailOvers && data.pmServerFailOvers[0]?.remarks) {
-        console.log('Setting remarks from data.pmServerFailOvers[0].remarks:', data.pmServerFailOvers[0].remarks);
+        //console.log('Setting remarks from data.pmServerFailOvers[0].remarks:', data.pmServerFailOvers[0].remarks);
         setRemarks(data.pmServerFailOvers[0].remarks);
       } else if (data && data.remarks) {
-        console.log('Setting remarks from data.remarks:', data.remarks);
+        //console.log('Setting remarks from data.remarks:', data.remarks);
         setRemarks(data.remarks);
       } else {
-        console.log('No AutoFailOver-specific remarks found');
+        //console.log('No AutoFailOver-specific remarks found');
         setRemarks('');
       }
       

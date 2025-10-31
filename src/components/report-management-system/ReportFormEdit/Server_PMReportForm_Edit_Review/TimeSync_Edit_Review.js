@@ -34,16 +34,16 @@ const TimeSync_Edit_Review = ({ data, disabled = true, formData }) => {
   // Initialize data from props only once
   useEffect(() => {
     if (!isInitialized.current) {
-      console.log('=== TIMESYNC_EDIT_REVIEW DEBUG ===');
-      console.log('Received data:', data);
-      console.log('Received formData:', formData);
+      //console.log('=== TIMESYNC_EDIT_REVIEW DEBUG ===');
+      //console.log('Received data:', data);
+      //console.log('Received formData:', formData);
       
       // Prioritize formData over data
       if (formData && formData.timeSyncData && formData.timeSyncData.length > 0) {
-        console.log('Using formData.timeSyncData:', formData.timeSyncData);
+        //console.log('Using formData.timeSyncData:', formData.timeSyncData);
         setTimeSyncData(formData.timeSyncData);
       } else if (data && data.pmServerTimeSyncs && data.pmServerTimeSyncs.length > 0) {
-        console.log('Using data.pmServerTimeSyncs:', data.pmServerTimeSyncs);
+        //console.log('Using data.pmServerTimeSyncs:', data.pmServerTimeSyncs);
         // Handle API response format
         const timeSyncRecord = data.pmServerTimeSyncs[0];
         if (timeSyncRecord && timeSyncRecord.details && timeSyncRecord.details.length > 0) {
@@ -67,23 +67,23 @@ const TimeSync_Edit_Review = ({ data, disabled = true, formData }) => {
           setTimeSyncData(sortedData);
         }
       } else if (data && data.timeSyncData && data.timeSyncData.length > 0) {
-        console.log('Using data.timeSyncData:', data.timeSyncData);
+        //console.log('Using data.timeSyncData:', data.timeSyncData);
         setTimeSyncData(data.timeSyncData);
       }
       
       // Get remarks from TimeSync-specific sources ONLY
-      console.log('=== REMARKS DEBUG ===');
+      //console.log('=== REMARKS DEBUG ===');
       if (formData && formData.timeSyncData && formData.timeSyncData.remarks) {
-        console.log('Setting remarks from formData.timeSyncData.remarks:', formData.timeSyncData.remarks);
+        //console.log('Setting remarks from formData.timeSyncData.remarks:', formData.timeSyncData.remarks);
         setRemarks(formData.timeSyncData.remarks);
       } else if (data && data.pmServerTimeSyncs && data.pmServerTimeSyncs[0]?.remarks) {
-        console.log('Setting remarks from data.pmServerTimeSyncs[0].remarks:', data.pmServerTimeSyncs[0].remarks);
+        //console.log('Setting remarks from data.pmServerTimeSyncs[0].remarks:', data.pmServerTimeSyncs[0].remarks);
         setRemarks(data.pmServerTimeSyncs[0].remarks);
       } else if (data && data.remarks) {
-        console.log('Setting remarks from data.remarks:', data.remarks);
+        //console.log('Setting remarks from data.remarks:', data.remarks);
         setRemarks(data.remarks);
       } else {
-        console.log('No TimeSync-specific remarks found');
+        //console.log('No TimeSync-specific remarks found');
         setRemarks('');
       }
       

@@ -587,7 +587,7 @@ const CMReviewReportFormEdit = () => {
         // Delete removed images
         for (const deletedImage of deletedImages) {
           if (deletedImage.id) {
-            console.log(`Deleting image: ${deletedImage.imageName}`);
+           // console.log(`Deleting image: ${deletedImage.imageName}`);
             await deleteReportFormImage(deletedImage.id);
           }
         }
@@ -595,7 +595,7 @@ const CMReviewReportFormEdit = () => {
         // Upload new images
         for (const newImage of newImages) {
           if (newImage.file) {
-            console.log(`Uploading new image for type ${imageMapping.typeName}`);
+            //console.log(`Uploading new image for type ${imageMapping.typeName}`);
             
             await createReportFormImage(
               reportFormId,           // reportFormId
@@ -630,9 +630,6 @@ const CMReviewReportFormEdit = () => {
         throw new Error('CM Report Form ID not found. Please ensure the report has been properly created.');
       }
 
-      console.log('Starting sequential API updates for Report Form ID:', reportFormId);
-      console.log('CM Report Form ID:', cmReportFormId);
-
       // Step 1: Update ReportForm table first
       setSaveProgress('Updating Report Form basic data...');
       const reportFormData = {
@@ -646,10 +643,8 @@ const CMReviewReportFormEdit = () => {
         FormStatus: formData.formStatus || 'Draft'
       };
       
-      console.log('Step 1: Updating Report Form with data:', reportFormData);
-      const reportFormResponse = await updateReportForm(reportFormId, reportFormData);
-      console.log('Step 1 completed:', reportFormResponse);
-
+       const reportFormResponse = await updateReportForm(reportFormId, reportFormData);
+      
       // Step 2: Update CMReportForm data
       setSaveProgress('Updating CM Report Form data...');
       const cmReportFormData = {
@@ -669,10 +664,8 @@ const CMReviewReportFormEdit = () => {
         remark: formData.remark
       };
       
-      console.log('Step 2: Updating CM Report Form with data:', cmReportFormData);
-      const cmReportFormResponse = await updateCMReportForm(cmReportFormId, cmReportFormData);
-      console.log('Step 2 completed:', cmReportFormResponse);
-
+       const cmReportFormResponse = await updateCMReportForm(cmReportFormId, cmReportFormData);
+      
       // Step 3: Handle Material Used deletions first
       if (materialUsedData && materialUsedData.length > 0) {
         setSaveProgress('Processing Material Used deletions...');
@@ -680,7 +673,6 @@ const CMReviewReportFormEdit = () => {
         // Delete material used records marked for deletion
         const recordsToDelete = materialUsedData.filter(record => record.isDeleted && record.id);
         if (recordsToDelete.length > 0) {
-          console.log('Deleting Material Used records:', recordsToDelete);
           await Promise.all(recordsToDelete.map(record => deleteCMMaterialUsed(record.id)));
         }
 
@@ -700,7 +692,6 @@ const CMReviewReportFormEdit = () => {
               remark: materialItem.remark,
               updatedBy: user?.id // Use current user's ID
             };
-            console.log('Updating material used item:', materialUsedItemData);
             await updateCMMaterialUsed(materialItem.id, materialUsedItemData);
           } else {
             // Create new material used item
@@ -712,13 +703,10 @@ const CMReviewReportFormEdit = () => {
               remark: materialItem.remark,
               createdBy: user?.id // Use current user's ID
             };
-            console.log('Creating material used item:', materialUsedItemData);
-            await createCMMaterialUsed(materialUsedItemData);
+           await createCMMaterialUsed(materialUsedItemData);
           }
         }
-        
-        console.log('Material Used data processing completed');
-      }
+        }
 
       // Step 5: Process image changes
       setSaveProgress('Processing image changes...');

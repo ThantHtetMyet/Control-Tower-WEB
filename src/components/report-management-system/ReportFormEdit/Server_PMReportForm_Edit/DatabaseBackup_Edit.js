@@ -43,23 +43,45 @@ const DatabaseBackup_Edit = ({ data, onDataChange, onStatusChange }) => {
   
   const isInitialized = useRef(false);
 
-  // Initialize data from props when meaningful data is available - following CPUAndRamUsage_Edit pattern
+  // Initialize data from props - handle both API array format and legacy format, following MonthlyDatabaseCreation_Edit pattern
   useEffect(() => {
-    // Check if we have meaningful data to initialize with
-    const hasData = data && (
-      (data.mssqlBackupData !== undefined) || // Accept even empty array
-      (data.scadaBackupData !== undefined) || // Accept even empty array
-      (data.pmServerDatabaseBackups && data.pmServerDatabaseBackups.length > 0) ||
-      (data.remarks !== undefined) || // Accept even empty remarks
-      (data.latestBackupFileName !== undefined) // Accept even empty filename
-    );
-    
-    if (hasData && !isInitialized.current) {
-      let mssqlData = [];
-      let scadaData = [];
+    if (data && !isInitialized.current) {
+      console.log('DatabaseBackup_Edit - Initializing with data:', data); // Debug log
+      
+      // Check if we already have processed data from previous user input (legacy format)
+      if (data.mssqlBackupData && Array.isArray(data.mssqlBackupData)) {
+        console.log('DatabaseBackup_Edit - Using existing mssqlBackupData:', data.mssqlBackupData);
+        setMssqlBackupData(data.mssqlBackupData);
+      }
+      
+      if (data.scadaBackupData && Array.isArray(data.scadaBackupData)) {
+        console.log('DatabaseBackup_Edit - Using existing scadaBackupData:', data.scadaBackupData);
+        setScadaBackupData(data.scadaBackupData);
+      }
+      
+      if (data.remarks !== undefined) {
+        console.log('DatabaseBackup_Edit - Using existing remarks:', data.remarks);
+        setRemarks(data.remarks);
+      }
+      
+      if (data.latestBackupFileName !== undefined) {
+        console.log('DatabaseBackup_Edit - Using existing latestBackupFileName:', data.latestBackupFileName);
+        setLatestBackupFileName(data.latestBackupFileName);
+      }
+      
+      // Only process API data if we don't have existing processed data
+      if (data.pmServerDatabaseBackups && Array.isArray(data.pmServerDatabaseBackups) && 
+          (!data.mssqlBackupData || data.mssqlBackupData.length === 0) &&
+          (!data.scadaBackupData || data.scadaBackupData.length === 0)) {
+        
+        console.log('DatabaseBackup_Edit - Processing API data:', data.pmServerDatabaseBackups);
+        
+        let mssqlData = [];
+        let scadaData = [];
+        let remarksFromAPI = '';
+        let latestBackupFileNameFromAPI = '';
 
-      // Handle API response format (from ServerPMReportForm_Edit)
-      if (data.pmServerDatabaseBackups && Array.isArray(data.pmServerDatabaseBackups)) {
+        // Process API response format
         const backupData = data.pmServerDatabaseBackups[0];
         
         // Initialize MSSQL data from mssqlDatabaseBackupDetails
@@ -79,7 +101,7 @@ const DatabaseBackup_Edit = ({ data, onDataChange, onStatusChange }) => {
             const serialB = parseInt(b.serialNo) || 0;
             return serialA - serialB;
           });
-          console.log('DatabaseBackup_Edit - Mapped MSSQL data from API:', mssqlData); // Debug log
+          console.log('DatabaseBackup_Edit - Mapped MSSQL data from API:', mssqlData);
         }
         
         // Initialize SCADA data from scadaDataBackupDetails
@@ -99,66 +121,21 @@ const DatabaseBackup_Edit = ({ data, onDataChange, onStatusChange }) => {
             const serialB = parseInt(b.serialNo) || 0;
             return serialA - serialB;
           });
-          console.log('DatabaseBackup_Edit - Mapped SCADA data from API:', scadaData); // Debug log
+          console.log('DatabaseBackup_Edit - Mapped SCADA data from API:', scadaData);
         }
         
         // Initialize remarks and latest backup file name from backupData
         if (backupData) {
-          setRemarks(backupData.remarks || '');
-          setLatestBackupFileName(backupData.latestBackupFileName || '');
+          remarksFromAPI = backupData.remarks || '';
+          latestBackupFileNameFromAPI = backupData.latestBackupFileName || '';
         }
-      }
-      // Handle legacy/direct data format
-      else {
-        if (data.mssqlBackupData && data.mssqlBackupData.length > 0) {
-          mssqlData = data.mssqlBackupData.map(item => ({
-            id: item.id || null,
-            serialNo: item.serialNo || '',
-            item: item.item || '',
-            monthlyDBBackupCreated: item.monthlyDBBackupCreated || '',
-            isNew: !item.id,
-            isModified: item.isModified || false,
-            isDeleted: item.isDeleted || false
-          }));
-          // Sort by serialNo
-          mssqlData.sort((a, b) => {
-            const serialA = parseInt(a.serialNo) || 0;
-            const serialB = parseInt(b.serialNo) || 0;
-            return serialA - serialB;
-          });
-          console.log('DatabaseBackup_Edit - Mapped MSSQL data from legacy:', mssqlData); // Debug log
-        }
-        
-        if (data.scadaBackupData && data.scadaBackupData.length > 0) {
-          scadaData = data.scadaBackupData.map(item => ({
-            id: item.id || null,
-            serialNo: item.serialNo || '',
-            item: item.item || '',
-            monthlyDBBackupCreated: item.monthlyDBBackupCreated || '',
-            isNew: !item.id,
-            isModified: item.isModified || false,
-            isDeleted: item.isDeleted || false
-          }));
-          // Sort by serialNo
-          scadaData.sort((a, b) => {
-            const serialA = parseInt(a.serialNo) || 0;
-            const serialB = parseInt(b.serialNo) || 0;
-            return serialA - serialB;
-          });
-          console.log('DatabaseBackup_Edit - Mapped SCADA data from legacy:', scadaData); // Debug log
-        }
-        
-        if (data.remarks) {
-          setRemarks(data.remarks);
-        }
-        
-        if (data.latestBackupFileName) {
-          setLatestBackupFileName(data.latestBackupFileName);
-        }
-      }
 
-      setMssqlBackupData(mssqlData);
-      setScadaBackupData(scadaData);
+        setMssqlBackupData(mssqlData);
+        setScadaBackupData(scadaData);
+        setRemarks(remarksFromAPI);
+        setLatestBackupFileName(latestBackupFileNameFromAPI);
+      }
+      
       isInitialized.current = true;
     }
   }, [data]);
@@ -181,7 +158,7 @@ const DatabaseBackup_Edit = ({ data, onDataChange, onStatusChange }) => {
     fetchYesNoStatuses();
   }, []);
 
-  // Update parent component when data changes (but not on initial load)
+  // Update parent component when data changes (but not on initial load) - following MonthlyDatabaseCreation_Edit pattern
   useEffect(() => {
     if (isInitialized.current && onDataChange) {
       onDataChange({

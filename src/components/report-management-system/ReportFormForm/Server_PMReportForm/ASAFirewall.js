@@ -120,7 +120,6 @@ const ASAFirewall = ({ data, onDataChange, onStatusChange }) => {
           const cpuOption = asaFirewallStatusOptions.find(option => 
             option.name && option.name.includes('CPU Usage <80%')
           );
-          console.log('CPU Option found:', cpuOption);
           return { ...item, expectedResultId: cpuOption ? cpuOption.id : '' };
         } else if (item.commandInput === 'show environment') {
           // Find "Overall hardware health" option

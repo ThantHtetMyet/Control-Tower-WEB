@@ -87,7 +87,7 @@ const HardDriveHealth_Details = ({ data = {}, disabled = true }) => {
         label={status} 
         color={color} 
         size="small"
-        variant="outlined"
+        sx={{ fontWeight: 'bold' }}
       />
     );
   };

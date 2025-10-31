@@ -36,13 +36,17 @@ const DatabaseBackup_Edit_Review = ({ data, disabled = true, formData }) => {
 
   // Initialize data from props only once
   useEffect(() => {
+    console.log('DatabaseBackup_Edit_Review - Received data:', data);
+    console.log('DatabaseBackup_Edit_Review - Received formData:', formData);
     
     // Check for alternative property names that might contain the database backup data
     if (formData) {
+      console.log('DatabaseBackup_Edit_Review - FormData keys:', Object.keys(formData));
       
       Object.keys(formData).forEach(key => {
         if (key.toLowerCase().includes('database') || key.toLowerCase().includes('backup') || 
             key.toLowerCase().includes('mssql') || key.toLowerCase().includes('scada')) {
+          console.log(`DatabaseBackup_Edit_Review - Found potential data in key '${key}':`, formData[key]);
         }
       });
     }

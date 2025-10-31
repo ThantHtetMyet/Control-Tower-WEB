@@ -50,9 +50,11 @@ import HotFixes_Details from './HotFixes_Details';
 import AutoFailOver_Details from './AutoFailOver_Details';
 import ASAFirewall_Details from './ASAFirewall_Details';
 import SoftwarePatch_Details from './SoftwarePatch_Details';
+import ServerPMReportFormSignOff_Details from './ServerPMReportFormSignOff_Details';
 
-// Import API service
+// Import the report form service
 import { getServerPMReportFormWithDetails } from '../../../api-services/reportFormService';
+import { generateServerPMReportPDF } from '../../utils/Server_PMReportForm_PDF';
 
 const ServerPMReportFormDetails = () => {
   const navigate = useNavigate();
@@ -63,11 +65,13 @@ const ServerPMReportFormDetails = () => {
   const [serverPMData, setServerPMData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentStep, setCurrentStep] = useState('serverHealth');
+  const [currentStep, setCurrentStep] = useState('signOff');
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Step configuration - matching ServerPMReportForm exactly
   const steps = [
+    'signOff',
     'serverHealth',
     'hardDriveHealth', 
     'diskUsage',
@@ -106,7 +110,8 @@ const ServerPMReportFormDetails = () => {
     hotFixes: 'Hotfixes / Service Packs',
     autoFailOver: 'Auto failover of SCADA server',
     asaFirewall: 'ASA Firewall Maintenance',
-    softwarePatch: 'Software Patch Summary'
+    softwarePatch: 'Software Patch Summary',
+    signOff: 'Sign Off'
   };
 
   // Fetch report form data
@@ -129,13 +134,21 @@ const ServerPMReportFormDetails = () => {
           // Override with reportForm data where applicable
           jobNo: response.reportForm?.jobNo || response.pmReportFormServer?.jobNo,
           systemDescription: response.reportForm?.systemDescription || response.pmReportFormServer?.systemDescription,
-          stationName: response.reportForm?.stationName || response.pmReportFormServer?.stationName
+          stationName: response.reportForm?.stationName || response.pmReportFormServer?.stationName,
+          // Structure signoff data properly
+          signOffData: {
+            attendedBy: response.pmReportFormServer?.signOffData?.attendedBy || '',
+            witnessedBy: response.pmReportFormServer?.signOffData?.witnessedBy || '',
+            startDate: response.pmReportFormServer?.signOffData?.startDate || null,
+            completionDate: response.pmReportFormServer?.signOffData?.completionDate || null,
+            remarks: response.pmReportFormServer?.signOffData?.remarks || ''
+          }
         };
         
         setFormData(mergedFormData);
         
-        // Map the backend data to the expected frontend structure
-        const mappedServerPMData = {
+        // Simple data mapping for UI display only
+        const serverPMData = {
           serverHealthData: response.pmServerHealths || [],
           hardDriveHealthData: response.pmServerHardDriveHealths || [],
           diskUsageData: response.pmServerDiskUsageHealths || [],
@@ -156,7 +169,7 @@ const ServerPMReportFormDetails = () => {
           softwarePatchData: response.pmServerSoftwarePatchSummaries || []
         };
         
-        setServerPMData(mappedServerPMData);
+        setServerPMData(serverPMData);
       } catch (err) {
         console.error('Error fetching report form details:', err);
         setError('Error fetching report form details: ' + err.message);
@@ -187,7 +200,32 @@ const ServerPMReportFormDetails = () => {
   };
 
   const handleBack = () => {
-    navigate('/report-management-system/report-forms');
+    const currentIndex = steps.indexOf(currentStep);
+    if (currentIndex > 0) {
+      // Navigate to previous step
+      handleStepNavigation(steps[currentIndex - 1]);
+    } else {
+      // If we're on the first step, go back to the report forms list
+      navigate('/report-management-system/report-forms');
+    }
+  };
+
+  // PDF Generation function - Simplified to just pass report ID
+  const handlePrintReport = async () => {
+    try {
+      setIsGeneratingPDF(true);
+      console.log('Generating PDF for report ID:', id);
+      
+      // Let the PDF component handle all data fetching, mapping, and processing
+      await generateServerPMReportPDF(id, stepTitles);
+      console.log('PDF generated successfully');
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      setError('Failed to generate PDF report. Please try again.');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
   // Component rendering - matching ServerPMReportForm exactly
@@ -210,7 +248,8 @@ const ServerPMReportFormDetails = () => {
       hotFixes: HotFixes_Details,
       autoFailOver: AutoFailOver_Details,
       asaFirewall: ASAFirewall_Details,
-      softwarePatch: SoftwarePatch_Details
+      softwarePatch: SoftwarePatch_Details,
+      signOff: ServerPMReportFormSignOff_Details
     };
 
     const Component = componentMap[currentStep];
@@ -241,11 +280,12 @@ const ServerPMReportFormDetails = () => {
                    currentStep === 'hotFixes' ? 'hotFixesData' :
                    currentStep === 'autoFailOver' ? 'autoFailOverData' :
                    currentStep === 'asaFirewall' ? 'asaFirewallData' :
-                   currentStep === 'softwarePatch' ? 'softwarePatchData' : 'serverHealthData';
+                   currentStep === 'softwarePatch' ? 'softwarePatchData' :
+                   currentStep === 'signOff' ? 'signOffData' : 'serverHealthData';
 
     return (
       <Component
-        data={serverPMData[dataKey] || []}
+        data={currentStep === 'signOff' ? formData.signOffData : (serverPMData[dataKey] || [])}
       />
     );
   };
@@ -452,8 +492,9 @@ const ServerPMReportFormDetails = () => {
                   
                   <Button
                     variant="contained"
-                    onClick={() => window.print()}
+                    onClick={handlePrintReport}
                     startIcon={<PrintIcon />}
+                    disabled={isGeneratingPDF}
                     sx={{
                       background: RMSTheme.components.button.primary.background,
                       color: RMSTheme.components.button.primary.text,
@@ -463,10 +504,13 @@ const ServerPMReportFormDetails = () => {
                       boxShadow: RMSTheme.components.button.primary.shadow,
                       '&:hover': {
                         background: RMSTheme.components.button.primary.hover
+                      },
+                      '&:disabled': {
+                        opacity: 0.6
                       }
                     }}
                   >
-                    Print Report
+                    {isGeneratingPDF ? 'Generating PDF...' : 'Print Report'}
                   </Button>
                 </Box>
               </Box>
@@ -548,144 +592,6 @@ const ServerPMReportFormDetails = () => {
                 </Grid>
               </Grid>
             </Paper>
-
-            {/* Witnessed By and Attended By Section */}
-            <Paper sx={{
-              padding: 3,
-              marginBottom: 3,
-              backgroundColor: '#ffffff',
-              borderRadius: 2,
-              border: '1px solid #e0e0e0',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}>
-              <Typography variant="h5" sx={{
-                color: '#1976d2',
-                fontWeight: 'bold',
-                marginBottom: 2,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}>
-                👥 Personnel Information
-              </Typography>
-              
-              <TextField
-                fullWidth
-                variant="outlined"
-                label="Attended By"
-                value={formData.attendedBy || ''}
-                disabled
-                placeholder="Enter maintenance personnel name"
-                sx={{
-                  marginBottom: 2,
-                  marginTop: 1,
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: 'white',
-                  }
-                }}
-              />
-              
-              <TextField
-                fullWidth
-                variant="outlined"
-                label="Witnessed By"
-                value={formData.witnessedBy || ''}
-                disabled
-                placeholder="Enter witness name"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: 'white',
-                  }
-                }}
-              />
-            </Paper>
-
-            {/* Schedule Information Section */}
-            <Paper sx={{
-              padding: 3,
-              marginBottom: 3,
-              backgroundColor: '#ffffff',
-              borderRadius: 2,
-              border: '1px solid #e0e0e0',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}>
-              <Typography variant="h5" sx={{
-                color: '#1976d2',
-                fontWeight: 'bold',
-                marginBottom: 2,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}>
-                📅 Schedule Information
-              </Typography>
-              
-              <Grid container spacing={3} sx={{ marginTop: 1 }}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Start Date"
-                    value={formData.startDate ? new Date(formData.startDate).toLocaleDateString() : ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Completion Date"
-                    value={formData.completionDate ? new Date(formData.completionDate).toLocaleDateString() : ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-              </Grid>
-            </Paper>
-
-            {/* Remarks Section */}
-            <Box sx={{ 
-              padding: 3, 
-              backgroundColor: '#ffffff', 
-              borderRadius: 2, 
-              border: '1px solid #e0e0e0',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              marginBottom: 3
-            }}>
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  color: '#1976d2', 
-                  fontWeight: 'bold', 
-                  marginBottom: 2,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-              >
-                📝 Remarks
-              </Typography>
-              <TextField
-                label="Additional Notes"
-                fullWidth
-                multiline
-                rows={4}
-                value={formData.remarks || ''}
-                disabled
-                placeholder="Enter any additional remarks or observations..."
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: '#f5f5f5',
-                    '& fieldset': {
-                      borderColor: '#d0d0d0'
-                    }
-                  },
-                  '& .MuiInputBase-input.Mui-disabled': {
-                    WebkitTextFillColor: 'rgba(0, 0, 0, 0.6)',
-                    color: 'rgba(0, 0, 0, 0.6)'
-                  }
-                }}
-              />
-            </Box>
 
             {/* Current Step Content */}
             <Box sx={stepContainerStyle}>

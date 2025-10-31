@@ -208,8 +208,8 @@ const CPUAndRamUsage_Edit_Review = ({ data, disabled = true, formData }) => {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableCell sx={{ fontWeight: 'bold' }}>Serial No.</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Machine Name</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', width: '80px', minWidth: '80px' }}>Serial No.</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', width: '250px', minWidth: '200px' }}>Machine Name</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Memory Size (GB)</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Memory in Use (%)</TableCell>
              <TableCell sx={{ fontWeight: 'bold' }}>Check (Usage &lt; 80%?)</TableCell>
@@ -287,8 +287,8 @@ const CPUAndRamUsage_Edit_Review = ({ data, disabled = true, formData }) => {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableCell sx={{ fontWeight: 'bold' }}>Serial No.</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Machine Name</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', width: '80px', minWidth: '80px' }}>Serial No.</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', width: '250px', minWidth: '200px' }}>Machine Name</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>CPU Usage (&lt; %)</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Check (Usage &lt; 80%)</TableCell>
             </TableRow>

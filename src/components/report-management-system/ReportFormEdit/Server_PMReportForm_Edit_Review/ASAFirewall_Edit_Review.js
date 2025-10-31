@@ -32,22 +32,22 @@ const ASAFirewall_Edit_Review = ({ data, disabled = true, formData }) => {
   // Initialize data from props only once
   useEffect(() => {
     if (!isInitialized.current) {
-      console.log('ASAFirewall_Edit_Review - Initializing data:', { formData, data });
+      //console.log('ASAFirewall_Edit_Review - Initializing data:', { formData, data });
       
       let dataToProcess = null;
       let remarksToSet = '';
 
       // Prioritize formData.asaFirewallData (from ASAFirewall_Edit)
       if (formData && formData.asaFirewallData && formData.asaFirewallData.length > 0) {
-        console.log('ASAFirewall_Edit_Review - Using formData.asaFirewallData:', formData.asaFirewallData);
+        //console.log('ASAFirewall_Edit_Review - Using formData.asaFirewallData:', formData.asaFirewallData);
         dataToProcess = formData.asaFirewallData;
         remarksToSet = formData.asaFirewallData.remarks || '';
       } else if (data && data.pmServerASAFirewalls && data.pmServerASAFirewalls.length > 0) {
-        console.log('ASAFirewall_Edit_Review - Using data.pmServerASAFirewalls:', data.pmServerASAFirewalls);
+        //console.log('ASAFirewall_Edit_Review - Using data.pmServerASAFirewalls:', data.pmServerASAFirewalls);
         dataToProcess = data.pmServerASAFirewalls;
         remarksToSet = data.pmServerASAFirewalls[0]?.remarks || '';
       } else if (data && data.asaFirewallData && data.asaFirewallData.length > 0) {
-        console.log('ASAFirewall_Edit_Review - Using data.asaFirewallData:', data.asaFirewallData);
+        //console.log('ASAFirewall_Edit_Review - Using data.asaFirewallData:', data.asaFirewallData);
         dataToProcess = data.asaFirewallData;
         remarksToSet = data.remarks || '';
       }
@@ -83,13 +83,13 @@ const ASAFirewall_Edit_Review = ({ data, disabled = true, formData }) => {
       
       // Get ASAFirewall-specific remarks (NOT SignOff remarks)
       if (formData && formData.asaFirewallData && formData.asaFirewallData.remarks) {
-        console.log('ASAFirewall_Edit_Review - Using ASAFirewall-specific remarks from formData:', formData.asaFirewallData.remarks);
+        //console.log('ASAFirewall_Edit_Review - Using ASAFirewall-specific remarks from formData:', formData.asaFirewallData.remarks);
         setRemarks(formData.asaFirewallData.remarks);
       } else if (remarksToSet) {
-        console.log('ASAFirewall_Edit_Review - Using remarks from data source:', remarksToSet);
+        //console.log('ASAFirewall_Edit_Review - Using remarks from data source:', remarksToSet);
         setRemarks(remarksToSet);
       } else if (data && data.remarks) {
-        console.log('ASAFirewall_Edit_Review - Using data.remarks as fallback:', data.remarks);
+        //console.log('ASAFirewall_Edit_Review - Using data.remarks as fallback:', data.remarks);
         setRemarks(data.remarks);
       }
       

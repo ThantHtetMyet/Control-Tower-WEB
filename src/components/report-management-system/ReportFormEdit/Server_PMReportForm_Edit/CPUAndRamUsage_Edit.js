@@ -446,12 +446,12 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableCell sx={{ fontWeight: 'bold' }}>S/N</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Machine Name</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', width: '80px', minWidth: '80px' }}>S/N</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', width: '250px', minWidth: '200px' }}>Machine Name</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Memory Size</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Memory In Use (%)</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Memory In Use &lt; 90%? *Historical server &lt; 90%?</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', width: '180px', maxWidth: '200px' }}>Memory In Use &lt; 90%?<br />*Historical server &lt; 90%?</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', width: '120px' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
