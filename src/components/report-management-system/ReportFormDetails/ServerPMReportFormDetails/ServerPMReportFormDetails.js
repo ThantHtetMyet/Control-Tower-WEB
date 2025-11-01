@@ -54,7 +54,7 @@ import ServerPMReportFormSignOff_Details from './ServerPMReportFormSignOff_Detai
 
 // Import the report form service
 import { getServerPMReportFormWithDetails } from '../../../api-services/reportFormService';
-import { generateServerPMReportPDF } from '../../utils/Server_PMReportForm_PDF';
+import { generateServerPMReportPDF } from '../../utils/Server_PM_ReportForm_PDF/Server_PMReportForm_PDF';
 
 const ServerPMReportFormDetails = () => {
   const navigate = useNavigate();
