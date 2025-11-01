@@ -9,6 +9,7 @@ import {
   Tooltip,
   CircularProgress,
   Alert,
+  Snackbar,
 } from '@mui/material';
 import { Print as PrintIcon } from '@mui/icons-material';
 import { 
@@ -30,6 +31,8 @@ import RMSTheme from '../../../theme-resource/RMSTheme';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useNavigate, useParams } from 'react-router-dom';
+import mqttService from '../../../api-services/mqttService';
+import { useAuth } from '../../../contexts/AuthContext';
 
 // Component imports
 import ServerHealth_Details from './ServerHealth_Details';
@@ -54,11 +57,11 @@ import ServerPMReportFormSignOff_Details from './ServerPMReportFormSignOff_Detai
 
 // Import the report form service
 import { getServerPMReportFormWithDetails } from '../../../api-services/reportFormService';
-import { generateServerPMReportPDF } from '../../utils/Server_PM_ReportForm_PDF/Server_PMReportForm_PDF';
 
 const ServerPMReportFormDetails = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuth(); // Get current user information
   
   // State management
   const [formData, setFormData] = useState(null);
@@ -68,6 +71,12 @@ const ServerPMReportFormDetails = () => {
   const [currentStep, setCurrentStep] = useState('signOff');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  
+  // MQTT-related state
+  const [mqttConnected, setMqttConnected] = useState(false);
+  const [pdfRequestId, setPdfRequestId] = useState(null);
+  const [pdfStatus, setPdfStatus] = useState(null);
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
 
   // Step configuration - matching ServerPMReportForm exactly
   const steps = [
@@ -181,6 +190,20 @@ const ServerPMReportFormDetails = () => {
     fetchReportFormData();
   }, [id]);
 
+  // Cleanup MQTT connection on component unmount
+  useEffect(() => {
+    return () => {
+      if (mqttService.isClientConnected()) {
+        mqttService.disconnect();
+      }
+    };
+  }, []);
+
+  // Close notification
+  const handleCloseNotification = () => {
+    setNotification({ ...notification, open: false });
+  };
+
   // Navigation functions - matching ServerPMReportForm exactly
   const handleStepNavigation = (targetStep) => {
     if (targetStep !== currentStep && !isTransitioning) {
@@ -210,21 +233,91 @@ const ServerPMReportFormDetails = () => {
     }
   };
 
-  // PDF Generation function - Simplified to just pass report ID
+  // PDF Generation function - Connect to MQTT and send request
   const handlePrintReport = async () => {
     try {
       setIsGeneratingPDF(true);
       console.log('Generating PDF for report ID:', id);
       
-      // Let the PDF component handle all data fetching, mapping, and processing
-      await generateServerPMReportPDF(id, stepTitles);
-      console.log('PDF generated successfully');
+      // Connect to MQTT if not already connected
+      if (!mqttConnected || !mqttService.isClientConnected()) {
+        setNotification({
+          open: true,
+          message: 'Connecting to MQTT broker...',
+          severity: 'info'
+        });
+
+        await mqttService.connect();
+        setMqttConnected(true);
+        
+        setNotification({
+          open: true,
+          message: 'Connected to MQTT broker',
+          severity: 'success'
+        });
+
+        // Subscribe to PDF status updates for this specific report
+        await mqttService.subscribeToPDFStatus(id, (statusMessage) => {
+          console.log('PDF Status Update:', statusMessage);
+          
+          // Check if this status update is for our request
+          if (pdfRequestId && statusMessage.request_id === pdfRequestId) {
+            setPdfStatus(statusMessage);
+            
+            if (statusMessage.status === 'completed') {
+              setIsGeneratingPDF(false);
+              setNotification({
+                open: true,
+                message: 'PDF generated successfully!',
+                severity: 'success'
+              });
+            } else if (statusMessage.status === 'error') {
+              setIsGeneratingPDF(false);
+              setNotification({
+                open: true,
+                message: `PDF generation failed: ${statusMessage.message}`,
+                severity: 'error'
+              });
+            } else if (statusMessage.status === 'processing') {
+              setNotification({
+                open: true,
+                message: statusMessage.message || 'Processing PDF...',
+                severity: 'info'
+              });
+            }
+          }
+        });
+      }
+
+      // Send PDF generation request via MQTT
+      console.log('Report ID from params:', id, 'Type:', typeof id);
+      
+      if (!id || id === 'undefined' || id === 'null') {
+        throw new Error(`Invalid report ID: ${id}`);
+      }
+      
+      // Use current user's ID instead of 'web_user'
+      const currentUserId = user?.ID || user?.id || 'web_user'; // Fallback to 'web_user' if no user ID
+      const requestId = await mqttService.requestPDFGeneration(id, currentUserId);
+      setPdfRequestId(requestId);
+      
+      setNotification({
+        open: true,
+        message: 'PDF generation request sent. Please wait...',
+        severity: 'info'
+      });
+      
+      console.log('PDF generation request sent with ID:', requestId);
       
     } catch (error) {
       console.error('Error generating PDF:', error);
-      setError('Failed to generate PDF report. Please try again.');
-    } finally {
       setIsGeneratingPDF(false);
+      setMqttConnected(false);
+      setNotification({
+        open: true,
+        message: `Failed to generate PDF: ${error.message}`,
+        severity: 'error'
+      });
     }
   };
 
@@ -665,6 +758,22 @@ const ServerPMReportFormDetails = () => {
             </Paper>
           </Box>
         </Box>
+
+        {/* Notification Snackbar */}
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={6000}
+          onClose={handleCloseNotification}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert 
+            onClose={handleCloseNotification} 
+            severity={notification.severity}
+            sx={{ width: '100%' }}
+          >
+            {notification.message}
+          </Alert>
+        </Snackbar>
     </LocalizationProvider>
   );
 };
