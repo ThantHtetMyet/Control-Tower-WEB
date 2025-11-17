@@ -31,8 +31,6 @@ import RMSTheme from '../../../theme-resource/RMSTheme';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useNavigate, useParams } from 'react-router-dom';
-import mqttService from '../../../api-services/mqttService';
-import { useAuth } from '../../../contexts/AuthContext';
 
 // Component imports
 import ServerHealth_Details from './ServerHealth_Details';
@@ -56,12 +54,11 @@ import SoftwarePatch_Details from './SoftwarePatch_Details';
 import ServerPMReportFormSignOff_Details from './ServerPMReportFormSignOff_Details';
 
 // Import the report form service
-import { getServerPMReportFormWithDetails } from '../../../api-services/reportFormService';
+import { getServerPMReportFormWithDetails, generateServerPMReportPdf } from '../../../api-services/reportFormService';
 
 const ServerPMReportFormDetails = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { user } = useAuth(); // Get current user information
   
   // State management
   const [formData, setFormData] = useState(null);
@@ -72,10 +69,6 @@ const ServerPMReportFormDetails = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   
-  // MQTT-related state
-  const [mqttConnected, setMqttConnected] = useState(false);
-  const [pdfRequestId, setPdfRequestId] = useState(null);
-  const [pdfStatus, setPdfStatus] = useState(null);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
 
   // Step configuration - matching ServerPMReportForm exactly
@@ -190,14 +183,6 @@ const ServerPMReportFormDetails = () => {
     fetchReportFormData();
   }, [id]);
 
-  // Cleanup MQTT connection on component unmount
-  useEffect(() => {
-    return () => {
-      if (mqttService.isClientConnected()) {
-        mqttService.disconnect();
-      }
-    };
-  }, []);
 
   // Close notification
   const handleCloseNotification = () => {
@@ -233,91 +218,64 @@ const ServerPMReportFormDetails = () => {
     }
   };
 
-  // PDF Generation function - Connect to MQTT and send request
+  // PDF Generation function - call API and download PDF
   const handlePrintReport = async () => {
-    try {
-      setIsGeneratingPDF(true);
-      console.log('Generating PDF for report ID:', id);
-      
-      // Connect to MQTT if not already connected
-      if (!mqttConnected || !mqttService.isClientConnected()) {
-        setNotification({
-          open: true,
-          message: 'Connecting to MQTT broker...',
-          severity: 'info'
-        });
-
-        await mqttService.connect();
-        setMqttConnected(true);
-        
-        setNotification({
-          open: true,
-          message: 'Connected to MQTT broker',
-          severity: 'success'
-        });
-
-        // Subscribe to PDF status updates for this specific report
-        await mqttService.subscribeToPDFStatus(id, (statusMessage) => {
-          console.log('PDF Status Update:', statusMessage);
-          
-          // Check if this status update is for our request
-          if (pdfRequestId && statusMessage.request_id === pdfRequestId) {
-            setPdfStatus(statusMessage);
-            
-            if (statusMessage.status === 'completed') {
-              setIsGeneratingPDF(false);
-              setNotification({
-                open: true,
-                message: 'PDF generated successfully!',
-                severity: 'success'
-              });
-            } else if (statusMessage.status === 'error') {
-              setIsGeneratingPDF(false);
-              setNotification({
-                open: true,
-                message: `PDF generation failed: ${statusMessage.message}`,
-                severity: 'error'
-              });
-            } else if (statusMessage.status === 'processing') {
-              setNotification({
-                open: true,
-                message: statusMessage.message || 'Processing PDF...',
-                severity: 'info'
-              });
-            }
-          }
-        });
-      }
-
-      // Send PDF generation request via MQTT
-      console.log('Report ID from params:', id, 'Type:', typeof id);
-      
-      if (!id || id === 'undefined' || id === 'null') {
-        throw new Error(`Invalid report ID: ${id}`);
-      }
-      
-      // Use current user's ID instead of 'web_user'
-      const currentUserId = user?.ID || user?.id || 'web_user'; // Fallback to 'web_user' if no user ID
-      const requestId = await mqttService.requestPDFGeneration(id, currentUserId);
-      setPdfRequestId(requestId);
-      
+    if (!id) {
       setNotification({
         open: true,
-        message: 'PDF generation request sent. Please wait...',
-        severity: 'info'
-      });
-      
-      console.log('PDF generation request sent with ID:', requestId);
-      
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      setIsGeneratingPDF(false);
-      setMqttConnected(false);
-      setNotification({
-        open: true,
-        message: `Failed to generate PDF: ${error.message}`,
+        message: 'Invalid report identifier.',
         severity: 'error'
       });
+      return;
+    }
+
+    try {
+      setIsGeneratingPDF(true);
+      setNotification({
+        open: true,
+        message: 'Generating PDF report. Please wait...',
+        severity: 'info'
+      });
+
+      const response = await generateServerPMReportPdf(id);
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      const disposition = response.headers['content-disposition'];
+      let fileName = `ServerPMReport_${formData?.jobNo || id}.pdf`;
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/i);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
+
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setNotification({
+        open: true,
+        message: 'PDF generated successfully.',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        (typeof error.response?.data === 'string' ? error.response.data : error.message) ||
+        'Failed to generate PDF.';
+      setNotification({
+        open: true,
+        message: errorMessage,
+        severity: 'error'
+      });
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 

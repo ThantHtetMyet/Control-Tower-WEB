@@ -22,6 +22,18 @@ export const getReportForm = async (id) => {
   return response.data;
 };
 
+export const generateServerPMReportPdf = async (id) => {
+  return api.post(`/PMReportFormServer/${id}/generate-pdf`, null, {
+    responseType: 'blob'
+  });
+};
+
+export const generateCMReportPdf = async (id) => {
+  return api.post(`/CMReportForm/${id}/generate-pdf`, null, {
+    responseType: 'blob'
+  });
+};
+
 export const createReportForm = async (reportFormData) => {
   // Ensure all required fields are present
   const completeData = {

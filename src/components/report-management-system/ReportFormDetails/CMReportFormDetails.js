@@ -18,7 +18,8 @@ import {
   CircularProgress,
   Alert,
   Modal,
-  IconButton
+  IconButton,
+  Snackbar
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -34,7 +35,7 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import RMSTheme from '../../theme-resource/RMSTheme';
-import { getCMReportForm } from '../../api-services/reportFormService';
+import { getCMReportForm, generateCMReportPdf } from '../../api-services/reportFormService';
 import { API_BASE_URL } from '../../../config/apiConfig';
 
 // Styling constants
@@ -289,6 +290,12 @@ const CMReportFormDetails = () => {
   const [formData, setFormData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
 
   useEffect(() => {
     const fetchReportDetails = async () => {
@@ -380,6 +387,71 @@ const CMReportFormDetails = () => {
 
   const handleBack = () => {
     navigate('/report-management-system/report-forms');
+  };
+
+  const handleCloseNotification = () => {
+    setNotification((prev) => ({ ...prev, open: false }));
+  };
+
+  const handlePrintReport = async () => {
+    if (!id) {
+      setNotification({
+        open: true,
+        message: 'Invalid report identifier.',
+        severity: 'error'
+      });
+      return;
+    }
+
+    try {
+      setIsGeneratingPDF(true);
+      setNotification({
+        open: true,
+        message: 'Generating PDF report. Please wait...',
+        severity: 'info'
+      });
+
+      const response = await generateCMReportPdf(id);
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      const disposition = response.headers['content-disposition'];
+      let fileName = `CMReport_${formData?.jobNo || id}.pdf`;
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/i);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
+
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setNotification({
+        open: true,
+        message: 'PDF generated successfully.',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error generating CM PDF:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        (typeof error.response?.data === 'string' ? error.response.data : error.message) ||
+        'Failed to generate PDF.';
+
+      setNotification({
+        open: true,
+        message: errorMessage,
+        severity: 'error'
+      });
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
   if (loading) {
@@ -527,8 +599,9 @@ const CMReportFormDetails = () => {
             
             <Button
               variant="contained"
-              onClick={() => window.print()}
+              onClick={handlePrintReport}
               startIcon={<PrintIcon />}
+              disabled={isGeneratingPDF}
               sx={{
                 background: RMSTheme.components.button.primary.background,
                 color: RMSTheme.components.button.primary.text,
@@ -541,7 +614,7 @@ const CMReportFormDetails = () => {
                 }
               }}
             >
-              Print Report
+              {isGeneratingPDF ? 'Generating PDF...' : 'Print Report'}
             </Button>
           </Box>
         </Box>
@@ -799,6 +872,21 @@ const CMReportFormDetails = () => {
           </Grid>
         </Grid>
       </Paper>
+
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
