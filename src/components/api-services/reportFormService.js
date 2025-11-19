@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../../config/apiConfig';
 
 // Report Form API calls
 export const getReportForms = async (page = 1, pageSize = 10, search = '', reportFormTypeId = null, sortField = null, sortDirection = 'asc') => {
+
   const params = new URLSearchParams({
     page: page.toString(),
     pageSize: pageSize.toString()
@@ -30,6 +31,12 @@ export const generateServerPMReportPdf = async (id) => {
 
 export const generateCMReportPdf = async (id) => {
   return api.post(`/CMReportForm/${id}/generate-pdf`, null, {
+    responseType: 'blob'
+  });
+};
+
+export const generateRTUPMReportPdf = async (id) => {
+  return api.post(`/PMReportFormRTU/${id}/generate-pdf`, null, {
     responseType: 'blob'
   });
 };

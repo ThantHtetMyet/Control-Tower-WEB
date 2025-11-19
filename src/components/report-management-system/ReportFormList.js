@@ -48,14 +48,7 @@ const ReportFormList = () => {
       setLoading(true);
       const response = await getReportForms(currentPage, pageSize, searchTerm, selectedTypeId || null, sortField, sortDirection);
       
-      // Process the data to add specificReportTypeName based on reportFormTypeName
-      const processedData = (response.data || []).map(form => ({
-        ...form,
-        // Map specificReportTypeName based on reportFormTypeName and systemName
-        specificReportTypeName: getSpecificReportTypeName(form.reportFormTypeName, form.systemNameWarehouseName)
-      }));
-      
-      setReportForms(processedData);
+      setReportForms(response.data || []);
       setTotalCount(response.totalCount || 0);
       setTotalPages(response.totalPages || 0);
     } catch (err) {
@@ -65,40 +58,20 @@ const ReportFormList = () => {
     }
   };
 
-  // Helper function to determine specific report type name
-  const getSpecificReportTypeName = (reportFormTypeName, systemName) => {
-    if (!reportFormTypeName) return 'N/A';
-    
-    const typeName = reportFormTypeName.toLowerCase();
-    const systemNameLower = systemName ? systemName.toLowerCase() : '';
-    
-    // Check for preventive/preventative maintenance first
-    if (typeName.includes('preventive') || typeName.includes('preventative')) {
-      // Check if it's a Server PM report by looking at system name
-      if (systemNameLower.includes('server') || systemNameLower.includes('security') || systemNameLower.includes('isoss')) {
-        return 'Server';
-      }
-      // Check if it's an RTU PM report
-      else if (systemNameLower.includes('rtu') || typeName.includes('rtu')) {
-        return 'RTU';
-      }
-      // For other PM forms, return the original type name
-      else {
-        return reportFormTypeName;
-      }
-    }
-    // Check for specific PM types in the report form type name
-    else if (typeName.includes('server') && (typeName.includes('preventive') || typeName.includes('preventative'))) {
-      return 'Server';
-    } else if (typeName.includes('rtu') && (typeName.includes('preventive') || typeName.includes('preventative'))) {
-      return 'RTU';
-    } else if (typeName.includes('corrective')) {
-      return 'Corrective Maintenance';
-    }
-    
-    return reportFormTypeName;
-  };
+  const handleNavigateToDetails = (form) => {
+    const specificType = (form.specificReportTypeName || '').toLowerCase();
+    const reportType = (form.reportFormTypeName || '').toLowerCase();
 
+    if (specificType === 'server') {
+      navigate(`/report-management-system/report-forms/server-pm-details/${form.id}`);
+    } else if (specificType === 'rtu') {
+      navigate(`/report-management-system/report-forms/rtu-pm-details/${form.id}`);
+    } else if (reportType === 'corrective maintenance') {
+      navigate(`/report-management-system/report-forms/cm-details/${form.id}`);
+    } else {
+      navigate(`/report-management-system/report-forms/details/${form.id}`);
+    }
+  };
   const fetchReportFormTypes = async () => {
     try {
       const data = await getReportFormTypes();
@@ -552,19 +525,7 @@ const ReportFormList = () => {
               sortedReportForms.map((form) => (
               <TableRow 
                 key={form.id}
-                onDoubleClick={() => {
-                  
-                  // Check if it's a Server PM report
-                  if (form.specificReportTypeName === 'Server') {
-                    navigate(`/report-management-system/report-forms/server-pm-details/${form.id}`);
-                  } else if (form.specificReportTypeName === 'RTU') {
-                    navigate(`/report-management-system/report-forms/rtu-pm-details/${form.id}`);
-                  } else if (form.reportFormTypeName === 'Corrective Maintenance') {
-                    navigate(`/report-management-system/report-forms/cm-details/${form.id}`);
-                  } else {
-                    navigate(`/report-management-system/report-forms/details/${form.id}`);
-                  }
-                }}
+                onDoubleClick={() => handleNavigateToDetails(form)}
                 sx={{
                   '&:hover': {
                     backgroundColor: RMSTheme.background.hover,
@@ -620,22 +581,7 @@ const ReportFormList = () => {
                     <Tooltip title="View Details">
                       <IconButton
                         size="small"
-                        onClick={() => {
-                          console.log('Form data:', form);
-                          console.log('Report Type Name:', form.reportFormTypeName);
-                          console.log('Specific Report Type Name:', form.specificReportTypeName);
-                          console.log('System Name:', form.systemName);
-                          
-                          if (form.specificReportTypeName === 'RTU') {
-                            navigate(`/report-management-system/report-forms/rtu-pm-details/${form.id}`);
-                          } else if (form.specificReportTypeName === 'Server') {
-                            navigate(`/report-management-system/report-forms/server-pm-details/${form.id}`);
-                          } else if (form.reportFormTypeName === 'Corrective Maintenance') {
-                            navigate(`/report-management-system/report-forms/cm-details/${form.id}`);
-                          } else {
-                            navigate(`/report-management-system/report-forms/details/${form.id}`);
-                          }
-                        }}
+                        onClick={() => handleNavigateToDetails(form)}
                         sx={{
                           color: RMSTheme.status.info,
                           '&:hover': {
@@ -652,15 +598,16 @@ const ReportFormList = () => {
                         size="small"
                         onClick={() => {
                           // Navigate to appropriate edit page based on report type
-                          if (form.specificReportTypeName === 'RTU') {
+                          const specificType = (form.specificReportTypeName || '').toLowerCase();
+                          const reportType = (form.reportFormTypeName || '').toLowerCase();
+                          if (specificType === 'rtu') {
                             navigate(`/report-management-system/rtu-pm-edit/${form.id}`);
-                          } else if (form.specificReportTypeName === 'Server') {
+                          } else if (specificType === 'server') {
                             navigate(`/report-management-system/server-pm-edit/${form.id}`);
-                          } else if (form.reportFormTypeName === 'Corrective Maintenance') {
+                          } else if (reportType === 'corrective maintenance') {
                             navigate(`/report-management-system/cm-edit/${form.id}`);
                           } else {
-                            // Default fallback for other report types
-                            navigate(`/report-management-system/rtu-pm-edit/${form.id}`);
+                            navigate(`/report-management-system/report-forms/details/${form.id}`);
                           }
                         }}
                         sx={{
