@@ -145,7 +145,8 @@ const MultipleImageUploadField = ({ field, label, images, previews, onUpload, on
 
 const RTUPMReportForm = ({ 
   formData, 
-  reportFormTypes, 
+  reportFormTypes,
+  formStatusOptions = [],
   onInputChange, 
   onNext, 
   onBack,
@@ -2414,16 +2415,35 @@ const RTUPMReportForm = ({
                 ...sectionContainerStyle,
                 background: '#ffffff'
               }}>
-                <Typography variant="h5" sx={sectionHeaderStyle}>
-                  ✅ Approval Information
-                </Typography>
-                
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="Attended By"
-                    value={formData.attendedBy || ''}
-                    onChange={(e) => handleInputChange('attendedBy', e.target.value)}
+            <Typography variant="h5" sx={sectionHeaderStyle}>
+              ✅ Approval Information
+            </Typography>
+            
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+              <TextField
+                fullWidth
+                select
+                label="Form Status"
+                value={formData.formstatusID || ''}
+                onChange={(e) => handleInputChange('formstatusID', e.target.value)}
+                SelectProps={{ displayEmpty: true }}
+                sx={fieldStyle}
+              >
+                <MenuItem value="">
+                  <em>Select Form Status</em>
+                </MenuItem>
+                {(formStatusOptions || []).map((status) => (
+                  <MenuItem key={status.id || status.ID} value={status.id || status.ID}>
+                    {status.name || status.Name}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              <TextField
+                fullWidth
+                label="Attended By"
+                value={formData.attendedBy || ''}
+                onChange={(e) => handleInputChange('attendedBy', e.target.value)}
                     placeholder="Enter the name of the person who attended to this maintenance..."
                     sx={fieldStyle}
                   />
@@ -2863,3 +2883,4 @@ const RTUPMReportForm = ({
 };
 
 export default RTUPMReportForm;
+

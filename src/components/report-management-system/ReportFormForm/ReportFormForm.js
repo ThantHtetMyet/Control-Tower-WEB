@@ -18,6 +18,7 @@ import CMReportForm from './CMReportForm';
 import RTUPMReportForm from './RTUPMReportForm'; // Updated import
 import ServerPMReportForm from './Server_PMReportForm/ServerPMReportForm'; // Add Server PM import
 import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, submitServerPMReportForm, getNextJobNumber } from '../../api-services/reportFormService';
+import warehouseService from '../../api-services/warehouseService';
 import CMReviewReportForm from './CMReviewReportForm';
 import RTUPMReviewReportForm from './RTUPMReviewReportForm';
 import ServerPMReviewReportForm from './Server_PMReportForm_Review/ServerPMReviewReportForm'; // Add Server PM import
@@ -38,6 +39,7 @@ const ReportFormForm = () => {
   const [reportFormTypes, setReportFormTypes] = useState([]);
   const [beforeIssueImages, setBeforeIssueImages] = useState([]);
   const [afterActionImages, setAfterActionImages] = useState([]);
+  const [formStatusOptions, setFormStatusOptions] = useState([]);
   
   // Add toast notification state
   const [showSuccessToast, setShowSuccessToast] = useState(false);
@@ -78,6 +80,7 @@ const ReportFormForm = () => {
     uploadStatus: 'Pending',
     uploadHostname: '',
     uploadIPAddress: '',
+    formstatusID: '',
     formStatus: 'Draft'
   });
 
@@ -89,6 +92,18 @@ const ReportFormForm = () => {
       } catch (error) {
         console.error('Error fetching report form types:', error);
         setError('Failed to load report form types');
+      }
+    };
+
+    const fetchFormStatuses = async () => {
+      try {
+        const statuses = await warehouseService.getFormStatus();
+        setFormStatusOptions(statuses || []);
+        if (!formData.formstatusID && Array.isArray(statuses) && statuses.length > 0) {
+          setFormData(prev => ({ ...prev, formstatusID: statuses[0].id || statuses[0].ID }));
+        }
+      } catch (error) {
+        console.error('Error fetching form status options:', error);
       }
     };
 
@@ -108,6 +123,7 @@ const ReportFormForm = () => {
     };
 
     fetchReportFormTypes();
+    fetchFormStatuses();
     fetchNextJobNumber();
   }, []);
 
@@ -359,6 +375,7 @@ const handleServerPMDataUpdate = (data) => {
           return (
             <RTUPMReportForm
               formData={formData}
+              formStatusOptions={formStatusOptions}
               reportFormTypes={reportFormTypes}
               onInputChange={handleInputChange}
               onNext={handleNext}
@@ -372,6 +389,7 @@ const handleServerPMDataUpdate = (data) => {
           return (
             <ServerPMReportForm
               formData={formData}
+              formStatusOptions={formStatusOptions}
               reportFormTypes={reportFormTypes}
               onInputChange={handleInputChange}
               onNext={handleNext}

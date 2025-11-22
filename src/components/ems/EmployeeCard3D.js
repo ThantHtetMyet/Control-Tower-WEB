@@ -380,7 +380,7 @@ const EmployeeCard3D = ({ open, onClose, employee, triggerElement }) => {
               variant="h5"
               sx={{
                 position: 'absolute',
-                top: '300px',
+                top: '335px',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 color: '#000',

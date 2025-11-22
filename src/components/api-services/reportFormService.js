@@ -412,6 +412,7 @@ export const submitRTUPMReportForm = async (formData, rtuPMData, user) => {
       reportFormID: reportForm.id,
       pmReportFormTypeID: formData.pmReportFormTypeID,
       reportTitle: formData.reportTitle || '',
+      formstatusID: formData.formstatusID,
       projectNo: formData.projectNo,
       customer: formData.customer,
       dateOfService: formData.dateOfService,
@@ -1432,6 +1433,7 @@ export const submitServerPMReportForm = async (formData, user) => {
     const pmReportData = {
       reportFormID: reportForm.id, // Use the ID from the created ReportForm
       pmReportFormTypeID: formData.pmReportFormTypeID,
+      formstatusID: formData.formstatusID,
       projectNo: formData.projectNo,
       customer: formData.customer,
       reportTitle: formData.reportTitle,

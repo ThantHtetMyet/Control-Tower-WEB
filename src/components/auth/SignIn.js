@@ -254,7 +254,7 @@ function SignIn() {
     inactivityTimerRef.current = setTimeout(() => {
       setIsHovered(false);
       inactivityTimerRef.current = null;
-    }, 3000); // 10 seconds of inactivity
+    }, 10000); // 10 seconds of inactivity
   };
 
   // Handle input focus and blur
@@ -280,7 +280,7 @@ function SignIn() {
     inactivityTimerRef.current = setTimeout(() => {
       setIsHovered(false);
       inactivityTimerRef.current = null;
-    }, 3000);
+    }, 10000);
 
     // Cleanup function
     return () => {
