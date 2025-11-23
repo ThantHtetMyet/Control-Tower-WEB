@@ -17,7 +17,7 @@ import FirstContainer from './FirstContainer';
 import CMReportForm from './CMReportForm';
 import RTUPMReportForm from './RTUPMReportForm'; // Updated import
 import ServerPMReportForm from './Server_PMReportForm/ServerPMReportForm'; // Add Server PM import
-import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, submitServerPMReportForm, getNextJobNumber } from '../../api-services/reportFormService';
+import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, submitServerPMReportForm, getNextJobNumber, uploadFinalReportAttachment } from '../../api-services/reportFormService';
 import warehouseService from '../../api-services/warehouseService';
 import CMReviewReportForm from './CMReviewReportForm';
 import RTUPMReviewReportForm from './RTUPMReviewReportForm';
@@ -99,9 +99,6 @@ const ReportFormForm = () => {
       try {
         const statuses = await warehouseService.getFormStatus();
         setFormStatusOptions(statuses || []);
-        if (!formData.formstatusID && Array.isArray(statuses) && statuses.length > 0) {
-          setFormData(prev => ({ ...prev, formstatusID: statuses[0].id || statuses[0].ID }));
-        }
       } catch (error) {
         console.error('Error fetching form status options:', error);
       }
@@ -159,7 +156,7 @@ const ReportFormForm = () => {
     }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (finalReportFile = null) => {
     // Prevent double submission immediately
     if (loading) return;
     
@@ -220,12 +217,25 @@ const ReportFormForm = () => {
           navigate('/report-management-system/report-forms');
         }, 2000);
         
-        return; // Exit early to avoid the generic success handling below
+        return true;
       } else if (isServerPreventativeMaintenance) {
         // console.log("Server Preventative Maintenance is working");
         // Handle Server PM report submission
         result = await submitServerPMReportForm(formData, user);
-        // console.log('Server PM Report Form submitted successfully:', result);
+        // After saving, upload final report if provided
+        if (finalReportFile) {
+          const newReportFormId = result?.reportForm?.id || result?.reportForm?.ID;
+          if (!newReportFormId) {
+            setError('Report saved, but failed to retrieve the ReportForm ID for final report upload.');
+            return false;
+          }
+          try {
+            await uploadFinalReportAttachment(newReportFormId, finalReportFile);
+          } catch (uploadError) {
+            setError(uploadError?.response?.data?.message || 'Failed to upload final report.');
+            return false;
+          }
+        }
         
         // Show success toast for Server PM reports
         setShowSuccessToast(true);
@@ -235,7 +245,7 @@ const ReportFormForm = () => {
           navigate('/report-management-system/report-forms');
         }, 2000);
         
-        return; // Exit early to avoid the generic success handling below
+        return true;
       } else if (isRTUPreventativeMaintenance) {
         // console.log("RTU Preventative Maintenance is working");
         // Handle RTU PM report submission
@@ -250,7 +260,7 @@ const ReportFormForm = () => {
           navigate('/report-management-system/report-forms');
         }, 2000);
         
-        return; // Exit early to avoid the generic success handling below
+        return true;
       } else if (isPreventativeMaintenance) {
         // console.log("Other PM type (not RTU) - not implemented yet");
         throw new Error('This PM report type is not yet implemented');
@@ -288,9 +298,12 @@ const ReportFormForm = () => {
         }, 2000);
       }
       
+      return true;
+      
     } catch (error) {
       // console.error('Error creating report form:', error);
       setError('Failed to create report form: ' + (error.message || 'Unknown error'));
+      return false;
     } finally {
       setLoading(false);
     }
@@ -451,6 +464,7 @@ const handleServerPMDataUpdate = (data) => {
             <RTUPMReviewReportForm
               formData={formData}
               reportFormTypes={reportFormTypes}
+              formStatusOptions={formStatusOptions}
               onNext={handleSubmit}
               onBack={handleBack}
               loading={loading}
@@ -464,6 +478,7 @@ const handleServerPMDataUpdate = (data) => {
             <ServerPMReviewReportForm
               formData={formData}
               reportFormTypes={reportFormTypes}
+              formStatusOptions={formStatusOptions}
               onNext={handleSubmit}
               onBack={handleBack}
               loading={loading}

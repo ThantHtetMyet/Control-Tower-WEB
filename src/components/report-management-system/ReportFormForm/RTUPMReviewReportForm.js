@@ -227,6 +227,7 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon })
 const RTUPMReviewReportForm = ({ 
   formData, 
   reportFormTypes, 
+  formStatusOptions = [],
   onNext, 
   onBack, 
   loading, 
@@ -234,6 +235,11 @@ const RTUPMReviewReportForm = ({
   rtuPMData = {} 
 }) => {
   const reportType = reportFormTypes?.find(type => type.id === formData.reportFormTypeID);
+  const formStatusDisplay = (() => {
+    const match = (formStatusOptions || []).find((s) => (s.id || s.ID) === formData.formstatusID);
+    if (match) return match.name || match.Name;
+    return formData.formStatusName || formData.formstatusName || formData.formstatusID || 'Not specified';
+  })();
 
   const handleSubmit = () => {
     onNext();
@@ -528,6 +534,12 @@ const RTUPMReviewReportForm = ({
           Service Details
         </Typography>
         <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Box sx={fieldContainer}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>Form Status</Typography>
+              <Typography variant="body1">{formStatusDisplay}</Typography>
+            </Box>
+          </Grid>
           <Grid item xs={12} md={6}>
             <Box sx={fieldContainer}>
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>Cleaning of Cabinet</Typography>

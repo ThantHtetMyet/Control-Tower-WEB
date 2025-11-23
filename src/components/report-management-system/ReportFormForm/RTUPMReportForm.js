@@ -34,7 +34,7 @@ import {
   Videocam
 } from '@mui/icons-material';
 import RMSTheme from '../../theme-resource/RMSTheme';
-import { getPMReportFormTypes } from '../../api-services/reportFormService';
+import { getPMReportFormTypes, uploadFinalReportAttachment } from '../../api-services/reportFormService';
 
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -169,6 +169,12 @@ const RTUPMReportForm = ({
   
   const [pmDVREquipmentImages, setPmDVREquipmentImages] = useState(initialRTUPMData.pmDVREquipmentImages || []);
   const [pmDVREquipmentPreviews, setPmDVREquipmentPreviews] = useState([]);
+
+  // Final report upload modal state
+  const [finalReportDialogOpen, setFinalReportDialogOpen] = useState(false);
+  const [finalReportFile, setFinalReportFile] = useState(null);
+  const [finalReportUploadError, setFinalReportUploadError] = useState('');
+  const [finalReportUploading, setFinalReportUploading] = useState(false);
   
   // MainRTUCabinet state management - Initialize with data from parent or default
   const [mainRTUCabinetData, setMainRTUCabinetData] = useState(initialRTUPMData.mainRTUCabinetData || [{
@@ -829,9 +835,19 @@ const RTUPMReportForm = ({
     const minutes = String(dateObj.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
-  
+
+  const currentReportFormId = formData?.reportFormID || formData?.ReportFormID || formData?.reportFormId;
+
   // Handle input changes
   const handleInputChange = (field, value) => {
+    if (field === 'formstatusID') {
+      const selected = (formStatusOptions || []).find((s) => (s.id || s.ID) === value);
+      const statusName = selected?.name || selected?.Name || '';
+      if (statusName.toLowerCase() === 'close') {
+        setFinalReportDialogOpen(true);
+      }
+    }
+
     if (fieldErrors[field]) {
       setFieldErrors(prev => {
         const newErrors = { ...prev };
@@ -840,6 +856,37 @@ const RTUPMReportForm = ({
       });
     }
     onInputChange(field, value);
+  };
+
+  const handleFinalReportFileChange = (e) => {
+    setFinalReportUploadError('');
+    const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+    setFinalReportFile(file);
+  };
+
+  const handleUploadFinalReport = async () => {
+    if (!finalReportFile) {
+      setFinalReportUploadError('Please select a file to upload.');
+      return;
+    }
+
+    if (!currentReportFormId) {
+      setFinalReportUploadError('Save the report first before uploading the final report file.');
+      return;
+    }
+
+    setFinalReportUploading(true);
+    try {
+      await uploadFinalReportAttachment(currentReportFormId, finalReportFile);
+      setFinalReportDialogOpen(false);
+      setFinalReportFile(null);
+      setFinalReportUploadError('');
+    } catch (error) {
+      const message = error?.response?.data?.message || 'Failed to upload final report.';
+      setFinalReportUploadError(message);
+    } finally {
+      setFinalReportUploading(false);
+    }
   };
   
   // Handle next button
@@ -2382,6 +2429,41 @@ const RTUPMReportForm = ({
               </Grid>
             </Paper>
 
+            <Paper sx={sectionContainerStyle}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                Form Status
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Form Status"
+                  value={formData.formstatusID || ''}
+                  onChange={(e) => handleInputChange('formstatusID', e.target.value)}
+                  SelectProps={{
+                    displayEmpty: true,
+                    renderValue: (selected) =>
+                      selected
+                        ? (formStatusOptions.find((s) => (s.id || s.ID) === selected)?.name ||
+                           formStatusOptions.find((s) => (s.id || s.ID) === selected)?.Name ||
+                           selected)
+                        : <em>Select Form Status</em>
+                  }}
+                  InputLabelProps={{ shrink: true }}
+                  sx={fieldStyle}
+                >
+                  <MenuItem value="">
+                    <em>Select Form Status</em>
+                  </MenuItem>
+                  {(formStatusOptions || []).map((status) => (
+                    <MenuItem key={status.id || status.ID} value={status.id || status.ID}>
+                      {status.name || status.Name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Box>
+            </Paper>
+
             {/* Remarks Section */}
             <Paper sx={sectionContainerStyle}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
@@ -2415,49 +2497,29 @@ const RTUPMReportForm = ({
                 ...sectionContainerStyle,
                 background: '#ffffff'
               }}>
-            <Typography variant="h5" sx={sectionHeaderStyle}>
-              ✅ Approval Information
-            </Typography>
-            
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-              <TextField
-                fullWidth
-                select
-                label="Form Status"
-                value={formData.formstatusID || ''}
-                onChange={(e) => handleInputChange('formstatusID', e.target.value)}
-                SelectProps={{ displayEmpty: true }}
-                sx={fieldStyle}
-              >
-                <MenuItem value="">
-                  <em>Select Form Status</em>
-                </MenuItem>
-                {(formStatusOptions || []).map((status) => (
-                  <MenuItem key={status.id || status.ID} value={status.id || status.ID}>
-                    {status.name || status.Name}
-                  </MenuItem>
-                ))}
-              </TextField>
-
-              <TextField
-                fullWidth
-                label="Attended By"
-                value={formData.attendedBy || ''}
-                onChange={(e) => handleInputChange('attendedBy', e.target.value)}
-                    placeholder="Enter the name of the person who attended to this maintenance..."
-                    sx={fieldStyle}
-                  />
-                  
-                  <TextField
-                    fullWidth
-                    label="Approved By"
-                    value={formData.approvedBy || ''}
-                    onChange={(e) => handleInputChange('approvedBy', e.target.value)}
-                    placeholder="Enter the name of the person who approved this report..."
-                    sx={fieldStyle}
-                  />
-                </Box>
-              </Paper>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                Approval Information
+              </Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Attended By"
+                  value={formData.attendedBy || ''}
+                  onChange={(e) => handleInputChange('attendedBy', e.target.value)}
+                  placeholder="Enter the name of the person who attended to this maintenance..."
+                  sx={fieldStyle}
+                />
+                <TextField
+                  fullWidth
+                  label="Approved By"
+                  value={formData.approvedBy || ''}
+                  onChange={(e) => handleInputChange('approvedBy', e.target.value)}
+                  placeholder="Enter the name of the person who approved this report..."
+                  sx={fieldStyle}
+                />
+              </Box>
+            </Paper>
 
             {/* Navigation Buttons Section */}
             <Paper sx={{
@@ -2505,6 +2567,46 @@ const RTUPMReportForm = ({
             </Paper>
           </Box>
         </Paper>
+
+        {/* Final Report Upload Modal */}
+        <Dialog
+          open={finalReportDialogOpen}
+          onClose={() => setFinalReportDialogOpen(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>Upload Final Report</DialogTitle>
+          <DialogContent>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              <Typography variant="body2" color="textSecondary">
+                Upload the final report file for this RTU PM form. It will be stored securely with the form data.
+              </Typography>
+              <Button
+                variant="outlined"
+                component="label"
+                startIcon={<CloudUploadIcon />}
+              >
+                {finalReportFile ? finalReportFile.name : 'Select File'}
+                <input type="file" hidden onChange={handleFinalReportFileChange} />
+              </Button>
+              {finalReportUploadError && (
+                <Typography color="error" variant="body2">{finalReportUploadError}</Typography>
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setFinalReportDialogOpen(false)} disabled={finalReportUploading}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleUploadFinalReport}
+              disabled={finalReportUploading}
+            >
+              {finalReportUploading ? 'Uploading...' : 'Upload'}
+            </Button>
+          </DialogActions>
+        </Dialog>
         
         {/* Clear Values Confirmation Modal */}
         <Dialog

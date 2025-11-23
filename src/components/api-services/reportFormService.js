@@ -163,6 +163,30 @@ export const deleteReportFormImage = async (id) => {
   return response.data;
 };
 
+// Final report upload for PM forms (RTU/Server)
+export const uploadFinalReportAttachment = async (reportFormId, file) => {
+  const formData = new FormData();
+  formData.append('ReportFormId', reportFormId);
+  formData.append('FinalReportFile', file);
+  const response = await api.post('/reportformfinalreport/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const getFinalReportsByReportForm = async (reportFormId) => {
+  const response = await api.get(`/reportformfinalreport/ByReportForm/${reportFormId}`);
+  return response.data;
+};
+
+export const downloadFinalReportAttachment = async (finalReportId) => {
+  return api.get(`/reportformfinalreport/download/${finalReportId}`, {
+    responseType: 'blob'
+  });
+};
+
 // ReportFormImageType API calls
 export const getReportFormImageTypes = async () => {
   const response = await api.get('/reportformimagetype');
@@ -1429,6 +1453,27 @@ export const submitServerPMReportForm = async (formData, user) => {
       return null;
     };
 
+    const normalizeDateValue = (value) => {
+      if (!value) return null;
+      if (value instanceof Date && !isNaN(value.getTime())) {
+        return value.toISOString();
+      }
+      try {
+        const parsed = new Date(value);
+        return isNaN(parsed.getTime()) ? value : parsed.toISOString();
+      } catch {
+        return value;
+      }
+    };
+
+    const signOffDataPayload = {
+      attendedBy: formData.signOffData?.attendedBy || formData.attendedBy || '',
+      witnessedBy: formData.signOffData?.witnessedBy || formData.witnessedBy || '',
+      startDate: normalizeDateValue(formData.signOffData?.startDateTime || formData.startDate),
+      completionDate: normalizeDateValue(formData.signOffData?.completionDateTime || formData.completionDate),
+      remarks: formData.signOffData?.remark || formData.remarks || ''
+    };
+
     // Step 2: Create the complete PM Report Form Server data with all components
     const pmReportData = {
       reportFormID: reportForm.id, // Use the ID from the created ReportForm
@@ -1437,12 +1482,7 @@ export const submitServerPMReportForm = async (formData, user) => {
       projectNo: formData.projectNo,
       customer: formData.customer,
       reportTitle: formData.reportTitle,
-      // Extract SignOff data from formData.signOffData
-      attendedBy: formData.signOffData?.attendedBy || formData.attendedBy || '',
-      witnessedBy: formData.signOffData?.witnessedBy || formData.witnessedBy || '',
-      startDate: formData.signOffData?.startDateTime || formData.startDate || null,
-      completionDate: formData.signOffData?.completionDateTime || formData.completionDate || null,
-      remarks: formData.signOffData?.remark || formData.remarks || '',
+      signOffData: signOffDataPayload,
       createdBy: user.id,
 
       // Transform all component data

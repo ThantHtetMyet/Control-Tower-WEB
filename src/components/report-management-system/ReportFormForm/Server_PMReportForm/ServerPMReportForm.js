@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Grid,
   TextField,
@@ -7,9 +7,14 @@ import {
   Typography,
   Paper,
   Tooltip,
+  MenuItem,
 } from '@mui/material';
 import { 
   Computer as ComputerIcon,
+  ArrowBackIosNew as ArrowBackIosNewIcon,
+  ArrowForwardIos as ArrowForwardIosIcon,
+  HelpOutline as HelpOutlineIcon,
+  Assignment as AssignmentIcon
 } from '@mui/icons-material';
 import RMSTheme from '../../../theme-resource/RMSTheme';
 import { getPMReportFormTypes } from '../../../api-services/reportFormService';
@@ -39,7 +44,7 @@ import AutoFailOver from './AutoFailOver';
 import ASAFirewall from './ASAFirewall';
 import SoftwarePatch from './SoftwarePatch';
 
-const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
+const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, onNext, onBack }) => {
   // State management
   const [pmReportFormTypes, setPMReportFormTypes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -210,6 +215,18 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
                    currentStep === 'asaFirewall' ? 'asaFirewallData' :
                    currentStep === 'softwarePatch' ? 'softwarePatchData' : 'serverHealthData';
 
+    if (currentStep === 'signOff') {
+      return (
+        <Component
+          data={formData[dataKey] || {}}
+          formStatusOptions={formStatusOptions}
+          formstatusID={formData.formstatusID || ''}
+          onFormStatusChange={(val) => onInputChange('formstatusID', val)}
+          onDataChange={dataChangeHandlers[currentStep]}
+        />
+      );
+    }
+
     return (
       <Component
         data={formData[dataKey] || {}}
@@ -343,7 +360,8 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
               border: '2px solid #e9ecef'
             }}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
-                📋 Basic Information Summary
+                <AssignmentIcon fontSize="inherit" />
+                Basic Information Summary
               </Typography>
               
               <Grid container spacing={3} sx={{ marginTop: 1 }}>
@@ -444,6 +462,49 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
               </Grid>
             </Paper>
 
+            {/* Form Status (moved outside Sign Off) */}
+            <Paper sx={{
+              ...sectionContainerStyle,
+              background: '#ffffff',
+              border: '1px solid #e0e0e0',
+              marginTop: 3
+            }}>
+            <Typography variant="h5" sx={{ 
+              color: '#1976d2',
+              fontWeight: 'bold',
+              marginBottom: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}>
+              <HelpOutlineIcon fontSize="small" color="primary" />
+              Form Status
+            </Typography>
+              <TextField
+                fullWidth
+                select
+                label="Form Status"
+                value={formData.formstatusID || ''}
+                onChange={(e) => onInputChange('formstatusID', e.target.value)}
+                SelectProps={{
+                  displayEmpty: true,
+                  renderValue: (selected) =>
+                    selected ? (formStatusOptions.find((s) => (s.id || s.ID) === selected)?.name || formStatusOptions.find((s) => (s.id || s.ID) === selected)?.Name || selected) : <em>Select Form Status</em>
+                }}
+                InputLabelProps={{ shrink: true }}
+                sx={fieldStyle}
+              >
+                <MenuItem value="">
+                  <em>Select Form Status</em>
+                </MenuItem>
+                {(formStatusOptions || []).map((status) => (
+                  <MenuItem key={status.id || status.ID} value={status.id || status.ID}>
+                    {status.name || status.Name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Paper>
+
             {/* Current Step Content */}
             <Box sx={stepContainerStyle}>
               {renderCurrentStep()}
@@ -466,6 +527,7 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
                   variant="contained"
                   onClick={handleBack}
                   disabled={isTransitioning}
+                  startIcon={<ArrowBackIosNewIcon fontSize="small" />}
                   sx={{
                     background: RMSTheme.components.button.primary.background,
                     color: RMSTheme.components.button.primary.text,
@@ -481,7 +543,7 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
                     }
                   }}
                 >
-                  ← Back
+                  Back
                 </Button>
                 
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
@@ -495,6 +557,7 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
                   variant="contained"
                   onClick={handleNext}
                   disabled={isTransitioning}
+                  endIcon={<ArrowForwardIosIcon fontSize="small" />}
                   sx={{
                     background: RMSTheme.components.button.primary.background,
                     color: RMSTheme.components.button.primary.text,
@@ -510,7 +573,7 @@ const ServerPMReportForm = ({ formData, onInputChange, onNext, onBack }) => {
                     }
                   }}
                 >
-                  {currentStep === 'asaFirewall' ? 'Next →' : currentStep === 'softwarePatch' ? 'Complete →' : 'Next →'}
+                  {currentStep === 'softwarePatch' ? 'Complete' : 'Next'}
                 </Button>
               </Box>
             </Paper>

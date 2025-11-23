@@ -1,27 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Paper,
   Typography,
   Grid,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Button,
-  Chip,
-  Card,
-  CardContent,
   CircularProgress,
   Alert,
-  Divider,
-  TextField
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Fade
 } from '@mui/material';
 import {
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
   Computer as ComputerIcon,
   Storage as StorageIcon,
   Memory as MemoryIcon,
@@ -36,10 +29,12 @@ import {
   Security as SecurityIcon,
   SystemUpdate as SystemUpdateIcon,
   Assignment as AssignmentIcon,
-  AccessTime
+  UploadFile as UploadFileIcon,
+  ArrowBackIosNew as ArrowBackIosNewIcon,
+  ArrowForwardIos as ArrowForwardIosIcon
 } from '@mui/icons-material';
+import RMSTheme from '../../../theme-resource/RMSTheme';
 
-// Import individual review components
 import ServerPMReportFormSignOff_Review from './ServerPMReportFormSignOff_Review';
 import ServerHealth_Review from './ServerHealth_Review';
 import HardDriveHealth_Review from './HardDriveHealth_Review';
@@ -59,262 +54,11 @@ import HotFixes_Review from './HotFixes_Review';
 import AutoFailOver_Review from './AutoFailOver_Review';
 import ASAFirewall_Review from './ASAFirewall_Review';
 import SoftwarePatch_Review from './SoftwarePatch_Review';
-import { format } from 'date-fns';
-import RMSTheme from '../../../theme-resource/RMSTheme';
-
-// Styling constants
-const sectionContainer = {
-  marginBottom: 4,
-  padding: 3,
-  border: '1px solid #e0e0e0',
-  borderRadius: 2,
-  backgroundColor: '#fafafa'
-};
-
-const sectionHeader = {
-  color: '#1976d2',
-  fontWeight: 'bold',
-  marginBottom: 2,
-  display: 'flex',
-  alignItems: 'center',
-  gap: 1,
-  paddingBottom: 1,
-  borderBottom: '2px solid #1976d2'
-};
-
-const fieldContainer = {
-  marginBottom: 2,
-  padding: 2,
-  backgroundColor: 'white',
-  borderRadius: 1,
-  border: '1px solid #e0e0e0'
-};
-
-// Helper functions
-const formatDate = (dateString) => {
-  if (!dateString) return 'Not specified';
-  try {
-    return format(new Date(dateString), 'dd/MM/yyyy HH:mm');
-  } catch (error) {
-    return 'Invalid date';
-  }
-};
-
-const getStatusChip = (status) => {
-  if (!status || status === '') {
-    return (
-      <Chip
-        label="Not specified"
-        color="default"
-        variant="outlined"
-        size="small"
-      />
-    );
-  }
-  
-  const statusStr = status.toString();
-  
-  if (statusStr === 'Yes' || statusStr === 'Acceptable' || statusStr === 'DONE' || statusStr === 'Pass') {
-    return (
-      <Chip
-        icon={<CheckCircleIcon />}
-        label={statusStr}
-        color="success"
-        variant="filled"
-        size="small"
-      />
-    );
-  } else if (statusStr === 'No' || statusStr === 'Not Acceptable' || statusStr === 'NOT DONE' || statusStr === 'Fail') {
-    return (
-      <Chip
-        icon={<CancelIcon />}
-        label={statusStr}
-        color="error"
-        variant="filled"
-        size="small"
-      />
-    );
-  } else {
-    return (
-      <Chip
-        label={statusStr}
-        color="primary"
-        variant="outlined"
-        size="small"
-      />
-    );
-  }
-};
-
-// Component for displaying table data
-const TableDataSection = ({ data, title, icon: IconComponent = SettingsIcon }) => {
-  if (!data || !Array.isArray(data) || data.length === 0 || !data[0] || typeof data[0] !== 'object') {
-    return (
-      <Box sx={sectionContainer}>
-        <Typography variant="h6" sx={sectionHeader}>
-          <IconComponent />
-          {title}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          No data available
-        </Typography>
-      </Box>
-    );
-  }
-
-  // Get headers from the first row
-  const headers = Object.keys(data[0]);
-
-  return (
-    <Box sx={sectionContainer}>
-      <Typography variant="h6" sx={sectionHeader}>
-        <IconComponent />
-        {title}
-      </Typography>
-      <TableContainer component={Paper} sx={{ mt: 2 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              {headers.map((header) => (
-                <TableCell key={header} sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>
-                  {header.charAt(0).toUpperCase() + header.slice(1).replace(/([A-Z])/g, ' $1')}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data.map((row, index) => (
-              <TableRow key={index}>
-                {headers.map((header) => (
-                  <TableCell key={header}>
-                    {header.toLowerCase().includes('status') || header.toLowerCase().includes('result') ? 
-                      getStatusChip(row[header]) : 
-                      row[header] || 'N/A'
-                    }
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
-  );
-};
-
-// Component for displaying simple field data
-const FieldDataSection = ({ data, title, icon: IconComponent = SettingsIcon }) => {
-  if (!data || Object.keys(data).length === 0) {
-    return (
-      <Box sx={sectionContainer}>
-        <Typography variant="h6" sx={sectionHeader}>
-          <IconComponent />
-          {title}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          No data available
-        </Typography>
-      </Box>
-    );
-  }
-
-  return (
-    <Box sx={sectionContainer}>
-      <Typography variant="h6" sx={sectionHeader}>
-        <IconComponent />
-        {title}
-      </Typography>
-      <Grid container spacing={2} sx={{ mt: 1 }}>
-        {Object.entries(data).map(([key, value]) => {
-          if (key === 'remarks') return null; // Handle remarks separately
-          
-          return (
-            <Grid item xs={12} sm={6} md={4} key={key}>
-              <Box sx={fieldContainer}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
-                </Typography>
-                <Typography variant="body1">
-                  {key.toLowerCase().includes('status') || key.toLowerCase().includes('result') ? 
-                    getStatusChip(value) : 
-                    value || 'Not specified'
-                  }
-                </Typography>
-              </Box>
-            </Grid>
-          );
-        })}
-      </Grid>
-      
-      {data.remarks && (
-        <Box sx={{ ...fieldContainer, mt: 2 }}>
-          <Typography variant="subtitle2" color="text.secondary">
-            Remarks
-          </Typography>
-          <Typography variant="body1">
-            {data.remarks}
-          </Typography>
-        </Box>
-      )}
-    </Box>
-  );
-};
-
-// Component for displaying image data
-const ImagePreviewSection = ({ images, title, icon: IconComponent = SettingsIcon }) => {
-  if (!images || images.length === 0) {
-    return (
-      <Box sx={sectionContainer}>
-        <Typography variant="h6" sx={sectionHeader}>
-          <IconComponent />
-          {title}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          No images available
-        </Typography>
-      </Box>
-    );
-  }
-
-  return (
-    <Box sx={sectionContainer}>
-      <Typography variant="h6" sx={sectionHeader}>
-        <IconComponent />
-        {title}
-      </Typography>
-      <Grid container spacing={2} sx={{ mt: 1 }}>
-        {images.map((image, index) => (
-          <Grid item xs={12} sm={6} md={4} key={index}>
-            <Card>
-              <CardContent>
-                <img
-                  src={image.url || image}
-                  alt={`${title} ${index + 1}`}
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    maxHeight: '200px',
-                    objectFit: 'contain',
-                    borderRadius: '4px'
-                  }}
-                />
-                {image.name && (
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    {image.name}
-                  </Typography>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
-  );
-};
 
 const ServerPMReviewReportForm = ({ 
   formData, 
   reportFormTypes, 
+  formStatusOptions = [],
   onNext, 
   onBack, 
   loading, 
@@ -364,6 +108,74 @@ const ServerPMReviewReportForm = ({
     }
   };
 
+  const [finalReportDialogOpen, setFinalReportDialogOpen] = useState(false);
+  const [finalReportFile, setFinalReportFile] = useState(null);
+  const [finalReportUploading, setFinalReportUploading] = useState(false);
+  const [finalReportUploadError, setFinalReportUploadError] = useState('');
+
+  const selectedFormStatusOption = (formStatusOptions || []).find(
+    (status) => (status.id || status.ID) === (formData?.formstatusID || formData?.formStatusID)
+  );
+
+  const formStatusDisplayValue =
+    selectedFormStatusOption?.name ||
+    selectedFormStatusOption?.Name ||
+    formData?.formStatusName ||
+    formData?.formstatusName ||
+    formData?.formStatus ||
+    '';
+
+  const resolvedFormStatusValue = formStatusDisplayValue || 'Not specified';
+
+  const isStatusClose = () => (formStatusDisplayValue || '').trim().toLowerCase() === 'close';
+
+  const handleFinalReportFileChange = (event) => {
+    setFinalReportUploadError('');
+    const file = event.target.files?.[0] || null;
+    setFinalReportFile(file);
+  };
+
+  const handleCloseFinalReportDialog = () => {
+    if (!finalReportUploading) {
+      setFinalReportDialogOpen(false);
+      setFinalReportFile(null);
+      setFinalReportUploadError('');
+    }
+  };
+
+  const handleUploadFinalReport = async () => {
+    if (!finalReportFile) {
+      setFinalReportUploadError('Please select a file to upload.');
+      return;
+    }
+
+    setFinalReportUploading(true);
+    setFinalReportUploadError('');
+    try {
+      const success = await onNext(finalReportFile);
+      if (success === false) {
+        setFinalReportUploadError('Failed to submit report. Please try again.');
+        return;
+      }
+      setFinalReportDialogOpen(false);
+      setFinalReportFile(null);
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.message || 'Failed to submit report.';
+      setFinalReportUploadError(message);
+    } finally {
+      setFinalReportUploading(false);
+    }
+  };
+
+  const handleSubmitClick = () => {
+    if (isStatusClose()) {
+      setFinalReportUploadError('');
+      setFinalReportDialogOpen(true);
+    } else {
+      onNext();
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -381,6 +193,7 @@ const ServerPMReviewReportForm = ({
   }
 
   return (
+    <>
     <Box sx={{ 
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
@@ -423,7 +236,8 @@ const ServerPMReviewReportForm = ({
               alignItems: 'center',
               gap: 1
             }}>
-              📋 Basic Information Summary
+              <AssignmentIcon />
+              Basic Information Summary
             </Typography>
             
             <Grid container spacing={3} sx={{ marginTop: 1 }}>
@@ -507,6 +321,32 @@ const ServerPMReviewReportForm = ({
                 />
               </Grid>
             </Grid>
+          </Paper>
+
+          {/* Form Status Summary */}
+          <Paper sx={{
+            ...sectionContainerStyle,
+            background: '#ffffff',
+            border: '1px solid #e0e0e0'
+          }}>
+            <Typography variant="h5" sx={{ 
+              color: '#1976d2',
+              fontWeight: 'bold',
+              marginBottom: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}>
+              <AssignmentIcon />
+              Form Status
+            </Typography>
+            <TextField
+              fullWidth
+              label="Form Status"
+              value={resolvedFormStatusValue}
+              disabled
+              sx={fieldStyle}
+            />
           </Paper>
 
           {/* Helper function to check if component has data */}
@@ -630,7 +470,7 @@ const ServerPMReviewReportForm = ({
               return (
                 <Paper elevation={2} sx={{ p: 4, mb: 3, borderRadius: 2, textAlign: 'center' }}>
                   <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-                    📝 No Maintenance Data Available
+                    No Maintenance Data Available
                   </Typography>
                   <Typography variant="body1" color="text.secondary">
                     No maintenance activities were completed during this session.
@@ -695,6 +535,7 @@ const ServerPMReviewReportForm = ({
                   variant="contained"
                   onClick={onBack}
                   disabled={loading}
+                  startIcon={<ArrowBackIosNewIcon fontSize="small" />}
                   sx={{
                     background: RMSTheme.components.button.primary.background,
                     color: RMSTheme.components.button.primary.text,
@@ -710,19 +551,20 @@ const ServerPMReviewReportForm = ({
                     }
                   }}
                 >
-                  ← Back
+                  Back
                 </Button>
-                
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="body2" sx={{ color: '#666' }}>
                     Review Report
                   </Typography>
                 </Box>
-                
+
                 <Button
                   variant="contained"
-                  onClick={onNext}
+                  onClick={handleSubmitClick}
                   disabled={loading}
+                  endIcon={!loading ? <ArrowForwardIosIcon fontSize="small" /> : null}
                   sx={{
                     background: RMSTheme.components.button.primary.background,
                     color: RMSTheme.components.button.primary.text,
@@ -738,7 +580,7 @@ const ServerPMReviewReportForm = ({
                     }
                   }}
                 >
-                  {loading ? <CircularProgress size={24} /> : 'Submit Report →'}
+                  {loading ? <CircularProgress size={24} /> : 'Submit Report'}
                 </Button>
               </Box>
             </Paper>
@@ -746,6 +588,128 @@ const ServerPMReviewReportForm = ({
         </Box>
       </Paper>
     </Box>
+
+    <Dialog
+      open={finalReportDialogOpen}
+      onClose={handleCloseFinalReportDialog}
+      fullWidth
+      maxWidth="xs"
+      TransitionComponent={Fade}
+      transitionDuration={{ enter: 400, exit: 250 }}
+      PaperProps={{
+        sx: {
+          minWidth: 320,
+          borderRadius: 4,
+          border: '1px solid rgba(255,255,255,0.15)',
+          background: 'linear-gradient(180deg, rgba(28,35,57,0.95) 0%, rgba(9,14,28,0.95) 80%)',
+          boxShadow: '0 25px 70px rgba(8,15,31,0.55)',
+          overflow: 'hidden'
+        }
+      }}
+      sx={{
+        '& .MuiBackdrop-root': {
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)'
+        }
+      }}
+    >
+      <DialogTitle
+        sx={{
+          textAlign: 'center',
+          fontWeight: 600,
+          color: '#f8fafc',
+          pb: 1
+        }}
+      >
+        Upload Final Report
+      </DialogTitle>
+      <DialogContent
+        sx={{
+          py: 2,
+          px: 4
+        }}
+      >
+        <Typography variant="body2" sx={{ mb: 2, textAlign: 'center', color: 'rgba(241,245,249,0.85)' }}>
+          Please attach the completed final report before submitting.
+        </Typography>
+        <Button
+          variant="outlined"
+          component="label"
+          startIcon={<UploadFileIcon />}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            width: '100%',
+            py: 1.5,
+            borderColor: 'rgba(226,232,240,0.5)',
+            color: '#e2e8f0',
+            fontWeight: 600,
+            '&:hover': {
+              borderColor: '#cbd5f5',
+              backgroundColor: 'rgba(148,163,184,0.15)'
+            }
+          }}
+        >
+          {finalReportFile ? finalReportFile.name : 'Select File'}
+          <input
+            type="file"
+            hidden
+            accept="application/pdf"
+            onChange={handleFinalReportFileChange}
+          />
+        </Button>
+        {finalReportUploadError && (
+          <Typography color="#fca5a5" variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
+            {finalReportUploadError}
+          </Typography>
+        )}
+      </DialogContent>
+      <DialogActions
+        sx={{
+          justifyContent: 'center',
+          px: 4,
+          pb: 3
+        }}
+      >
+        <Button
+          onClick={handleCloseFinalReportDialog}
+          disabled={finalReportUploading}
+          sx={{
+            background: RMSTheme.components.button.primary.background,
+            color: RMSTheme.components.button.primary.text,
+            padding: '10px 28px',
+            borderRadius: RMSTheme.borderRadius.small,
+            border: `1px solid ${RMSTheme.components.button.primary.border}`,
+            boxShadow: RMSTheme.components.button.primary.shadow,
+            textTransform: 'none',
+            mr: 2,
+            '&:hover': { background: RMSTheme.components.button.primary.hover },
+            '&:disabled': { opacity: 0.6 }
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleUploadFinalReport}
+          disabled={finalReportUploading}
+          sx={{
+            background: RMSTheme.components.button.primary.background,
+            color: RMSTheme.components.button.primary.text,
+            padding: '10px 28px',
+            borderRadius: RMSTheme.borderRadius.small,
+            border: `1px solid ${RMSTheme.components.button.primary.border}`,
+            boxShadow: RMSTheme.components.button.primary.shadow,
+            textTransform: 'none',
+            '&:hover': { background: RMSTheme.components.button.primary.hover },
+            '&:disabled': { opacity: 0.6 }
+          }}
+        >
+          {finalReportUploading ? 'Uploading...' : 'Upload & Submit'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+    </>
   );
 };
 

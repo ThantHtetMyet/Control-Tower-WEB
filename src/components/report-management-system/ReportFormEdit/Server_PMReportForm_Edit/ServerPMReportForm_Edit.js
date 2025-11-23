@@ -135,6 +135,8 @@ const ServerPMReportForm_Edit = () => {
   };
 
   // Initialize component
+  const isStatusClosed = (status) => (status || '').trim().toLowerCase() === 'close';
+
   useEffect(() => {
     const fetchPMReportFormTypes = async () => {
       try {
@@ -157,6 +159,13 @@ const ServerPMReportForm_Edit = () => {
       try {
         setLoading(true);
         const response = await getServerPMReportFormWithDetails(id);
+
+        const currentStatusName = response.pmReportFormServer?.formStatusName || response.pmReportFormServer?.formStatus || '';
+        if (isStatusClosed(currentStatusName)) {
+          setLoading(false);
+          navigate(`/report-management-system/report-forms/server-pm-details/${id}`, { replace: true });
+          return;
+        }
         
         // Set basic form data
         setFormData({
@@ -365,7 +374,7 @@ const ServerPMReportForm_Edit = () => {
     };
 
     fetchReportData();
-  }, [id]);
+  }, [id, navigate]);
 
   // Handle input changes
   const handleInputChange = (field, value) => {

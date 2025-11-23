@@ -83,6 +83,15 @@ const ServerPMReportForm_Edit_Review = () => {
     severity: 'success'
   });
   const isDataLoaded = useRef(false);
+  const isStatusClosed = (status) => (status || '').trim().toLowerCase() === 'close';
+  const redirectIfClosed = (message) => {
+    setNotification({
+      open: true,
+      message: message || 'This report is already closed and cannot be edited.',
+      severity: 'warning'
+    });
+    navigate(`/report-management-system/report-forms/server-pm-details/${id}`, { replace: true });
+  };
 
   // Component configuration matching ServerPMReviewReportForm
   const components = [
@@ -190,6 +199,12 @@ const ServerPMReportForm_Edit_Review = () => {
         // Check if form data was passed from edit page - Following reference pattern
         if (location.state && location.state.formData) {
           const passedData = location.state.formData;
+          const passedStatus = passedData.formStatusName || passedData.formstatusName || '';
+          if (isStatusClosed(passedStatus)) {
+            redirectIfClosed('This Server PM report is closed and cannot be edited.');
+            setLoading(false);
+            return;
+          }
           
           // Use the passed form data directly - Following ServerPMReviewReportForm pattern
           setFormData(passedData);
@@ -201,9 +216,16 @@ const ServerPMReportForm_Edit_Review = () => {
         // Fallback: fetch from database if no passed data
         const response = await getServerPMReportFormWithDetails(id);
         
-        // Set basic form data
-        setFormData({
-          reportTitle: response.pmReportFormServer.reportTitle || 'Server Preventive Maintenance Report - Review',
+          const currentStatusName = response.pmReportFormServer?.formStatusName || response.pmReportFormServer?.formStatus || '';
+          if (isStatusClosed(currentStatusName)) {
+            redirectIfClosed('This Server PM report is closed and cannot be edited.');
+            setLoading(false);
+            return;
+          }
+
+          // Set basic form data
+          setFormData({
+            reportTitle: response.pmReportFormServer.reportTitle || 'Server Preventive Maintenance Report - Review',
           systemDescription: response.systemNameWarehouseName || response.pmReportFormServer?.systemDescription || '',
           systemNameWarehouseID: response.systemNameWarehouseID || '',
           stationName: response.stationNameWarehouseName || response.pmReportFormServer?.stationName || '',

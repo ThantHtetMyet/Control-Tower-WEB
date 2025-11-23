@@ -8,45 +8,55 @@ import {
 } from '@mui/material';
 import {
   Assignment as AssignmentIcon,
+  People as PeopleIcon,
+  AccessTime as AccessTimeIcon,
+  ChatBubbleOutline as ChatBubbleOutlineIcon
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
-const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange }) => {
+const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange, formStatusOptions = [], formstatusID = '', onFormStatusChange }) => {
   const [attendedBy, setAttendedBy] = useState('');
   const [witnessedBy, setWitnessedBy] = useState('');
   const [startDateTime, setStartDateTime] = useState(null);
   const [completionDateTime, setCompletionDateTime] = useState(null);
   const [remark, setRemark] = useState('');
-  const isInitialized = useRef(false);
+  const hasMountedRef = useRef(false);
+  const onDataChangeRef = useRef(onDataChange);
 
-  // Initialize data from props only once
   useEffect(() => {
-    if (data && !isInitialized.current) {
-      if (data.attendedBy) {
-        setAttendedBy(data.attendedBy);
-      }
-      if (data.witnessedBy) {
-        setWitnessedBy(data.witnessedBy);
-      }
-      if (data.startDateTime) {
-        setStartDateTime(data.startDateTime);
-      }
-      if (data.completionDateTime) {
-        setCompletionDateTime(data.completionDateTime);
-      }
-      if (data.remark) {
-        setRemark(data.remark);
-      }
-      isInitialized.current = true;
+    onDataChangeRef.current = onDataChange;
+  }, [onDataChange]);
+
+  // Initialize data from props
+  useEffect(() => {
+    if (!data) return;
+    if (data.attendedBy !== undefined) {
+      setAttendedBy(data.attendedBy || '');
+    }
+    if (data.witnessedBy !== undefined) {
+      setWitnessedBy(data.witnessedBy || '');
+    }
+    if (data.startDateTime !== undefined || data.startDate !== undefined) {
+      setStartDateTime(data.startDateTime || data.startDate || null);
+    }
+    if (data.completionDateTime !== undefined || data.completionDate !== undefined) {
+      setCompletionDateTime(data.completionDateTime || data.completionDate || null);
+    }
+    if (data.remark !== undefined || data.remarks !== undefined) {
+      setRemark(data.remark || data.remarks || '');
     }
   }, [data]);
 
-  // Update parent component when data changes (but not on initial load)
+  // Update parent component when data changes (skip first mount)
   useEffect(() => {
-    if (isInitialized.current && onDataChange) {
-      onDataChange({
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    if (onDataChangeRef.current) {
+      onDataChangeRef.current({
         attendedBy,
         witnessedBy,
         startDateTime,
@@ -54,7 +64,7 @@ const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange }) => {
         remark
       });
     }
-  }, [attendedBy, witnessedBy, startDateTime, completionDateTime, remark, onDataChange]);
+  }, [attendedBy, witnessedBy, startDateTime, completionDateTime, remark]);
 
   // Calculate completion status
   useEffect(() => {
@@ -97,11 +107,12 @@ const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange }) => {
 
         {/* Personnel Information Container */}
         <Box sx={{ marginBottom: 3, padding: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
-          <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
-            👥 Personnel Information
+          <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <PeopleIcon fontSize="small" />
+            Personnel Information
           </Typography>
           
-          <TextField
+                    <TextField
             fullWidth
             variant="outlined"
             label="Attended By"
@@ -133,8 +144,9 @@ const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange }) => {
 
         {/* Maintenance Timeline Container */}
         <Box sx={{ marginBottom: 3, padding: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
-          <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
-            ⏰ Maintenance Timeline
+          <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AccessTimeIcon fontSize="small" />
+            Maintenance Timeline
           </Typography>
           <Grid container spacing={2}>
             <Grid item xs={12}>
@@ -180,8 +192,9 @@ const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange }) => {
 
         {/* Remarks Container */}
         <Box sx={{ padding: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
-          <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold' }}>
-            📝 Remarks
+          <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <ChatBubbleOutlineIcon fontSize="small" />
+            Remarks
           </Typography>
           
           <TextField

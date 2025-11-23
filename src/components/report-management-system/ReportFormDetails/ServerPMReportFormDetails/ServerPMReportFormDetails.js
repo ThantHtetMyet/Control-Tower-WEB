@@ -16,6 +16,7 @@ import {
   Computer as ComputerIcon,
   Storage as StorageIcon,
   Memory as MemoryIcon,
+  Assignment as AssignmentIcon,
   NetworkCheck as NetworkCheckIcon,
   Settings as SettingsIcon,
   TrendingUp as TrendingUpIcon,
@@ -26,6 +27,8 @@ import {
   SwapHoriz as SwapHorizIcon,
   Security as SecurityIcon,
   SystemUpdate as SystemUpdateIcon,
+  ArrowBackIosNew as ArrowBackIosNewIcon,
+  ArrowForwardIos as ArrowForwardIosIcon,
 } from '@mui/icons-material';
 import RMSTheme from '../../../theme-resource/RMSTheme';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -54,7 +57,7 @@ import SoftwarePatch_Details from './SoftwarePatch_Details';
 import ServerPMReportFormSignOff_Details from './ServerPMReportFormSignOff_Details';
 
 // Import the report form service
-import { getServerPMReportFormWithDetails, generateServerPMReportPdf } from '../../../api-services/reportFormService';
+import { getServerPMReportFormWithDetails, generateServerPMReportPdf, getFinalReportsByReportForm, downloadFinalReportAttachment } from '../../../api-services/reportFormService';
 
 const ServerPMReportFormDetails = () => {
   const navigate = useNavigate();
@@ -68,6 +71,8 @@ const ServerPMReportFormDetails = () => {
   const [currentStep, setCurrentStep] = useState('signOff');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [finalReports, setFinalReports] = useState([]);
+  const [finalReportsLoading, setFinalReportsLoading] = useState(false);
   
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
 
@@ -125,25 +130,26 @@ const ServerPMReportFormDetails = () => {
         setLoading(true);
         const response = await getServerPMReportFormWithDetails(id);
         
+        const serverData = response.pmReportFormServer || {};
+        const signOffPayload = serverData.signOffData || {};
         // Merge reportForm and pmReportFormServer data for form display
         const mergedFormData = {
-          ...response.pmReportFormServer,
-          // Add reportForm fields that might be needed
+          ...serverData,
           reportFormTypeID: response.reportForm?.reportFormTypeID,
           reportFormTypeName: response.reportForm?.reportFormTypeName,
           systemNameWarehouseID: response.reportForm?.systemNameWarehouseID,
           stationNameWarehouseID: response.reportForm?.stationNameWarehouseID,
-          // Override with reportForm data where applicable
-          jobNo: response.reportForm?.jobNo || response.pmReportFormServer?.jobNo,
-          systemDescription: response.reportForm?.systemDescription || response.pmReportFormServer?.systemDescription,
-          stationName: response.reportForm?.stationName || response.pmReportFormServer?.stationName,
-          // Structure signoff data properly
+          jobNo: response.reportForm?.jobNo || serverData.jobNo,
+          systemDescription: response.reportForm?.systemDescription || serverData.systemDescription,
+          stationName: response.reportForm?.stationName || serverData.stationName,
+          formstatusID: serverData.formstatusID || null,
+          formStatusName: serverData.formStatusName || '',
           signOffData: {
-            attendedBy: response.pmReportFormServer?.signOffData?.attendedBy || '',
-            witnessedBy: response.pmReportFormServer?.signOffData?.witnessedBy || '',
-            startDate: response.pmReportFormServer?.signOffData?.startDate || null,
-            completionDate: response.pmReportFormServer?.signOffData?.completionDate || null,
-            remarks: response.pmReportFormServer?.signOffData?.remarks || ''
+            attendedBy: signOffPayload.attendedBy ?? serverData.attendedBy ?? '',
+            witnessedBy: signOffPayload.witnessedBy ?? serverData.witnessedBy ?? '',
+            startDate: signOffPayload.startDate ?? serverData.startDate ?? null,
+            completionDate: signOffPayload.completionDate ?? serverData.completionDate ?? null,
+            remarks: signOffPayload.remarks ?? serverData.remarks ?? ''
           }
         };
         
@@ -243,9 +249,9 @@ const ServerPMReportFormDetails = () => {
       const link = document.createElement('a');
 
       const disposition = response.headers['content-disposition'];
-      let fileName = `ServerPMReport_${formData?.jobNo || id}.pdf`;
+      let fileName = `ServerPMReport_${formData.jobNo || id}.pdf`;
       if (disposition) {
-        const match = disposition.match(/filename="?([^"]+)"?/i);
+        const match = disposition.match(/filename="([^"]+)"/i);
         if (match && match[1]) {
           fileName = match[1];
         }
@@ -314,31 +320,87 @@ const ServerPMReportFormDetails = () => {
       );
     }
 
-    const dataKey = currentStep === 'serverHealth' ? 'serverHealthData' :
-                   currentStep === 'networkHealth' ? 'networkHealthData' :
-                   currentStep === 'hardDriveHealth' ? 'hardDriveHealthData' :
-                   currentStep === 'diskUsage' ? 'diskUsageData' :
-                   currentStep === 'cpuAndRamUsage' ? 'cpuAndRamUsageData' :
-                   currentStep === 'willowlynxProcessStatus' ? 'willowlynxProcessStatusData' :
-                   currentStep === 'willowlynxNetworkStatus' ? 'willowlynxNetworkStatusData' :
-                   currentStep === 'willowlynxRTUStatus' ? 'willowlynxRTUStatusData' :
-                   currentStep === 'willowlynxHistorialTrend' ? 'willowlynxHistorialTrendData' :
-                   currentStep === 'willowlynxHistoricalReport' ? 'willowlynxHistoricalReportData' :
-                   currentStep === 'willowlynxSumpPitCCTVCamera' ? 'willowlynxSumpPitCCTVCameraData' :
-                   currentStep === 'monthlyDatabaseCreation' ? 'monthlyDatabaseCreationData' :
-                   currentStep === 'databaseBackup' ? 'databaseBackupData' :
-                   currentStep === 'timeSync' ? 'timeSyncData' :
-                   currentStep === 'hotFixes' ? 'hotFixesData' :
-                   currentStep === 'autoFailOver' ? 'autoFailOverData' :
-                   currentStep === 'asaFirewall' ? 'asaFirewallData' :
-                   currentStep === 'softwarePatch' ? 'softwarePatchData' :
-                   currentStep === 'signOff' ? 'signOffData' : 'serverHealthData';
+    const dataKey =
+      currentStep === 'serverHealth' ? 'serverHealthData' :
+      currentStep === 'networkHealth' ? 'networkHealthData' :
+      currentStep === 'hardDriveHealth' ? 'hardDriveHealthData' :
+      currentStep === 'diskUsage' ? 'diskUsageData' :
+      currentStep === 'cpuAndRamUsage' ? 'cpuAndRamUsageData' :
+      currentStep === 'willowlynxProcessStatus' ? 'willowlynxProcessStatusData' :
+      currentStep === 'willowlynxNetworkStatus' ? 'willowlynxNetworkStatusData' :
+      currentStep === 'willowlynxRTUStatus' ? 'willowlynxRTUStatusData' :
+      currentStep === 'willowlynxHistorialTrend' ? 'willowlynxHistorialTrendData' :
+      currentStep === 'willowlynxHistoricalReport' ? 'willowlynxHistoricalReportData' :
+      currentStep === 'willowlynxSumpPitCCTVCamera' ? 'willowlynxSumpPitCCTVCameraData' :
+      currentStep === 'monthlyDatabaseCreation' ? 'monthlyDatabaseCreationData' :
+      currentStep === 'databaseBackup' ? 'databaseBackupData' :
+      currentStep === 'timeSync' ? 'timeSyncData' :
+      currentStep === 'hotFixes' ? 'hotFixesData' :
+      currentStep === 'autoFailOver' ? 'autoFailOverData' :
+      currentStep === 'asaFirewall' ? 'asaFirewallData' :
+      currentStep === 'softwarePatch' ? 'softwarePatchData' :
+      currentStep === 'signOff' ? 'signOffData' : 'serverHealthData';
 
     return (
       <Component
         data={currentStep === 'signOff' ? formData.signOffData : (serverPMData[dataKey] || [])}
       />
     );
+  };
+
+  const isFormStatusClosed = (formData?.formStatusName || formData?.formStatus || '').trim().toLowerCase() === 'close';
+
+  useEffect(() => {
+    if (!id || !isFormStatusClosed) {
+      setFinalReports([]);
+      return;
+    }
+
+    const fetchFinalReports = async () => {
+      try {
+        setFinalReportsLoading(true);
+        const response = await getFinalReportsByReportForm(id);
+        setFinalReports(response || []);
+      } catch (err) {
+        console.error('Error fetching final reports:', err);
+        setNotification({
+          open: true,
+          message: err.response?.data?.message || err.message || 'Failed to load final reports.',
+          severity: 'error'
+        });
+      } finally {
+        setFinalReportsLoading(false);
+      }
+    };
+
+    fetchFinalReports();
+  }, [id, isFormStatusClosed]);
+
+  const handleDownloadFinalReport = async (report) => {
+    if (!report?.id) {
+      return;
+    }
+
+    try {
+      const response = await downloadFinalReportAttachment(report.id);
+      const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const fileName = report.attachmentName || `FinalReport_${formData?.jobNo || 'report'}.pdf`;
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Error downloading final report:', error);
+      setNotification({
+        open: true,
+        message: error.response?.data?.message || error.message || 'Failed to download final report.',
+        severity: 'error'
+      });
+    }
   };
 
   const renderProgressDots = () => {
@@ -506,7 +568,8 @@ const ServerPMReportFormDetails = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Button
                   variant="contained"
-                  onClick={handleBack}
+                  onClick={() => navigate('/report-management-system/report-forms')}
+                  startIcon={<ArrowBackIosNewIcon fontSize="small" />}
                   sx={{
                     background: RMSTheme.components.button.primary.background,
                     color: RMSTheme.components.button.primary.text,
@@ -519,27 +582,29 @@ const ServerPMReportFormDetails = () => {
                     }
                   }}
                 >
-                  ← Back
+                  Back
                 </Button>
                 
                 <Box sx={{ display: 'flex', gap: 2 }}>
-                  <Button
-                    variant="contained"
-                    onClick={() => navigate(`/report-management-system/server-pm-edit/${id}`)}
-                    sx={{
-                      background: RMSTheme.components.button.primary.background,
-                      color: RMSTheme.components.button.primary.text,
-                      padding: '12px 32px',
-                      borderRadius: RMSTheme.borderRadius.small,
-                      border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                      boxShadow: RMSTheme.components.button.primary.shadow,
-                      '&:hover': {
-                        background: RMSTheme.components.button.primary.hover
-                      }
-                    }}
-                  >
-                    Edit Report
-                  </Button>
+                  {!isFormStatusClosed && (
+                    <Button
+                      variant="contained"
+                      onClick={() => navigate(`/report-management-system/server-pm-edit/${id}`)}
+                      sx={{
+                        background: RMSTheme.components.button.primary.background,
+                        color: RMSTheme.components.button.primary.text,
+                        padding: '12px 32px',
+                        borderRadius: RMSTheme.borderRadius.small,
+                        border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                        boxShadow: RMSTheme.components.button.primary.shadow,
+                        '&:hover': {
+                          background: RMSTheme.components.button.primary.hover
+                        }
+                      }}
+                    >
+                      Edit Report
+                    </Button>
+                  )}
                   
                   <Button
                     variant="contained"
@@ -588,7 +653,8 @@ const ServerPMReportFormDetails = () => {
                 alignItems: 'center',
                 gap: 1
               }}>
-                📋 Basic Information Summary
+                <AssignmentIcon fontSize="inherit" />
+                Basic Information Summary
               </Typography>
               
               <Grid container spacing={3} sx={{ marginTop: 1 }}>
@@ -644,6 +710,107 @@ const ServerPMReportFormDetails = () => {
               </Grid>
             </Paper>
 
+            {isFormStatusClosed && (
+              <Paper sx={{
+                padding: 3,
+                marginBottom: 3,
+                backgroundColor: '#ffffff',
+                borderRadius: 2,
+                border: '1px solid #e0e0e0',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}>
+                <Typography variant="h5" sx={{
+                  color: '#1976d2',
+                  fontWeight: 'bold',
+                  marginBottom: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}>
+                  Final Report
+                </Typography>
+
+                {finalReportsLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : finalReports.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No final report has been uploaded for this record.
+                  </Typography>
+                ) : (
+                  finalReports.map((report) => (
+                    <Box
+                      key={report.id}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: 2,
+                        border: '1px solid #e0e0e0',
+                        borderRadius: 1,
+                        mb: 2,
+                        backgroundColor: '#f9f9f9'
+                      }}
+                    >
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {report.attachmentName || 'Final Report'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Uploaded on {report.uploadedDate ? new Date(report.uploadedDate).toLocaleString() : 'N/A'}
+                        </Typography>
+                      </Box>
+                      <Button
+                        variant="contained"
+                        onClick={() => handleDownloadFinalReport(report)}
+                        sx={{
+                          background: RMSTheme.components.button.primary.background,
+                          color: RMSTheme.components.button.primary.text,
+                          padding: '8px 20px',
+                          borderRadius: RMSTheme.borderRadius.small,
+                          border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                          '&:hover': {
+                            background: RMSTheme.components.button.primary.hover
+                          }
+                        }}
+                      >
+                        Download
+                      </Button>
+                    </Box>
+                  ))
+                )}
+              </Paper>
+            )}
+
+            {/* Form Status */}
+            <Paper sx={{
+              padding: 3,
+              marginBottom: 3,
+              backgroundColor: '#ffffff',
+              borderRadius: 2,
+              border: '1px solid #e0e0e0',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>
+              <Typography variant="h5" sx={{
+                color: '#1976d2',
+                fontWeight: 'bold',
+                marginBottom: 2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                Form Status
+              </Typography>
+              <TextField
+                fullWidth
+                label="Form Status"
+                value={formData.formStatusName || formData.formStatus || 'Not specified'}
+                disabled
+                sx={fieldStyle}
+              />
+            </Paper>
+
             {/* Current Step Content */}
             <Box sx={stepContainerStyle}>
               {renderCurrentStep()}
@@ -666,6 +833,7 @@ const ServerPMReportFormDetails = () => {
                   variant="contained"
                   onClick={handleBack}
                   disabled={isTransitioning}
+                  startIcon={<ArrowBackIosNewIcon fontSize="small" />}
                   sx={{
                     background: RMSTheme.components.button.primary.background,
                     color: RMSTheme.components.button.primary.text,
@@ -681,7 +849,7 @@ const ServerPMReportFormDetails = () => {
                     }
                   }}
                 >
-                  ← Back
+                   Back
                 </Button>
                 
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
@@ -691,10 +859,11 @@ const ServerPMReportFormDetails = () => {
                   {renderProgressDots()}
                 </Box>
                 
-                <Button
+                                <Button
                   variant="contained"
                   onClick={handleNext}
                   disabled={isTransitioning || currentStep === 'softwarePatch'}
+                  endIcon={<ArrowForwardIosIcon fontSize="small" />}
                   sx={{
                     background: RMSTheme.components.button.primary.background,
                     color: RMSTheme.components.button.primary.text,
@@ -710,7 +879,7 @@ const ServerPMReportFormDetails = () => {
                     }
                   }}
                 >
-                  {currentStep === 'softwarePatch' ? 'End' : 'Next →'}
+                  {currentStep === 'softwarePatch' ? 'End' : 'Next '}
                 </Button>
               </Box>
             </Paper>
