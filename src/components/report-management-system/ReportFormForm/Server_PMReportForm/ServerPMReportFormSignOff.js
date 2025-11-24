@@ -7,7 +7,7 @@ import {
   Grid
 } from '@mui/material';
 import {
-  Assignment as AssignmentIcon,
+  DoneAll as DoneAllIcon,
   People as PeopleIcon,
   AccessTime as AccessTimeIcon,
   ChatBubbleOutline as ChatBubbleOutlineIcon
@@ -16,7 +16,7 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
-const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange, formStatusOptions = [], formstatusID = '', onFormStatusChange }) => {
+const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange }) => {
   const [attendedBy, setAttendedBy] = useState('');
   const [witnessedBy, setWitnessedBy] = useState('');
   const [startDateTime, setStartDateTime] = useState(null);
@@ -24,62 +24,86 @@ const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange, formSta
   const [remark, setRemark] = useState('');
   const hasMountedRef = useRef(false);
   const onDataChangeRef = useRef(onDataChange);
+  const lastDataRef = useRef(null);
+
+  const parseDateValue = (value) => {
+    if (!value) return null;
+    if (value instanceof Date) {
+      return isNaN(value.getTime()) ? null : value;
+    }
+    const parsed = new Date(value);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const areDatesEqual = (a, b) => {
+    if (!a && !b) return true;
+    if (!a || !b) return false;
+    return a.getTime() === b.getTime();
+  };
 
   useEffect(() => {
     onDataChangeRef.current = onDataChange;
   }, [onDataChange]);
 
-  // Initialize data from props
   useEffect(() => {
-    if (!data) return;
-    if (data.attendedBy !== undefined) {
-      setAttendedBy(data.attendedBy || '');
+    if (!data || lastDataRef.current === data) return;
+
+    const nextAttended = data.attendedBy ?? '';
+    const nextWitnessed = data.witnessedBy ?? '';
+    const nextStart = parseDateValue(data.startDateTime ?? data.startDate ?? null);
+    const nextCompletion = parseDateValue(data.completionDateTime ?? data.completionDate ?? null);
+    const nextRemark = data.remark ?? data.remarks ?? '';
+
+    if (nextAttended !== attendedBy) {
+      setAttendedBy(nextAttended);
     }
-    if (data.witnessedBy !== undefined) {
-      setWitnessedBy(data.witnessedBy || '');
+    if (nextWitnessed !== witnessedBy) {
+      setWitnessedBy(nextWitnessed);
     }
-    if (data.startDateTime !== undefined || data.startDate !== undefined) {
-      setStartDateTime(data.startDateTime || data.startDate || null);
+    if (!areDatesEqual(nextStart, startDateTime)) {
+      setStartDateTime(nextStart);
     }
-    if (data.completionDateTime !== undefined || data.completionDate !== undefined) {
-      setCompletionDateTime(data.completionDateTime || data.completionDate || null);
+    if (!areDatesEqual(nextCompletion, completionDateTime)) {
+      setCompletionDateTime(nextCompletion);
     }
-    if (data.remark !== undefined || data.remarks !== undefined) {
-      setRemark(data.remark || data.remarks || '');
+    if (nextRemark !== remark) {
+      setRemark(nextRemark);
     }
+
+    lastDataRef.current = data;
   }, [data]);
 
-  // Update parent component when data changes (skip first mount)
   useEffect(() => {
     if (!hasMountedRef.current) {
       hasMountedRef.current = true;
       return;
     }
     if (onDataChangeRef.current) {
-      onDataChangeRef.current({
+      const nextPayload = {
         attendedBy,
         witnessedBy,
         startDateTime,
         completionDateTime,
         remark
-      });
+      };
+      onDataChangeRef.current(nextPayload);
+      lastDataRef.current = nextPayload;
     }
   }, [attendedBy, witnessedBy, startDateTime, completionDateTime, remark]);
 
-  // Calculate completion status
   useEffect(() => {
-    const isCompleted = attendedBy.trim() !== '' && 
-                       witnessedBy.trim() !== '' && 
-                       startDateTime !== null && 
-                       completionDateTime !== null && 
-                       remark.trim() !== '';
-    
+    const isCompleted =
+      attendedBy.trim() !== '' &&
+      witnessedBy.trim() !== '' &&
+      startDateTime !== null &&
+      completionDateTime !== null &&
+      remark.trim() !== '';
+
     if (onStatusChange) {
       onStatusChange('ServerPMReportFormSignOff', isCompleted);
     }
   }, [attendedBy, witnessedBy, startDateTime, completionDateTime, remark, onStatusChange]);
 
-  // Styling constants matching ServerHealth component
   const sectionContainerStyle = {
     padding: 3,
     marginBottom: 3,
@@ -102,31 +126,25 @@ const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange, formSta
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Paper sx={sectionContainerStyle}>
         <Typography variant="h5" sx={sectionHeaderStyle}>
-          <AssignmentIcon /> Sign Off Information
+          <DoneAllIcon /> Sign-Off Information
         </Typography>
 
-        {/* Personnel Information Container */}
         <Box sx={{ marginBottom: 3, padding: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
           <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
             <PeopleIcon fontSize="small" />
             Personnel Information
           </Typography>
-          
-                    <TextField
+
+          <TextField
             fullWidth
             variant="outlined"
             label="Attended By"
             value={attendedBy}
             onChange={(e) => setAttendedBy(e.target.value)}
             placeholder="Enter maintenance personnel name"
-            sx={{
-              marginBottom: 2,
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: 'white',
-              }
-            }}
+            sx={{ marginBottom: 2, '& .MuiOutlinedInput-root': { backgroundColor: 'white' } }}
           />
-          
+
           <TextField
             fullWidth
             variant="outlined"
@@ -134,15 +152,10 @@ const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange, formSta
             value={witnessedBy}
             onChange={(e) => setWitnessedBy(e.target.value)}
             placeholder="Enter approver name"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: 'white',
-              }
-            }}
+            sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'white' } }}
           />
         </Box>
 
-        {/* Maintenance Timeline Container */}
         <Box sx={{ marginBottom: 3, padding: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
           <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
             <AccessTimeIcon fontSize="small" />
@@ -155,16 +168,7 @@ const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange, formSta
                 value={startDateTime}
                 onChange={(newValue) => setStartDateTime(newValue)}
                 renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    fullWidth
-                    variant="outlined"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        backgroundColor: 'white',
-                      }
-                    }}
-                  />
+                  <TextField {...params} fullWidth variant="outlined" sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'white' } }} />
                 )}
               />
             </Grid>
@@ -174,29 +178,19 @@ const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange, formSta
                 value={completionDateTime}
                 onChange={(newValue) => setCompletionDateTime(newValue)}
                 renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    fullWidth
-                    variant="outlined"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        backgroundColor: 'white',
-                      }
-                    }}
-                  />
+                  <TextField {...params} fullWidth variant="outlined" sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'white' } }} />
                 )}
               />
             </Grid>
           </Grid>
         </Box>
 
-        {/* Remarks Container */}
         <Box sx={{ padding: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
           <Typography variant="h6" sx={{ marginBottom: 2, color: '#1976d2', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
             <ChatBubbleOutlineIcon fontSize="small" />
             Remarks
           </Typography>
-          
+
           <TextField
             fullWidth
             multiline
@@ -206,11 +200,7 @@ const ServerPMReportFormSignOff = ({ data, onDataChange, onStatusChange, formSta
             value={remark}
             onChange={(e) => setRemark(e.target.value)}
             placeholder="Enter any additional remarks or observations..."
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: 'white',
-              }
-            }}
+            sx={{ '& .MuiOutlinedInput-root': { backgroundColor: 'white' } }}
           />
         </Box>
       </Paper>

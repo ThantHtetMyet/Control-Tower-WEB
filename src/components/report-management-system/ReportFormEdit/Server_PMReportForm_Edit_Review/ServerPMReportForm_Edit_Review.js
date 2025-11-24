@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { AssignmentTurnedIn as AssignmentTurnedInIcon } from '@mui/icons-material';
+
 import {
   Grid,
   TextField,
@@ -20,7 +22,12 @@ import {
   CircularProgress,
   Alert,
   Snackbar,
-  Divider
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Fade
 } from '@mui/material';
 import { 
   Computer as ComputerIcon,
@@ -39,10 +46,11 @@ import {
   Videocam as VideocamIcon,
   Schedule as ScheduleIcon,
   Update as UpdateIcon,
-  AccessTime
+  AccessTime,
+  UploadFile as UploadFileIcon
 } from '@mui/icons-material';
 import RMSTheme from '../../../theme-resource/RMSTheme';
-import { getPMReportFormTypes, getServerPMReportFormWithDetails } from '../../../api-services/reportFormService';
+import { getPMReportFormTypes, getServerPMReportFormWithDetails, uploadFinalReportAttachment } from '../../../api-services/reportFormService';
 import { updateServerPMReportForm } from '../../../api-services/reportFormService_Update';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -69,6 +77,8 @@ import ASAFirewall_Edit_Review from './ASAFirewall_Edit_Review';
 import SoftwarePatch_Edit_Review from './SoftwarePatch_Edit_Review';
 
 const ServerPMReportForm_Edit_Review = () => {
+  const themeColor = '#1976d2'; // System blue color
+
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -82,6 +92,10 @@ const ServerPMReportForm_Edit_Review = () => {
     message: '',
     severity: 'success'
   });
+  const [finalReportDialogOpen, setFinalReportDialogOpen] = useState(false);
+  const [finalReportFile, setFinalReportFile] = useState(null);
+  const [finalReportUploading, setFinalReportUploading] = useState(false);
+  const [finalReportUploadError, setFinalReportUploadError] = useState('');
   const isDataLoaded = useRef(false);
   const isStatusClosed = (status) => (status || '').trim().toLowerCase() === 'close';
   const redirectIfClosed = (message) => {
@@ -172,6 +186,12 @@ const ServerPMReportForm_Edit_Review = () => {
     display: 'flex',
     alignItems: 'center'
   };
+  const resolvedFormStatusValue =
+    formData?.formStatusName ||
+    formData?.formstatusName ||
+    formData?.formStatus ||
+    '';
+  const isCurrentStatusClose = () => (resolvedFormStatusValue || '').trim().toLowerCase() === 'close';
 
   // Initialize component
   useEffect(() => {
@@ -199,12 +219,6 @@ const ServerPMReportForm_Edit_Review = () => {
         // Check if form data was passed from edit page - Following reference pattern
         if (location.state && location.state.formData) {
           const passedData = location.state.formData;
-          const passedStatus = passedData.formStatusName || passedData.formstatusName || '';
-          if (isStatusClosed(passedStatus)) {
-            redirectIfClosed('This Server PM report is closed and cannot be edited.');
-            setLoading(false);
-            return;
-          }
           
           // Use the passed form data directly - Following ServerPMReviewReportForm pattern
           setFormData(passedData);
@@ -236,6 +250,9 @@ const ServerPMReportForm_Edit_Review = () => {
           reportFormTypeID: response.reportFormTypeID || '',
           pmReportFormTypeID: response.pmReportFormServer?.pmReportFormTypeID || '',
           pmReportFormTypeName: response.pmReportFormServer?.pmReportFormTypeName || '',
+          reportFormID: response.reportForm?.id || response.pmReportFormServer?.reportFormID || '',
+          formstatusID: response.pmReportFormServer?.formstatusID || '',
+          formStatusName: currentStatusName || '',
           dateOfService: response.pmReportFormServer?.dateOfService ? 
             new Date(response.pmReportFormServer.dateOfService).toISOString().slice(0, 16) : '',
           
@@ -351,42 +368,93 @@ const ServerPMReportForm_Edit_Review = () => {
     fetchReportData();
   }, [id]); // Remove location.state from dependencies
 
-  const handleComplete = async () => {
+
+  const performUpdate = async (finalReportFileParam = null) => {
     try {
       setSubmitting(true);
       setError(null);
 
-      // Get user info from localStorage or context
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      
-      // Update the report with all the form data
       const result = await updateServerPMReportForm(id, formData, user);
-      
-      // Show beautiful success toast
+
+      const reportFormId =
+        formData?.reportFormID ||
+        formData?.reportFormId ||
+        result?.data?.reportFormID ||
+        result?.data?.reportFormId ||
+        null;
+
+      if (finalReportFileParam) {
+        if (!reportFormId) {
+          throw new Error('Report Form ID is missing. Unable to upload final report.');
+        }
+        await uploadFinalReportAttachment(reportFormId, finalReportFileParam);
+      }
+
       setNotification({
         open: true,
         message: '🎉 Server PM report updated successfully! Redirecting to report list...',
         severity: 'success'
       });
-      
-      // Navigate after a short delay to show the toast
+
       setTimeout(() => {
         navigate('/report-management-system');
       }, 2000);
-      
+
+      return { success: true };
     } catch (error) {
       console.error('Error updating report:', error);
-      setError('Failed to update report: ' + (error.response?.data?.message || error.message));
-      
-      // Show error toast
+      const message = error.response?.data?.message || error.message || 'Failed to update report.';
+      setError('Failed to update report: ' + message);
       setNotification({
         open: true,
-        message: '❌ Failed to update report. Please try again.',
+        message: '??O Failed to update report. Please try again.',
         severity: 'error'
       });
+      return { success: false, message };
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleComplete = async () => {
+    if (isCurrentStatusClose()) {
+      setFinalReportUploadError('');
+      setFinalReportDialogOpen(true);
+      return;
+    }
+    await performUpdate();
+  };
+
+  const handleFinalReportFileChange = (event) => {
+    setFinalReportUploadError('');
+    const file = event.target.files?.[0] || null;
+    setFinalReportFile(file);
+  };
+
+  const handleCloseFinalReportDialog = () => {
+    if (!finalReportUploading) {
+      setFinalReportDialogOpen(false);
+      setFinalReportFile(null);
+      setFinalReportUploadError('');
+    }
+  };
+
+  const handleUploadFinalReport = async () => {
+    if (!finalReportFile) {
+      setFinalReportUploadError('Please select a file to upload.');
+      return;
+    }
+    setFinalReportUploading(true);
+    const result = await performUpdate(finalReportFile);
+    if (result.success) {
+      setFinalReportDialogOpen(false);
+      setFinalReportFile(null);
+      setFinalReportUploadError('');
+    } else {
+      setFinalReportUploadError(result.message || 'Failed to submit report. Please try again.');
+    }
+    setFinalReportUploading(false);
   };
 
   // Handle close notification
@@ -464,7 +532,17 @@ const ServerPMReportForm_Edit_Review = () => {
               background: '#f8f9fa',
               border: '2px solid #e9ecef'
             }}>
-              <Typography variant="h5" sx={sectionHeaderStyle}>
+              <Typography
+                variant="h5"
+                sx={{
+                  color: themeColor,
+                  fontWeight: 'bold',
+                  marginBottom: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
+              >
                 📋 Basic Information Summary
               </Typography>
               
@@ -519,6 +597,37 @@ const ServerPMReportForm_Edit_Review = () => {
                   />
                 </Grid>
               </Grid>
+            </Paper>
+
+            <Paper sx={{
+              ...sectionContainerStyle,
+              background: '#ffffff',
+              border: '1px solid #e0e0e0'
+            }}>
+              <Typography
+                variant="h5"
+                sx={{
+                  color: themeColor,
+                  fontWeight: 'bold',
+                  marginBottom: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
+              >
+                        <AssignmentTurnedInIcon
+                          fontSize="small"
+                          sx={{ color: themeColor }}
+                        />
+                        Form-Status
+                    </Typography>
+              <TextField
+                fullWidth
+                label="Form Status"
+                value={resolvedFormStatusValue || 'Not specified'}
+                disabled
+                sx={fieldStyle}
+              />
             </Paper>
 
             {/* All Components Display - Following ServerPMReviewReportForm pattern */}
@@ -703,6 +812,126 @@ const ServerPMReportForm_Edit_Review = () => {
           </Alert>
         </Snackbar>
       </Box>
+    <Dialog
+      open={finalReportDialogOpen}
+      onClose={handleCloseFinalReportDialog}
+      fullWidth
+      maxWidth="xs"
+      TransitionComponent={Fade}
+      transitionDuration={{ enter: 400, exit: 250 }}
+      PaperProps={{
+        sx: {
+          minWidth: 320,
+          borderRadius: 4,
+          border: '1px solid rgba(255,255,255,0.15)',
+          background: 'linear-gradient(180deg, rgba(28,35,57,0.95) 0%, rgba(9,14,28,0.95) 80%)',
+          boxShadow: '0 25px 70px rgba(8,15,31,0.55)',
+          overflow: 'hidden'
+        }
+      }}
+      sx={{
+        '& .MuiBackdrop-root': {
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)'
+        }
+      }}
+    >
+      <DialogTitle
+        sx={{
+          textAlign: 'center',
+          fontWeight: 600,
+          color: '#f8fafc',
+          pb: 1
+        }}
+      >
+        Upload Final Report
+      </DialogTitle>
+      <DialogContent
+        sx={{
+          py: 2,
+          px: 4
+        }}
+      >
+        <Typography variant="body2" sx={{ mb: 2, textAlign: 'center', color: 'rgba(241,245,249,0.85)' }}>
+          Please attach the completed final report before submitting.
+        </Typography>
+        <Button
+          variant="outlined"
+          component="label"
+          startIcon={<UploadFileIcon />}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            width: '100%',
+            py: 1.5,
+            borderColor: 'rgba(226,232,240,0.5)',
+            color: '#e2e8f0',
+            fontWeight: 600,
+            '&:hover': {
+              borderColor: '#cbd5f5',
+              backgroundColor: 'rgba(148,163,184,0.15)'
+            }
+          }}
+        >
+          {finalReportFile ? finalReportFile.name : 'Select File'}
+          <input
+            type="file"
+            hidden
+            accept="application/pdf"
+            onChange={handleFinalReportFileChange}
+          />
+        </Button>
+        {finalReportUploadError && (
+          <Typography color="#fca5a5" variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
+            {finalReportUploadError}
+          </Typography>
+        )}
+      </DialogContent>
+      <DialogActions
+        sx={{
+          justifyContent: 'center',
+          px: 4,
+          pb: 3
+        }}
+      >
+        <Button
+          onClick={handleCloseFinalReportDialog}
+          disabled={finalReportUploading}
+          sx={{
+            background: RMSTheme.components.button.primary.background,
+            color: RMSTheme.components.button.primary.text,
+            padding: '10px 28px',
+            borderRadius: RMSTheme.borderRadius.small,
+            border: `1px solid ${RMSTheme.components.button.primary.border}`,
+            boxShadow: RMSTheme.components.button.primary.shadow,
+            textTransform: 'none',
+            mr: 2,
+            '&:hover': { background: RMSTheme.components.button.primary.hover },
+            '&:disabled': { opacity: 0.6 }
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleUploadFinalReport}
+          disabled={finalReportUploading}
+          sx={{
+            background: RMSTheme.components.button.primary.background,
+            color: RMSTheme.components.button.primary.text,
+            padding: '10px 28px',
+            borderRadius: RMSTheme.borderRadius.small,
+            border: `1px solid ${RMSTheme.components.button.primary.border}`,
+            boxShadow: RMSTheme.components.button.primary.shadow,
+            textTransform: 'none',
+            '&:hover': { background: RMSTheme.components.button.primary.hover },
+            '&:disabled': { opacity: 0.6 }
+          }}
+        >
+          {finalReportUploading ? 'Uploading...' : 'Upload & Submit'}
+        </Button>
+      </DialogActions>
+    </Dialog>
     </LocalizationProvider>
   );
 };

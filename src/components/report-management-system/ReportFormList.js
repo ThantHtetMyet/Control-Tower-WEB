@@ -165,17 +165,23 @@ const ReportFormList = () => {
   };
 
   const getStatusChip = (status) => {
+    const normalizedStatus = (status || '').trim().toLowerCase();
     const statusColors = {
-      'Draft': { backgroundColor: RMSTheme.status.info, color: RMSTheme.text.onPrimary },
-      'Submitted': { backgroundColor: RMSTheme.primary.main, color: RMSTheme.text.onPrimary },
-      'Under Review': { backgroundColor: RMSTheme.status.warning, color: RMSTheme.text.onPrimary },
-      'Approved': { backgroundColor: RMSTheme.status.success, color: RMSTheme.text.onPrimary },
-      'Rejected': { backgroundColor: RMSTheme.status.error, color: RMSTheme.text.onPrimary }
+      'pending': { backgroundColor: '#ffb300', color: '#fff' }, // amber
+      'in progress': { backgroundColor: RMSTheme.status.info, color: RMSTheme.text.onPrimary },
+      'under review': { backgroundColor: '#8e24aa', color: '#fff' },
+      'close': { backgroundColor: '#2e7d32', color: '#fff' },
+      'cancelled': { backgroundColor: RMSTheme.status.error, color: RMSTheme.text.onPrimary }
     };
+    const style = statusColors[normalizedStatus] || { backgroundColor: RMSTheme.background.default, color: RMSTheme.text.primary };
     return (
       <Chip 
-        label={status} 
-        sx={statusColors[status] || { backgroundColor: RMSTheme.background.default }}
+        label={status || 'N/A'} 
+        sx={{
+          fontWeight: 600,
+          textTransform: 'capitalize',
+          ...style
+        }}
         size="small" 
       />
     );

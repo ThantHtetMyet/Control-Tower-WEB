@@ -606,28 +606,30 @@ const ServerPMReportFormDetails = () => {
                     </Button>
                   )}
                   
-                  <Button
-                    variant="contained"
-                    onClick={handlePrintReport}
-                    startIcon={<PrintIcon />}
-                    disabled={isGeneratingPDF}
-                    sx={{
-                      background: RMSTheme.components.button.primary.background,
-                      color: RMSTheme.components.button.primary.text,
-                      padding: '12px 32px',
-                      borderRadius: RMSTheme.borderRadius.small,
-                      border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                      boxShadow: RMSTheme.components.button.primary.shadow,
-                      '&:hover': {
-                        background: RMSTheme.components.button.primary.hover
-                      },
-                      '&:disabled': {
-                        opacity: 0.6
-                      }
-                    }}
-                  >
-                    {isGeneratingPDF ? 'Generating PDF...' : 'Print Report'}
-                  </Button>
+                  {!isFormStatusClosed && (
+                    <Button
+                      variant="contained"
+                      onClick={handlePrintReport}
+                      startIcon={<PrintIcon />}
+                      disabled={isGeneratingPDF}
+                      sx={{
+                        background: RMSTheme.components.button.primary.background,
+                        color: RMSTheme.components.button.primary.text,
+                        padding: '12px 32px',
+                        borderRadius: RMSTheme.borderRadius.small,
+                        border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                        boxShadow: RMSTheme.components.button.primary.shadow,
+                        '&:hover': {
+                          background: RMSTheme.components.button.primary.hover
+                        },
+                        '&:disabled': {
+                          opacity: 0.6
+                        }
+                      }}
+                    >
+                      {isGeneratingPDF ? 'Generating PDF...' : 'Print Report'}
+                    </Button>
+                  )}
                 </Box>
               </Box>
             </Paper>

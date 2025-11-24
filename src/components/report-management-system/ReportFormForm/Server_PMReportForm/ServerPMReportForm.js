@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Grid,
   TextField,
@@ -7,13 +7,11 @@ import {
   Typography,
   Paper,
   Tooltip,
-  MenuItem,
 } from '@mui/material';
 import { 
   Computer as ComputerIcon,
   ArrowBackIosNew as ArrowBackIosNewIcon,
   ArrowForwardIos as ArrowForwardIosIcon,
-  HelpOutline as HelpOutlineIcon,
   Assignment as AssignmentIcon
 } from '@mui/icons-material';
 import RMSTheme from '../../../theme-resource/RMSTheme';
@@ -25,6 +23,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Component imports
 import ServerPMReportFormSignOff from './ServerPMReportFormSignOff';
+
+import FormStatus from './FormStatus';
 import ServerHealth from './ServerHealth';
 import HardDriveHealth from './HardDriveHealth';
 import DiskUsage from './DiskUsage';
@@ -47,12 +47,15 @@ import SoftwarePatch from './SoftwarePatch';
 const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, onNext, onBack }) => {
   // State management
   const [pmReportFormTypes, setPMReportFormTypes] = useState([]);
+
+
   const [loading, setLoading] = useState(true);
-  const [currentStep, setCurrentStep] = useState('signOff');
+  const [currentStep, setCurrentStep] = useState('formStatus');
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Step configuration
-  const steps = [
+const steps = [
+    'formStatus',
     'signOff',
     'serverHealth',
     'hardDriveHealth', 
@@ -74,7 +77,8 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
     'softwarePatch'
   ];
 
-  const stepTitles = {
+const stepTitles = {
+    formStatus: 'Form Status',
     signOff: 'Sign Off Information',
     serverHealth: 'Server Health Check',
     networkHealth: 'Network Health Check',
@@ -139,25 +143,47 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
     softwarePatch: createDataChangeHandler('softwarePatchData')
   };
 
+  const formStatusIndex = steps.indexOf('formStatus');
+  const hasFormStatus = Boolean(formData.formstatusID);
+
   // Navigation functions
   const handleStepNavigation = (targetStep) => {
-    if (targetStep !== currentStep && !isTransitioning) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentStep(targetStep);
-        setIsTransitioning(false);
-      }, 300);
+    if (targetStep === currentStep || isTransitioning) return;
+
+    const targetIndex = steps.indexOf(targetStep);
+    if (!hasFormStatus && targetIndex > formStatusIndex) {
+      return;
     }
+
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentStep(targetStep);
+      setIsTransitioning(false);
+    }, 300);
   };
 
   const handleNext = () => {
-    const currentIndex = steps.indexOf(currentStep);
-    if (currentIndex < steps.length - 1) {
-      handleStepNavigation(steps[currentIndex + 1]);
-    } else {
-      onNext();
+    if (currentStep === 'formStatus' && !hasFormStatus) {
+      return;
     }
+
+    const currentStepIndex = steps.indexOf(currentStep);
+
+    if (currentStepIndex < steps.length - 1) {
+
+      const nextStep = steps[currentStepIndex + 1];
+
+      handleStepNavigation(nextStep);
+
+    } else {
+
+      onNext?.();
+
+    }
+
   };
+
+
 
   const handleBack = () => {
     const currentIndex = steps.indexOf(currentStep);
@@ -169,70 +195,152 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
   };
 
   // Component rendering
-  const renderCurrentStep = () => {
-    const componentMap = {
-      signOff: ServerPMReportFormSignOff,
-      serverHealth: ServerHealth,
-      networkHealth: NetworkHealth,
-      hardDriveHealth: HardDriveHealth,
-      diskUsage: DiskUsage,
-      cpuAndRamUsage: CPUAndRamUsage,
-      willowlynxProcessStatus: WillowlynxProcessStatus,
-      willowlynxNetworkStatus: WillowlynxNetworkStatus,
-      willowlynxRTUStatus: WillowlynxRTUStatus,
-      willowlynxHistorialTrend: WillowlynxHistorialTrend,
-      willowlynxHistoricalReport: WillowlynxHistoricalReport,
-      willowlynxSumpPitCCTVCamera: WillowlynxSumpPitCCTVCamera,
-      monthlyDatabaseCreation: MonthlyDatabaseCreation,
-      databaseBackup: DatabaseBackup,
-      timeSync: TimeSync,
-      hotFixes: HotFixes,
-      autoFailOver: AutoFailOver,
-      asaFirewall: ASAFirewall,
-      softwarePatch: SoftwarePatch
-    };
-
-    const Component = componentMap[currentStep];
-    if (!Component) return null;
-
-    const dataKey = currentStep === 'signOff' ? 'signOffData' :
-                   currentStep === 'serverHealth' ? 'serverHealthData' :
-                   currentStep === 'networkHealth' ? 'networkHealthData' :
-                   currentStep === 'hardDriveHealth' ? 'hardDriveHealthData' :
-                   currentStep === 'diskUsage' ? 'diskUsageData' :
-                   currentStep === 'cpuAndRamUsage' ? 'cpuAndRamUsageData' :
-                   currentStep === 'willowlynxProcessStatus' ? 'willowlynxProcessStatusData' :
-                   currentStep === 'willowlynxNetworkStatus' ? 'willowlynxNetworkStatusData' :
-                   currentStep === 'willowlynxRTUStatus' ? 'willowlynxRTUStatusData' :
-                   currentStep === 'willowlynxHistorialTrend' ? 'willowlynxHistorialTrendData' :
-                   currentStep === 'willowlynxHistoricalReport' ? 'willowlynxHistoricalReportData' :
-                   currentStep === 'willowlynxSumpPitCCTVCamera' ? 'willowlynxSumpPitCCTVCameraData' :
-                   currentStep === 'monthlyDatabaseCreation' ? 'monthlyDatabaseCreationData' :
-                   currentStep === 'databaseBackup' ? 'databaseBackupData' :
-                   currentStep === 'timeSync' ? 'timeSyncData' :
-                   currentStep === 'hotFixes' ? 'hotFixesData' :
-                   currentStep === 'autoFailOver' ? 'autoFailOverData' :
-                   currentStep === 'asaFirewall' ? 'asaFirewallData' :
-                   currentStep === 'softwarePatch' ? 'softwarePatchData' : 'serverHealthData';
-
-    if (currentStep === 'signOff') {
-      return (
-        <Component
-          data={formData[dataKey] || {}}
-          formStatusOptions={formStatusOptions}
-          formstatusID={formData.formstatusID || ''}
-          onFormStatusChange={(val) => onInputChange('formstatusID', val)}
-          onDataChange={dataChangeHandlers[currentStep]}
-        />
-      );
+const renderCurrentStep = () => {
+    switch (currentStep) {
+      case 'formStatus':
+        return (
+          <FormStatus
+            value={formData.formstatusID || ''}
+            formStatusOptions={formStatusOptions}
+            onChange={(value) => onInputChange('formstatusID', value)}
+          />
+        );
+      case 'signOff':
+        return (
+          <ServerPMReportFormSignOff
+            data={formData.signOffData || {}}
+            onDataChange={dataChangeHandlers.signOff}
+          />
+        );
+      case 'serverHealth':
+        return (
+          <ServerHealth
+            data={formData.serverHealthData || {}}
+            onDataChange={dataChangeHandlers.serverHealth}
+          />
+        );
+      case 'networkHealth':
+        return (
+          <NetworkHealth
+            data={formData.networkHealthData || {}}
+            onDataChange={dataChangeHandlers.networkHealth}
+          />
+        );
+      case 'hardDriveHealth':
+        return (
+          <HardDriveHealth
+            data={formData.hardDriveHealthData || {}}
+            onDataChange={dataChangeHandlers.hardDriveHealth}
+          />
+        );
+      case 'diskUsage':
+        return (
+          <DiskUsage
+            data={formData.diskUsageData || {}}
+            onDataChange={dataChangeHandlers.diskUsage}
+          />
+        );
+      case 'cpuAndRamUsage':
+        return (
+          <CPUAndRamUsage
+            data={formData.cpuAndRamUsageData || {}}
+            onDataChange={dataChangeHandlers.cpuAndRamUsage}
+          />
+        );
+      case 'willowlynxProcessStatus':
+        return (
+          <WillowlynxProcessStatus
+            data={formData.willowlynxProcessStatusData || {}}
+            onDataChange={dataChangeHandlers.willowlynxProcessStatus}
+          />
+        );
+      case 'willowlynxNetworkStatus':
+        return (
+          <WillowlynxNetworkStatus
+            data={formData.willowlynxNetworkStatusData || {}}
+            onDataChange={dataChangeHandlers.willowlynxNetworkStatus}
+          />
+        );
+      case 'willowlynxRTUStatus':
+        return (
+          <WillowlynxRTUStatus
+            data={formData.willowlynxRTUStatusData || {}}
+            onDataChange={dataChangeHandlers.willowlynxRTUStatus}
+          />
+        );
+      case 'willowlynxHistorialTrend':
+        return (
+          <WillowlynxHistorialTrend
+            data={formData.willowlynxHistorialTrendData || {}}
+            onDataChange={dataChangeHandlers.willowlynxHistorialTrend}
+          />
+        );
+      case 'willowlynxHistoricalReport':
+        return (
+          <WillowlynxHistoricalReport
+            data={formData.willowlynxHistoricalReportData || {}}
+            onDataChange={dataChangeHandlers.willowlynxHistoricalReport}
+          />
+        );
+      case 'willowlynxSumpPitCCTVCamera':
+        return (
+          <WillowlynxSumpPitCCTVCamera
+            data={formData.willowlynxSumpPitCCTVCameraData || {}}
+            onDataChange={dataChangeHandlers.willowlynxSumpPitCCTVCamera}
+          />
+        );
+      case 'monthlyDatabaseCreation':
+        return (
+          <MonthlyDatabaseCreation
+            data={formData.monthlyDatabaseCreationData || {}}
+            onDataChange={dataChangeHandlers.monthlyDatabaseCreation}
+          />
+        );
+      case 'databaseBackup':
+        return (
+          <DatabaseBackup
+            data={formData.databaseBackupData || {}}
+            onDataChange={dataChangeHandlers.databaseBackup}
+          />
+        );
+      case 'timeSync':
+        return (
+          <TimeSync
+            data={formData.timeSyncData || {}}
+            onDataChange={dataChangeHandlers.timeSync}
+          />
+        );
+      case 'hotFixes':
+        return (
+          <HotFixes
+            data={formData.hotFixesData || {}}
+            onDataChange={dataChangeHandlers.hotFixes}
+          />
+        );
+      case 'autoFailOver':
+        return (
+          <AutoFailOver
+            data={formData.autoFailOverData || {}}
+            onDataChange={dataChangeHandlers.autoFailOver}
+          />
+        );
+      case 'asaFirewall':
+        return (
+          <ASAFirewall
+            data={formData.asaFirewallData || {}}
+            onDataChange={dataChangeHandlers.asaFirewall}
+          />
+        );
+      case 'softwarePatch':
+        return (
+          <SoftwarePatch
+            data={formData.softwarePatchData || {}}
+            onDataChange={dataChangeHandlers.softwarePatch}
+          />
+        );
+      default:
+        return null;
     }
-
-    return (
-      <Component
-        data={formData[dataKey] || {}}
-        onDataChange={dataChangeHandlers[currentStep]}
-      />
-    );
   };
 
   const renderProgressDots = () => {
@@ -247,8 +355,9 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
       }}>
         {steps.map((step, index) => {
           const isActive = currentStep === step;
+          const isLocked = !hasFormStatus && steps.indexOf(step) > formStatusIndex;
           
-           return (
+          return (
             <Tooltip 
               key={step}
               title={`${index + 1}. ${stepTitles[step] || step}`}
@@ -269,18 +378,20 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
               }}
             >
               <Box
-                onClick={() => handleStepNavigation(step)}
+                onClick={() => !isLocked && handleStepNavigation(step)}
                 sx={{
                   width: 18,
                   height: 18,
                   borderRadius: '50%',
                   backgroundColor: isActive ? '#1976d2' : '#e0e0e0',
                   transition: 'all 0.3s ease',
-                  cursor: 'pointer',
+                  cursor: isLocked ? 'not-allowed' : 'pointer',
+                  opacity: isLocked ? 0.4 : 1,
                   flexShrink: 0,
+                  pointerEvents: isLocked ? 'none' : 'auto',
                   '&:hover': {
-                    transform: 'scale(1.2)',
-                    backgroundColor: isActive ? '#1565c0' : '#bdbdbd'
+                    transform: isLocked ? 'none' : 'scale(1.2)',
+                    backgroundColor: isLocked ? '#e0e0e0' : (isActive ? '#1565c0' : '#bdbdbd')
                   }
                 }}
               />
@@ -371,16 +482,7 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
                     label="Job No"
                     value={formData.jobNo || ''}
                     disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
+                    sx={fieldStyle}
                   />
                 </Grid>
                 
@@ -390,35 +492,7 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
                     label="System Description"
                     value={formData.systemDescription || ''}
                     disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Station Name"
-                    value={formData.stationName || ''}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
+                    sx={fieldStyle}
                   />
                 </Grid>
                 
@@ -428,16 +502,7 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
                     label="Customer"
                     value={formData.customer || ''}
                     disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
+                    sx={fieldStyle}
                   />
                 </Grid>
                 
@@ -447,62 +512,20 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
                     label="Project No"
                     value={formData.projectNo || ''}
                     disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
+                    sx={fieldStyle}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Station Name"
+                    value={formData.stationName || ''}
+                    disabled
+                    sx={fieldStyle}
                   />
                 </Grid>
               </Grid>
-            </Paper>
-
-            {/* Form Status (moved outside Sign Off) */}
-            <Paper sx={{
-              ...sectionContainerStyle,
-              background: '#ffffff',
-              border: '1px solid #e0e0e0',
-              marginTop: 3
-            }}>
-            <Typography variant="h5" sx={{ 
-              color: '#1976d2',
-              fontWeight: 'bold',
-              marginBottom: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}>
-              <HelpOutlineIcon fontSize="small" color="primary" />
-              Form Status
-            </Typography>
-              <TextField
-                fullWidth
-                select
-                label="Form Status"
-                value={formData.formstatusID || ''}
-                onChange={(e) => onInputChange('formstatusID', e.target.value)}
-                SelectProps={{
-                  displayEmpty: true,
-                  renderValue: (selected) =>
-                    selected ? (formStatusOptions.find((s) => (s.id || s.ID) === selected)?.name || formStatusOptions.find((s) => (s.id || s.ID) === selected)?.Name || selected) : <em>Select Form Status</em>
-                }}
-                InputLabelProps={{ shrink: true }}
-                sx={fieldStyle}
-              >
-                <MenuItem value="">
-                  <em>Select Form Status</em>
-                </MenuItem>
-                {(formStatusOptions || []).map((status) => (
-                  <MenuItem key={status.id || status.ID} value={status.id || status.ID}>
-                    {status.name || status.Name}
-                  </MenuItem>
-                ))}
-              </TextField>
             </Paper>
 
             {/* Current Step Content */}

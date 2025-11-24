@@ -8,12 +8,18 @@ import {
   Typography,
   Paper,
   Tooltip,
+  MenuItem
 } from '@mui/material';
-import { 
+import {
   Computer as ComputerIcon,
+  HelpOutline as HelpOutlineIcon,
+  
+  ArrowBackIosNew as ArrowBackIosNewIcon,
+  ArrowForwardIos as ArrowForwardIosIcon,
 } from '@mui/icons-material';
 import RMSTheme from '../../../theme-resource/RMSTheme';
 import { getPMReportFormTypes, getServerPMReportFormWithDetails } from '../../../api-services/reportFormService';
+import warehouseService from '../../../api-services/warehouseService';
 
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -21,6 +27,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Component imports - Edit versions
 import ServerPMReportFormSignOff_Edit from './ServerPMReportFormSignOff_Edit';
+import FormStatus_Edit from './FormStatus_Edit';
 import ServerHealth_Edit from './ServerHealth_Edit';
 import HardDriveHealth_Edit from './HardDriveHealth_Edit';
 import DiskUsage_Edit from './DiskUsage_Edit';
@@ -46,9 +53,10 @@ const ServerPMReportForm_Edit = () => {
   
   // State management
   const [pmReportFormTypes, setPMReportFormTypes] = useState([]);
+  const [formStatusOptions, setFormStatusOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentStep, setCurrentStep] = useState('signOff');
+  const [currentStep, setCurrentStep] = useState('formStatus');
   const [isTransitioning, setIsTransitioning] = useState(false);
   
   // Form data state
@@ -63,7 +71,10 @@ const ServerPMReportForm_Edit = () => {
     customer: '',
     reportFormTypeID: '',
     pmReportFormTypeID: '',
-    pmReportFormTypeName: ''
+    pmReportFormTypeName: '',
+    reportFormID: '',
+    formstatusID: '',
+    formStatusName: ''
   });
 
   // Add signOffData to serverPMData state
@@ -91,6 +102,7 @@ const ServerPMReportForm_Edit = () => {
 
   // Step configuration
   const steps = [
+    'formStatus',
     'signOff',
     'serverHealth',
     'hardDriveHealth', 
@@ -113,6 +125,7 @@ const ServerPMReportForm_Edit = () => {
   ];
 
   const stepTitles = {
+    formStatus: 'Form Status',
     signOff: 'Sign Off Information',
     serverHealth: 'Server Health Check',
     networkHealth: 'Network Health Check',
@@ -136,6 +149,14 @@ const ServerPMReportForm_Edit = () => {
 
   // Initialize component
   const isStatusClosed = (status) => (status || '').trim().toLowerCase() === 'close';
+  const handleFormStatusChange = (value) => {
+    const selected = (formStatusOptions || []).find((s) => (s.id || s.ID) === value);
+    setFormData((prev) => ({
+      ...prev,
+      formstatusID: value,
+      formStatusName: selected?.name || selected?.Name || ''
+    }));
+  };
 
   useEffect(() => {
     const fetchPMReportFormTypes = async () => {
@@ -148,7 +169,17 @@ const ServerPMReportForm_Edit = () => {
       }
     };
 
+    const fetchFormStatuses = async () => {
+      try {
+        const statuses = await warehouseService.getFormStatus();
+        setFormStatusOptions(statuses || []);
+      } catch (error) {
+        console.error('Error fetching form status options:', error);
+      }
+    };
+
     fetchPMReportFormTypes();
+    fetchFormStatuses();
   }, []);
 
   // Load existing report data
@@ -179,7 +210,10 @@ const ServerPMReportForm_Edit = () => {
           customer: response.pmReportFormServer?.customer || '',
           reportFormTypeID: response.reportFormTypeID || '',
           pmReportFormTypeID: response.pmReportFormServer?.pmReportFormTypeID || '',
-          pmReportFormTypeName: response.pmReportFormServer?.pmReportFormTypeName || ''
+          pmReportFormTypeName: response.pmReportFormServer?.pmReportFormTypeName || '',
+          reportFormID: response.reportForm?.id || response.pmReportFormServer?.reportFormID || '',
+          formstatusID: response.pmReportFormServer?.formstatusID || '',
+          formStatusName: currentStatusName || ''
         });
 
         // Map the backend data to the expected frontend structure - matching Details component
@@ -414,25 +448,35 @@ const ServerPMReportForm_Edit = () => {
     softwarePatch: createDataChangeHandler('softwarePatchData')
   };
 
+    const formStatusIndex = steps.indexOf('formStatus');
+  const hasFormStatus = Boolean(formData.formstatusID);
+
   // Navigation functions
   const handleStepNavigation = (targetStep) => {
-    if (targetStep !== currentStep && !isTransitioning) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentStep(targetStep);
-        setIsTransitioning(false);
-      }, 300);
+    if (targetStep === currentStep || isTransitioning) return;
+
+    const targetIndex = steps.indexOf(targetStep);
+    if (!hasFormStatus && targetIndex > formStatusIndex) {
+      return;
     }
+
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentStep(targetStep);
+      setIsTransitioning(false);
+    }, 300);
   };
 
   const handleNext = () => {
+    if (currentStep === 'formStatus' && !hasFormStatus) {
+      return;
+    }
+
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex < steps.length - 1) {
       handleStepNavigation(steps[currentIndex + 1]);
     } else {
-      // Prepare the complete form data to pass to review - Following CM and RTU PM pattern
       const reviewData = {
-        // Basic form data
         reportTitle: formData.reportTitle,
         systemDescription: formData.systemDescription,
         systemNameWarehouseID: formData.systemNameWarehouseID,
@@ -444,8 +488,9 @@ const ServerPMReportForm_Edit = () => {
         reportFormTypeID: formData.reportFormTypeID,
         pmReportFormTypeID: formData.pmReportFormTypeID,
         pmReportFormTypeName: formData.pmReportFormTypeName,
-        
-        // All Server PM sub-component data
+        reportFormID: formData.reportFormID,
+        formstatusID: formData.formstatusID,
+        formStatusName: formData.formStatusName,
         signOffData: serverPMData.signOffData,
         serverHealthData: serverPMData.serverHealthData,
         hardDriveHealthData: serverPMData.hardDriveHealthData,
@@ -466,8 +511,7 @@ const ServerPMReportForm_Edit = () => {
         asaFirewallData: serverPMData.asaFirewallData,
         softwarePatchData: serverPMData.softwarePatchData
       };
-      
-      // Navigate to review page with form data - Following CM and RTU PM pattern
+
       navigate(`/report-management-system/server-pm-report-review-edit/${id}`, {
         state: { formData: reviewData }
       });
@@ -488,6 +532,16 @@ const ServerPMReportForm_Edit = () => {
 
   // Component rendering
   const renderCurrentStep = () => {
+    if (currentStep === 'formStatus') {
+      return (
+        <FormStatus_Edit
+          value={formData.formstatusID || ''}
+          options={formStatusOptions}
+          onChange={handleFormStatusChange}
+        />
+      );
+    }
+
     const componentMap = {
       signOff: ServerPMReportFormSignOff_Edit,
       serverHealth: ServerHealth_Edit,
@@ -554,8 +608,9 @@ const ServerPMReportForm_Edit = () => {
       }}>
         {steps.map((step, index) => {
           const isActive = currentStep === step;
+          const isLocked = !hasFormStatus && steps.indexOf(step) > formStatusIndex;
           
-           return (
+          return (
             <Tooltip 
               key={step}
               title={`${index + 1}. ${stepTitles[step] || step}`}
@@ -576,18 +631,20 @@ const ServerPMReportForm_Edit = () => {
               }}
             >
               <Box
-                onClick={() => handleStepNavigation(step)}
+                onClick={() => !isLocked && handleStepNavigation(step)}
                 sx={{
                   width: 18,
                   height: 18,
                   borderRadius: '50%',
                   backgroundColor: isActive ? '#1976d2' : '#e0e0e0',
                   transition: 'all 0.3s ease',
-                  cursor: 'pointer',
+                  cursor: isLocked ? 'not-allowed' : 'pointer',
+                  opacity: isLocked ? 0.4 : 1,
                   flexShrink: 0,
+                  pointerEvents: isLocked ? 'none' : 'auto',
                   '&:hover': {
-                    transform: 'scale(1.2)',
-                    backgroundColor: isActive ? '#1565c0' : '#bdbdbd'
+                    transform: isLocked ? 'none' : 'scale(1.2)',
+                    backgroundColor: isLocked ? '#e0e0e0' : (isActive ? '#1565c0' : '#bdbdbd')
                   }
                 }}
               />
@@ -661,11 +718,11 @@ const ServerPMReportForm_Edit = () => {
 
           <Box sx={{ padding: 4 }}>
             {/* Basic Information Summary */}
-            <Paper sx={{
-              ...sectionContainerStyle,
-              background: '#f8f9fa',
-              border: '2px solid #e9ecef'
-            }}>
+        <Paper sx={{
+          ...sectionContainerStyle,
+          background: '#f8f9fa',
+          border: '2px solid #e9ecef'
+        }}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
                 📋 Basic Information Summary
               </Typography>
@@ -790,6 +847,7 @@ const ServerPMReportForm_Edit = () => {
                   variant="contained"
                   onClick={handleBack}
                   disabled={isTransitioning}
+                  startIcon={<ArrowBackIosNewIcon fontSize="small" />}
                   sx={{
                     background: RMSTheme.components.button.primary.background,
                     color: RMSTheme.components.button.primary.text,
@@ -805,7 +863,7 @@ const ServerPMReportForm_Edit = () => {
                     }
                   }}
                 >
-                  ← Back
+                  Back
                 </Button>
                 
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
@@ -819,7 +877,8 @@ const ServerPMReportForm_Edit = () => {
                   <Button
                     variant="contained"
                     onClick={handleNext}
-                    disabled={isTransitioning}
+                    disabled={isTransitioning || (!hasFormStatus && currentStep === 'formStatus')}
+                    endIcon={<ArrowForwardIosIcon fontSize="small" />}
                     sx={{
                       background: RMSTheme.components.button.primary.background,
                       color: RMSTheme.components.button.primary.text,
@@ -835,7 +894,7 @@ const ServerPMReportForm_Edit = () => {
                       }
                     }}
                   >
-                    {currentStep === 'softwarePatch' ? 'Complete →' : 'Next →'}
+                    {currentStep === 'softwarePatch' ? 'Complete →' : 'Next'}
                   </Button>
                 </Box>
               </Box>

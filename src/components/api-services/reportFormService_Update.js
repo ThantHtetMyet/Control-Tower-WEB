@@ -796,6 +796,7 @@ export const updateServerPMReportForm = async (id, formData, user) => {
       ProjectNo: formData.projectNo || '',
       Customer: formData.customer || '',
       ReportTitle: formData.reportTitle || 'Server Preventive Maintenance Report',
+      FormstatusID: formData.formstatusID || formData.formStatusID || null,
       SignOffData: {
         AttendedBy: formData.signOffData.attendedBy || '',
         WitnessedBy: formData.signOffData.witnessedBy || '',
