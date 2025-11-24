@@ -12,7 +12,7 @@ import {
   Snackbar,
 } from '@mui/material';
 import { Print as PrintIcon } from '@mui/icons-material';
-import { 
+import {
   Computer as ComputerIcon,
   Storage as StorageIcon,
   Memory as MemoryIcon,
@@ -55,6 +55,7 @@ import AutoFailOver_Details from './AutoFailOver_Details';
 import ASAFirewall_Details from './ASAFirewall_Details';
 import SoftwarePatch_Details from './SoftwarePatch_Details';
 import ServerPMReportFormSignOff_Details from './ServerPMReportFormSignOff_Details';
+import FormStatus_Details from './FormStatus_Details';
 
 // Import the report form service
 import { getServerPMReportFormWithDetails, generateServerPMReportPdf, getFinalReportsByReportForm, downloadFinalReportAttachment } from '../../../api-services/reportFormService';
@@ -62,25 +63,26 @@ import { getServerPMReportFormWithDetails, generateServerPMReportPdf, getFinalRe
 const ServerPMReportFormDetails = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  
+
   // State management
   const [formData, setFormData] = useState(null);
   const [serverPMData, setServerPMData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentStep, setCurrentStep] = useState('signOff');
+  const [currentStep, setCurrentStep] = useState('formStatus');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [finalReports, setFinalReports] = useState([]);
   const [finalReportsLoading, setFinalReportsLoading] = useState(false);
-  
+
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
 
   // Step configuration - matching ServerPMReportForm exactly
   const steps = [
+    'formStatus',
     'signOff',
     'serverHealth',
-    'hardDriveHealth', 
+    'hardDriveHealth',
     'diskUsage',
     'cpuAndRamUsage',
     'networkHealth',
@@ -118,18 +120,19 @@ const ServerPMReportFormDetails = () => {
     autoFailOver: 'Auto failover of SCADA server',
     asaFirewall: 'ASA Firewall Maintenance',
     softwarePatch: 'Software Patch Summary',
-    signOff: 'Sign Off'
+    signOff: 'Sign Off',
+    formStatus: 'Form Status'
   };
 
   // Fetch report form data
   useEffect(() => {
     const fetchReportFormData = async () => {
       if (!id) return;
-      
+
       try {
         setLoading(true);
         const response = await getServerPMReportFormWithDetails(id);
-        
+
         const serverData = response.pmReportFormServer || {};
         const signOffPayload = serverData.signOffData || {};
         // Merge reportForm and pmReportFormServer data for form display
@@ -152,9 +155,9 @@ const ServerPMReportFormDetails = () => {
             remarks: signOffPayload.remarks ?? serverData.remarks ?? ''
           }
         };
-        
+
         setFormData(mergedFormData);
-        
+
         // Simple data mapping for UI display only
         const serverPMData = {
           serverHealthData: response.pmServerHealths || [],
@@ -176,7 +179,7 @@ const ServerPMReportFormDetails = () => {
           asaFirewallData: response.pmServerASAFirewalls || [],
           softwarePatchData: response.pmServerSoftwarePatchSummaries || []
         };
-        
+
         setServerPMData(serverPMData);
       } catch (err) {
         console.error('Error fetching report form details:', err);
@@ -306,7 +309,10 @@ const ServerPMReportFormDetails = () => {
       autoFailOver: AutoFailOver_Details,
       asaFirewall: ASAFirewall_Details,
       softwarePatch: SoftwarePatch_Details,
-      signOff: ServerPMReportFormSignOff_Details
+      asaFirewall: ASAFirewall_Details,
+      softwarePatch: SoftwarePatch_Details,
+      signOff: ServerPMReportFormSignOff_Details,
+      formStatus: FormStatus_Details
     };
 
     const Component = componentMap[currentStep];
@@ -322,28 +328,35 @@ const ServerPMReportFormDetails = () => {
 
     const dataKey =
       currentStep === 'serverHealth' ? 'serverHealthData' :
-      currentStep === 'networkHealth' ? 'networkHealthData' :
-      currentStep === 'hardDriveHealth' ? 'hardDriveHealthData' :
-      currentStep === 'diskUsage' ? 'diskUsageData' :
-      currentStep === 'cpuAndRamUsage' ? 'cpuAndRamUsageData' :
-      currentStep === 'willowlynxProcessStatus' ? 'willowlynxProcessStatusData' :
-      currentStep === 'willowlynxNetworkStatus' ? 'willowlynxNetworkStatusData' :
-      currentStep === 'willowlynxRTUStatus' ? 'willowlynxRTUStatusData' :
-      currentStep === 'willowlynxHistorialTrend' ? 'willowlynxHistorialTrendData' :
-      currentStep === 'willowlynxHistoricalReport' ? 'willowlynxHistoricalReportData' :
-      currentStep === 'willowlynxSumpPitCCTVCamera' ? 'willowlynxSumpPitCCTVCameraData' :
-      currentStep === 'monthlyDatabaseCreation' ? 'monthlyDatabaseCreationData' :
-      currentStep === 'databaseBackup' ? 'databaseBackupData' :
-      currentStep === 'timeSync' ? 'timeSyncData' :
-      currentStep === 'hotFixes' ? 'hotFixesData' :
-      currentStep === 'autoFailOver' ? 'autoFailOverData' :
-      currentStep === 'asaFirewall' ? 'asaFirewallData' :
-      currentStep === 'softwarePatch' ? 'softwarePatchData' :
-      currentStep === 'signOff' ? 'signOffData' : 'serverHealthData';
+        currentStep === 'networkHealth' ? 'networkHealthData' :
+          currentStep === 'hardDriveHealth' ? 'hardDriveHealthData' :
+            currentStep === 'diskUsage' ? 'diskUsageData' :
+              currentStep === 'cpuAndRamUsage' ? 'cpuAndRamUsageData' :
+                currentStep === 'willowlynxProcessStatus' ? 'willowlynxProcessStatusData' :
+                  currentStep === 'willowlynxNetworkStatus' ? 'willowlynxNetworkStatusData' :
+                    currentStep === 'willowlynxRTUStatus' ? 'willowlynxRTUStatusData' :
+                      currentStep === 'willowlynxHistorialTrend' ? 'willowlynxHistorialTrendData' :
+                        currentStep === 'willowlynxHistoricalReport' ? 'willowlynxHistoricalReportData' :
+                          currentStep === 'willowlynxSumpPitCCTVCamera' ? 'willowlynxSumpPitCCTVCameraData' :
+                            currentStep === 'monthlyDatabaseCreation' ? 'monthlyDatabaseCreationData' :
+                              currentStep === 'databaseBackup' ? 'databaseBackupData' :
+                                currentStep === 'timeSync' ? 'timeSyncData' :
+                                  currentStep === 'hotFixes' ? 'hotFixesData' :
+                                    currentStep === 'autoFailOver' ? 'autoFailOverData' :
+                                      currentStep === 'asaFirewall' ? 'asaFirewallData' :
+                                        currentStep === 'softwarePatch' ? 'softwarePatchData' :
+                                          currentStep === 'asaFirewall' ? 'asaFirewallData' :
+                                            currentStep === 'softwarePatch' ? 'softwarePatchData' :
+                                              currentStep === 'signOff' ? 'signOffData' :
+                                                currentStep === 'formStatus' ? 'formStatusData' : 'serverHealthData';
 
     return (
       <Component
-        data={currentStep === 'signOff' ? formData.signOffData : (serverPMData[dataKey] || [])}
+        data={
+          currentStep === 'signOff' ? formData.signOffData :
+            currentStep === 'formStatus' ? { formStatusName: formData.formStatusName, formStatus: formData.formStatus } :
+              (serverPMData[dataKey] || [])
+        }
       />
     );
   };
@@ -405,9 +418,9 @@ const ServerPMReportFormDetails = () => {
 
   const renderProgressDots = () => {
     return (
-      <Box sx={{ 
-        display: 'flex', 
-        gap: 1, 
+      <Box sx={{
+        display: 'flex',
+        gap: 1,
         alignItems: 'center',
         overflow: 'hidden',
         maxWidth: '100%',
@@ -415,9 +428,9 @@ const ServerPMReportFormDetails = () => {
       }}>
         {steps.map((step, index) => {
           const isActive = currentStep === step;
-          
-           return (
-            <Tooltip 
+
+          return (
+            <Tooltip
               key={step}
               title={`${index + 1}. ${stepTitles[step] || step}`}
               placement="top"
@@ -458,13 +471,18 @@ const ServerPMReportFormDetails = () => {
       </Box>
     );
   };
-  // Styling - matching ServerPMReportForm exactly
+
+
   const fieldStyle = {
     '& .MuiOutlinedInput-root': {
       backgroundColor: '#f5f5f5',
       '& fieldset': {
         borderColor: '#d0d0d0'
       }
+    },
+    '& .MuiInputBase-input.Mui-disabled': {
+      color: '#333',
+      WebkitTextFillColor: '#333'
     }
   };
 
@@ -503,22 +521,22 @@ const ServerPMReportFormDetails = () => {
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ padding: 3 }}>
         {/* Header with JobNo in top right corner */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 3
         }}>
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              color: '#1976d2', 
-              fontWeight: 'bold' 
+          <Typography
+            variant="h4"
+            sx={{
+              color: '#1976d2',
+              fontWeight: 'bold'
             }}
           >
             {formData.reportTitle ? `${formData.reportTitle}` : 'Server PM Report - Details'}
           </Typography>
-          
+
           {/* JobNo display in top right corner */}
           <Box sx={{
             backgroundColor: '#f5f5f5',
@@ -526,20 +544,20 @@ const ServerPMReportFormDetails = () => {
             borderRadius: '8px',
             border: '1px solid #ddd'
           }}>
-            <Typography 
-              variant="body1" 
-              sx={{ 
+            <Typography
+              variant="body1"
+              sx={{
                 color: '#2C3E50',
                 fontWeight: 'normal',
                 fontSize: '14px',
                 display: 'inline'
               }}
             >
-              Job No: 
+              Job No:
             </Typography>
-            <Typography 
-              variant="body1" 
-              sx={{ 
+            <Typography
+              variant="body1"
+              sx={{
                 color: '#FF0000',
                 fontWeight: 'bold',
                 fontSize: '14px',
@@ -553,23 +571,43 @@ const ServerPMReportFormDetails = () => {
         </Box>
 
         {/* Header Action Buttons - Following CMReportFormDetails pattern */}
-            <Paper sx={{
-              backgroundColor: '#ffffff',
-              borderRadius: '12px',
-              padding: '24px',
-              marginBottom: '24px',
-              border: '1px solid #e0e0e0',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-              transition: 'box-shadow 0.3s ease',
-              '&:hover': {
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)'
-              }
-            }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Paper sx={{
+          backgroundColor: '#ffffff',
+          borderRadius: '12px',
+          padding: '24px',
+          marginBottom: '24px',
+          border: '1px solid #e0e0e0',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+          transition: 'box-shadow 0.3s ease',
+          '&:hover': {
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)'
+          }
+        }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/report-management-system/report-forms')}
+              startIcon={<ArrowBackIosNewIcon fontSize="small" />}
+              sx={{
+                background: RMSTheme.components.button.primary.background,
+                color: RMSTheme.components.button.primary.text,
+                padding: '12px 32px',
+                borderRadius: RMSTheme.borderRadius.small,
+                border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                boxShadow: RMSTheme.components.button.primary.shadow,
+                '&:hover': {
+                  background: RMSTheme.components.button.primary.hover
+                }
+              }}
+            >
+              Back
+            </Button>
+
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {!isFormStatusClosed && (
                 <Button
                   variant="contained"
-                  onClick={() => navigate('/report-management-system/report-forms')}
-                  startIcon={<ArrowBackIosNewIcon fontSize="small" />}
+                  onClick={() => navigate(`/report-management-system/server-pm-edit/${id}`)}
                   sx={{
                     background: RMSTheme.components.button.primary.background,
                     color: RMSTheme.components.button.primary.text,
@@ -582,210 +620,107 @@ const ServerPMReportFormDetails = () => {
                     }
                   }}
                 >
-                  Back
+                  Edit Report
                 </Button>
-                
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  {!isFormStatusClosed && (
-                    <Button
-                      variant="contained"
-                      onClick={() => navigate(`/report-management-system/server-pm-edit/${id}`)}
-                      sx={{
-                        background: RMSTheme.components.button.primary.background,
-                        color: RMSTheme.components.button.primary.text,
-                        padding: '12px 32px',
-                        borderRadius: RMSTheme.borderRadius.small,
-                        border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                        boxShadow: RMSTheme.components.button.primary.shadow,
-                        '&:hover': {
-                          background: RMSTheme.components.button.primary.hover
-                        }
-                      }}
-                    >
-                      Edit Report
-                    </Button>
-                  )}
-                  
-                  {!isFormStatusClosed && (
-                    <Button
-                      variant="contained"
-                      onClick={handlePrintReport}
-                      startIcon={<PrintIcon />}
-                      disabled={isGeneratingPDF}
-                      sx={{
-                        background: RMSTheme.components.button.primary.background,
-                        color: RMSTheme.components.button.primary.text,
-                        padding: '12px 32px',
-                        borderRadius: RMSTheme.borderRadius.small,
-                        border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                        boxShadow: RMSTheme.components.button.primary.shadow,
-                        '&:hover': {
-                          background: RMSTheme.components.button.primary.hover
-                        },
-                        '&:disabled': {
-                          opacity: 0.6
-                        }
-                      }}
-                    >
-                      {isGeneratingPDF ? 'Generating PDF...' : 'Print Report'}
-                    </Button>
-                  )}
-                </Box>
-              </Box>
-            </Paper>
+              )}
 
-          {/* Main Content */}
-          <Box>
-            {/* Basic Information Summary */}
-            <Paper sx={{
-              padding: 3,
-              marginBottom: 3,
-              backgroundColor: '#ffffff',
-              borderRadius: 2,
-              border: '1px solid #e0e0e0',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              background: '#f8f9fa',
-              border: '2px solid #e9ecef'
+              {!isFormStatusClosed && (
+                <Button
+                  variant="contained"
+                  onClick={handlePrintReport}
+                  startIcon={<PrintIcon />}
+                  disabled={isGeneratingPDF}
+                  sx={{
+                    background: RMSTheme.components.button.primary.background,
+                    color: RMSTheme.components.button.primary.text,
+                    padding: '12px 32px',
+                    borderRadius: RMSTheme.borderRadius.small,
+                    border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                    boxShadow: RMSTheme.components.button.primary.shadow,
+                    '&:hover': {
+                      background: RMSTheme.components.button.primary.hover
+                    },
+                    '&:disabled': {
+                      opacity: 0.6
+                    }
+                  }}
+                >
+                  {isGeneratingPDF ? 'Generating PDF...' : 'Print Report'}
+                </Button>
+              )}
+            </Box>
+          </Box>
+        </Paper>
+
+        {/* Main Content */}
+        <Box>
+          {/* Basic Information Summary */}
+          <Paper sx={{
+            padding: 3,
+            marginBottom: 3,
+            backgroundColor: '#ffffff',
+            borderRadius: 2,
+            border: '1px solid #e0e0e0',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            background: '#f8f9fa',
+            border: '2px solid #e9ecef'
+          }}>
+            <Typography variant="h5" sx={{
+              color: '#1976d2',
+              fontWeight: 'bold',
+              marginBottom: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
             }}>
-              <Typography variant="h5" sx={{
-                color: '#1976d2',
-                fontWeight: 'bold',
-                marginBottom: 2,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}>
-                <AssignmentIcon fontSize="inherit" />
-                Basic Information Summary
-              </Typography>
-              
-              <Grid container spacing={3} sx={{ marginTop: 1 }}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Job No"
-                    value={formData.jobNo || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="System Description"
-                    value={formData.systemDescription || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Station Name"
-                    value={formData.stationName || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Customer"
-                    value={formData.customer || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Project No"
-                    value={formData.projectNo || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-              </Grid>
-            </Paper>
+              <AssignmentIcon fontSize="inherit" />
+              Basic Information Summary
+            </Typography>
 
-            {isFormStatusClosed && (
-              <Paper sx={{
-                padding: 3,
-                marginBottom: 3,
-                backgroundColor: '#ffffff',
-                borderRadius: 2,
-                border: '1px solid #e0e0e0',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-              }}>
-                <Typography variant="h5" sx={{
-                  color: '#1976d2',
-                  fontWeight: 'bold',
-                  marginBottom: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1
-                }}>
-                  Final Report
-                </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 1 }}>
+              <TextField
+                fullWidth
+                label="Job No"
+                value={formData.jobNo || ''}
+                disabled
+                sx={fieldStyle}
+              />
 
-                {finalReportsLoading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : finalReports.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    No final report has been uploaded for this record.
-                  </Typography>
-                ) : (
-                  finalReports.map((report) => (
-                    <Box
-                      key={report.id}
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: 2,
-                        border: '1px solid #e0e0e0',
-                        borderRadius: 1,
-                        mb: 2,
-                        backgroundColor: '#f9f9f9'
-                      }}
-                    >
-                      <Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                          {report.attachmentName || 'Final Report'}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Uploaded on {report.uploadedDate ? new Date(report.uploadedDate).toLocaleString() : 'N/A'}
-                        </Typography>
-                      </Box>
-                      <Button
-                        variant="contained"
-                        onClick={() => handleDownloadFinalReport(report)}
-                        sx={{
-                          background: RMSTheme.components.button.primary.background,
-                          color: RMSTheme.components.button.primary.text,
-                          padding: '8px 20px',
-                          borderRadius: RMSTheme.borderRadius.small,
-                          border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                          '&:hover': {
-                            background: RMSTheme.components.button.primary.hover
-                          }
-                        }}
-                      >
-                        Download
-                      </Button>
-                    </Box>
-                  ))
-                )}
-              </Paper>
-            )}
+              <TextField
+                fullWidth
+                label="System Description"
+                value={formData.systemDescription || ''}
+                disabled
+                sx={fieldStyle}
+              />
 
-            {/* Form Status */}
+              <TextField
+                fullWidth
+                label="Station Name"
+                value={formData.stationName || ''}
+                disabled
+                sx={fieldStyle}
+              />
+
+              <TextField
+                fullWidth
+                label="Customer"
+                value={formData.customer || ''}
+                disabled
+                sx={fieldStyle}
+              />
+
+              <TextField
+                fullWidth
+                label="Project No"
+                value={formData.projectNo || ''}
+                disabled
+                sx={fieldStyle}
+              />
+            </Box>
+          </Paper>
+
+          {isFormStatusClosed && (
             <Paper sx={{
               padding: 3,
               marginBottom: 3,
@@ -802,107 +737,154 @@ const ServerPMReportFormDetails = () => {
                 alignItems: 'center',
                 gap: 1
               }}>
-                Form Status
+                Final Report
               </Typography>
-              <TextField
-                fullWidth
-                label="Form Status"
-                value={formData.formStatusName || formData.formStatus || 'Not specified'}
-                disabled
-                sx={fieldStyle}
-              />
-            </Paper>
 
-            {/* Current Step Content */}
-            <Box sx={stepContainerStyle}>
-              {renderCurrentStep()}
-            </Box>
-
-            {/* Navigation Footer */}
-            <Paper sx={{
-              backgroundColor: '#ffffff',
-              borderRadius: '12px',
-              padding: '24px',
-              marginTop: '24px',
-              border: '1px solid #e0e0e0',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-              position: 'sticky',
-              bottom: 0,
-              zIndex: 1000
-            }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Button
-                  variant="contained"
-                  onClick={handleBack}
-                  disabled={isTransitioning}
-                  startIcon={<ArrowBackIosNewIcon fontSize="small" />}
-                  sx={{
-                    background: RMSTheme.components.button.primary.background,
-                    color: RMSTheme.components.button.primary.text,
-                    padding: '12px 32px',
-                    borderRadius: RMSTheme.borderRadius.small,
-                    border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                    boxShadow: RMSTheme.components.button.primary.shadow,
-                    '&:hover': {
-                      background: RMSTheme.components.button.primary.hover
-                    },
-                    '&:disabled': {
-                      opacity: 0.6
-                    }
-                  }}
-                >
-                   Back
-                </Button>
-                
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="h6" sx={{ color: '#2C3E50', fontWeight: 600 }}>
-                    {stepTitles[currentStep]}
-                  </Typography>
-                  {renderProgressDots()}
+              {finalReportsLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                  <CircularProgress size={24} />
                 </Box>
-                
-                                <Button
-                  variant="contained"
-                  onClick={handleNext}
-                  disabled={isTransitioning || currentStep === 'softwarePatch'}
-                  endIcon={<ArrowForwardIosIcon fontSize="small" />}
-                  sx={{
-                    background: RMSTheme.components.button.primary.background,
-                    color: RMSTheme.components.button.primary.text,
-                    padding: '12px 32px',
-                    borderRadius: RMSTheme.borderRadius.small,
-                    border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                    boxShadow: RMSTheme.components.button.primary.shadow,
-                    '&:hover': {
-                      background: RMSTheme.components.button.primary.hover
-                    },
-                    '&:disabled': {
-                      opacity: 0.6
-                    }
-                  }}
-                >
-                  {currentStep === 'softwarePatch' ? 'End' : 'Next '}
-                </Button>
-              </Box>
+              ) : finalReports.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No final report has been uploaded for this record.
+                </Typography>
+              ) : (
+                finalReports.map((report) => (
+                  <Box
+                    key={report.id}
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: 2,
+                      border: '1px solid #e0e0e0',
+                      borderRadius: 1,
+                      mb: 2,
+                      backgroundColor: '#f9f9f9'
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                        {report.attachmentName || 'Final Report'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Uploaded on {report.uploadedDate ? new Date(report.uploadedDate).toLocaleString() : 'N/A'}
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="contained"
+                      onClick={() => handleDownloadFinalReport(report)}
+                      sx={{
+                        background: RMSTheme.components.button.primary.background,
+                        color: RMSTheme.components.button.primary.text,
+                        padding: '8px 20px',
+                        borderRadius: RMSTheme.borderRadius.small,
+                        border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                        '&:hover': {
+                          background: RMSTheme.components.button.primary.hover
+                        }
+                      }}
+                    >
+                      Download
+                    </Button>
+                  </Box>
+                ))
+              )}
             </Paper>
-          </Box>
-        </Box>
+          )}
 
-        {/* Notification Snackbar */}
-        <Snackbar
-          open={notification.open}
-          autoHideDuration={6000}
+
+
+          {/* Current Step Content */}
+          <Box sx={stepContainerStyle}>
+            {renderCurrentStep()}
+          </Box>
+
+          {/* Navigation Footer */}
+          <Paper sx={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            marginTop: '24px',
+            border: '1px solid #e0e0e0',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+            position: 'sticky',
+            bottom: 0,
+            zIndex: 1000
+          }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Button
+                variant="contained"
+                onClick={handleBack}
+                disabled={isTransitioning}
+                startIcon={<ArrowBackIosNewIcon fontSize="small" />}
+                sx={{
+                  background: RMSTheme.components.button.primary.background,
+                  color: RMSTheme.components.button.primary.text,
+                  padding: '12px 32px',
+                  borderRadius: RMSTheme.borderRadius.small,
+                  border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                  boxShadow: RMSTheme.components.button.primary.shadow,
+                  '&:hover': {
+                    background: RMSTheme.components.button.primary.hover
+                  },
+                  '&:disabled': {
+                    opacity: 0.6
+                  }
+                }}
+              >
+                Back
+              </Button>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                <Typography variant="h6" sx={{ color: '#2C3E50', fontWeight: 600 }}>
+                  {stepTitles[currentStep]}
+                </Typography>
+                {renderProgressDots()}
+              </Box>
+
+              <Button
+                variant="contained"
+                onClick={handleNext}
+                disabled={isTransitioning || currentStep === 'softwarePatch'}
+                endIcon={<ArrowForwardIosIcon fontSize="small" />}
+                sx={{
+                  background: RMSTheme.components.button.primary.background,
+                  color: RMSTheme.components.button.primary.text,
+                  padding: '12px 32px',
+                  borderRadius: RMSTheme.borderRadius.small,
+                  border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                  boxShadow: RMSTheme.components.button.primary.shadow,
+                  '&:hover': {
+                    background: RMSTheme.components.button.primary.hover
+                  },
+                  '&:disabled': {
+                    opacity: 0.6
+                  }
+                }}
+              >
+                {currentStep === 'softwarePatch' ? 'End' : 'Next '}
+              </Button>
+            </Box>
+          </Paper>
+        </Box>
+      </Box>
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
           onClose={handleCloseNotification}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          severity={notification.severity}
+          sx={{ width: '100%' }}
         >
-          <Alert 
-            onClose={handleCloseNotification} 
-            severity={notification.severity}
-            sx={{ width: '100%' }}
-          >
-            {notification.message}
-          </Alert>
-        </Snackbar>
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </LocalizationProvider>
   );
 };

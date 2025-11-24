@@ -8,7 +8,7 @@ import {
   Paper,
   Tooltip,
 } from '@mui/material';
-import { 
+import {
   Computer as ComputerIcon,
   ArrowBackIosNew as ArrowBackIosNewIcon,
   ArrowForwardIos as ArrowForwardIosIcon,
@@ -54,11 +54,11 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Step configuration
-const steps = [
+  const steps = [
     'formStatus',
     'signOff',
     'serverHealth',
-    'hardDriveHealth', 
+    'hardDriveHealth',
     'diskUsage',
     'cpuAndRamUsage',
     'networkHealth',
@@ -77,7 +77,7 @@ const steps = [
     'softwarePatch'
   ];
 
-const stepTitles = {
+  const stepTitles = {
     formStatus: 'Form Status',
     signOff: 'Sign Off Information',
     serverHealth: 'Server Health Check',
@@ -195,7 +195,7 @@ const stepTitles = {
   };
 
   // Component rendering
-const renderCurrentStep = () => {
+  const renderCurrentStep = () => {
     switch (currentStep) {
       case 'formStatus':
         return (
@@ -345,9 +345,9 @@ const renderCurrentStep = () => {
 
   const renderProgressDots = () => {
     return (
-      <Box sx={{ 
-        display: 'flex', 
-        gap: 1, 
+      <Box sx={{
+        display: 'flex',
+        gap: 1,
         alignItems: 'center',
         overflow: 'hidden',
         maxWidth: '100%',
@@ -356,9 +356,9 @@ const renderCurrentStep = () => {
         {steps.map((step, index) => {
           const isActive = currentStep === step;
           const isLocked = !hasFormStatus && steps.indexOf(step) > formStatusIndex;
-          
+
           return (
-            <Tooltip 
+            <Tooltip
               key={step}
               title={`${index + 1}. ${stepTitles[step] || step}`}
               placement="top"
@@ -436,7 +436,7 @@ const renderCurrentStep = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ 
+      <Box sx={{
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
         padding: 3
@@ -455,12 +455,59 @@ const renderCurrentStep = () => {
             padding: 4,
             textAlign: 'center'
           }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, marginBottom: 1 }}>
-              {formData.reportTitle || 'Server Preventive Maintenance Report'}
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 'bold',
+                marginBottom: 1,
+                letterSpacing: '0.5px'
+              }}
+            >
+              {formData.reportTitle || 'xxx'}
             </Typography>
-            <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                opacity: 0.95,
+                fontSize: '16px',
+                fontWeight: 400
+              }}
+            >
               Complete the form below with accurate maintenance information
             </Typography>
+
+            {/* Job No Badge */}
+            <Box sx={{
+              marginTop: 2,
+              display: 'inline-block',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              padding: '8px 20px',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: '#e0e0e0',
+                  fontSize: '14px',
+                  fontWeight: 500
+                }}
+              >
+                Job No:
+                <Typography
+                  component="span"
+                  sx={{
+                    color: '#FFD700',
+                    fontWeight: 'bold',
+                    marginLeft: '8px',
+                    fontSize: '16px'
+                  }}
+                >
+                  {formData.jobNo || 'Not assigned'}
+                </Typography>
+              </Typography>
+            </Box>
           </Box>
 
           <Box sx={{ padding: 4 }}>
@@ -474,58 +521,71 @@ const renderCurrentStep = () => {
                 <AssignmentIcon fontSize="inherit" />
                 Basic Information Summary
               </Typography>
-              
-              <Grid container spacing={3} sx={{ marginTop: 1 }}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Job No"
-                    value={formData.jobNo || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="System Description"
-                    value={formData.systemDescription || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Customer"
-                    value={formData.customer || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Project No"
-                    value={formData.projectNo || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
 
-                <Grid item xs={12}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Job No"
+                  value={formData.jobNo || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+
+                <TextField
+                  fullWidth
+                  label="System Description"
+                  value={formData.systemDescription || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Customer"
+                  value={formData.customer || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Project No"
+                  value={formData.projectNo || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+
+                <Tooltip
+                  title={formData.stationName || 'Not specified'}
+                  placement="top"
+                  enterDelay={200}
+                  sx={{
+                    '& .MuiTooltip-tooltip': {
+                      backgroundColor: '#1976d2',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                      maxWidth: '400px',
+                      whiteSpace: 'normal',
+                    },
+                    '& .MuiTooltip-arrow': {
+                      color: '#1976d2',
+                    }
+                  }}
+                  arrow
+                >
                   <TextField
                     fullWidth
                     label="Station Name"
                     value={formData.stationName || ''}
                     disabled
-                    sx={fieldStyle}
+                    sx={{ ...fieldStyle, '& .MuiOutlinedInput-root': { cursor: 'help' } }}
                   />
-                </Grid>
-              </Grid>
+                </Tooltip>
+              </Box>
             </Paper>
 
             {/* Current Step Content */}
@@ -568,14 +628,14 @@ const renderCurrentStep = () => {
                 >
                   Back
                 </Button>
-                
+
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                   <Typography variant="h6" sx={{ color: '#2C3E50', fontWeight: 600 }}>
                     {stepTitles[currentStep]}
                   </Typography>
                   {renderProgressDots()}
                 </Box>
-                
+
                 <Button
                   variant="contained"
                   onClick={handleNext}

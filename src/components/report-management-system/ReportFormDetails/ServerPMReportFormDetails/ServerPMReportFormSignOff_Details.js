@@ -16,8 +16,8 @@ const ServerPMReportFormSignOff_Details = ({ data }) => {
       }
     },
     '& .MuiInputBase-input.Mui-disabled': {
-      WebkitTextFillColor: 'rgba(0, 0, 0, 0.6)',
-      color: 'rgba(0, 0, 0, 0.6)'
+      color: '#333',
+      WebkitTextFillColor: '#333'
     }
   };
 
@@ -42,7 +42,7 @@ const ServerPMReportFormSignOff_Details = ({ data }) => {
         }}>
           👥 Personnel Information
         </Typography>
-        
+
         <TextField
           fullWidth
           variant="outlined"
@@ -54,11 +54,18 @@ const ServerPMReportFormSignOff_Details = ({ data }) => {
             marginBottom: 2,
             marginTop: 1,
             '& .MuiOutlinedInput-root': {
-              backgroundColor: 'white',
+              backgroundColor: '#f5f5f5',
+              '& fieldset': {
+                borderColor: '#d0d0d0'
+              }
+            },
+            '& .MuiInputBase-input.Mui-disabled': {
+              color: '#333',
+              WebkitTextFillColor: '#333'
             }
           }}
         />
-        
+
         <TextField
           fullWidth
           variant="outlined"
@@ -68,7 +75,14 @@ const ServerPMReportFormSignOff_Details = ({ data }) => {
           placeholder="Enter witness name"
           sx={{
             '& .MuiOutlinedInput-root': {
-              backgroundColor: 'white',
+              backgroundColor: '#f5f5f5',
+              '& fieldset': {
+                borderColor: '#d0d0d0'
+              }
+            },
+            '& .MuiInputBase-input.Mui-disabled': {
+              color: '#333',
+              WebkitTextFillColor: '#333'
             }
           }}
         />
@@ -93,7 +107,7 @@ const ServerPMReportFormSignOff_Details = ({ data }) => {
         }}>
           📅 Schedule Information
         </Typography>
-        
+
         <Grid container spacing={3} sx={{ marginTop: 1 }}>
           <Grid item xs={12} md={6}>
             <TextField
@@ -104,7 +118,7 @@ const ServerPMReportFormSignOff_Details = ({ data }) => {
               sx={fieldStyle}
             />
           </Grid>
-          
+
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
@@ -118,19 +132,19 @@ const ServerPMReportFormSignOff_Details = ({ data }) => {
       </Paper>
 
       {/* Remarks Section */}
-      <Box sx={{ 
-        padding: 3, 
-        backgroundColor: '#ffffff', 
-        borderRadius: 2, 
+      <Box sx={{
+        padding: 3,
+        backgroundColor: '#ffffff',
+        borderRadius: 2,
         border: '1px solid #e0e0e0',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         marginBottom: 3
       }}>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: '#1976d2', 
-            fontWeight: 'bold', 
+        <Typography
+          variant="h6"
+          sx={{
+            color: '#1976d2',
+            fontWeight: 'bold',
             marginBottom: 2,
             display: 'flex',
             alignItems: 'center'

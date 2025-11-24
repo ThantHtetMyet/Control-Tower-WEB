@@ -29,7 +29,7 @@ import {
   DialogActions,
   Fade
 } from '@mui/material';
-import { 
+import {
   Computer as ComputerIcon,
   Assignment as AssignmentIcon,
   Storage as StorageIcon,
@@ -215,11 +215,11 @@ const ServerPMReportForm_Edit_Review = () => {
 
       try {
         setLoading(true);
-        
+
         // Check if form data was passed from edit page - Following reference pattern
         if (location.state && location.state.formData) {
           const passedData = location.state.formData;
-          
+
           // Use the passed form data directly - Following ServerPMReviewReportForm pattern
           setFormData(passedData);
           isDataLoaded.current = true;
@@ -229,17 +229,17 @@ const ServerPMReportForm_Edit_Review = () => {
 
         // Fallback: fetch from database if no passed data
         const response = await getServerPMReportFormWithDetails(id);
-        
-          const currentStatusName = response.pmReportFormServer?.formStatusName || response.pmReportFormServer?.formStatus || '';
-          if (isStatusClosed(currentStatusName)) {
-            redirectIfClosed('This Server PM report is closed and cannot be edited.');
-            setLoading(false);
-            return;
-          }
 
-          // Set basic form data
-          setFormData({
-            reportTitle: response.pmReportFormServer.reportTitle || 'Server Preventive Maintenance Report - Review',
+        const currentStatusName = response.pmReportFormServer?.formStatusName || response.pmReportFormServer?.formStatus || '';
+        if (isStatusClosed(currentStatusName)) {
+          redirectIfClosed('This Server PM report is closed and cannot be edited.');
+          setLoading(false);
+          return;
+        }
+
+        // Set basic form data
+        setFormData({
+          reportTitle: response.pmReportFormServer.reportTitle || 'Server Preventive Maintenance Report - Review',
           systemDescription: response.systemNameWarehouseName || response.pmReportFormServer?.systemDescription || '',
           systemNameWarehouseID: response.systemNameWarehouseID || '',
           stationName: response.stationNameWarehouseName || response.pmReportFormServer?.stationName || '',
@@ -253,16 +253,16 @@ const ServerPMReportForm_Edit_Review = () => {
           reportFormID: response.reportForm?.id || response.pmReportFormServer?.reportFormID || '',
           formstatusID: response.pmReportFormServer?.formstatusID || '',
           formStatusName: currentStatusName || '',
-          dateOfService: response.pmReportFormServer?.dateOfService ? 
+          dateOfService: response.pmReportFormServer?.dateOfService ?
             new Date(response.pmReportFormServer.dateOfService).toISOString().slice(0, 16) : '',
-          
+
           // Map server PM data directly to formData - Following reference pattern
           signOffData: {
             attendedBy: response.pmReportFormServer?.signOffData?.attendedBy || '',
             witnessedBy: response.pmReportFormServer?.signOffData?.witnessedBy || '',
-            startDate: response.pmReportFormServer?.signOffData?.startDate ? 
+            startDate: response.pmReportFormServer?.signOffData?.startDate ?
               new Date(response.pmReportFormServer.signOffData.startDate).toISOString().slice(0, 16) : '',
-            completionDate: response.pmReportFormServer?.signOffData?.completionDate ? 
+            completionDate: response.pmReportFormServer?.signOffData?.completionDate ?
               new Date(response.pmReportFormServer.signOffData.completionDate).toISOString().slice(0, 16) : '',
             approvedBy: response.pmReportFormServer?.signOffData?.approvedBy || '',
             remarks: response.pmReportFormServer?.signOffData?.remarks || ''
@@ -464,10 +464,10 @@ const ServerPMReportForm_Edit_Review = () => {
 
   if (loading) {
     return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
       }}>
@@ -482,10 +482,10 @@ const ServerPMReportForm_Edit_Review = () => {
 
   if (error) {
     return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
       }}>
@@ -498,7 +498,7 @@ const ServerPMReportForm_Edit_Review = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ 
+      <Box sx={{
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
         padding: 3
@@ -517,12 +517,59 @@ const ServerPMReportForm_Edit_Review = () => {
             padding: 4,
             textAlign: 'center'
           }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, marginBottom: 1 }}>
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 'bold',
+                marginBottom: 1,
+                letterSpacing: '0.5px'
+              }}
+            >
               {formData?.reportTitle || 'Server Preventive Maintenance Report - Review'}
             </Typography>
-            <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
-              Review the maintenance information (Read-Only Mode)
+            <Typography
+              variant="subtitle1"
+              sx={{
+                opacity: 0.95,
+                fontSize: '16px',
+                fontWeight: 400
+              }}
+            >
+              Review the maintenance information
             </Typography>
+
+            {/* Job No Badge */}
+            <Box sx={{
+              marginTop: 2,
+              display: 'inline-block',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              padding: '8px 20px',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: '#e0e0e0',
+                  fontSize: '14px',
+                  fontWeight: 500
+                }}
+              >
+                Job No:
+                <Typography
+                  component="span"
+                  sx={{
+                    color: '#FFD700',
+                    fontWeight: 'bold',
+                    marginLeft: '8px',
+                    fontSize: '16px'
+                  }}
+                >
+                  {formData?.jobNo || 'Not assigned'}
+                </Typography>
+              </Typography>
+            </Box>
           </Box>
 
           <Box sx={{ padding: 4 }}>
@@ -545,58 +592,48 @@ const ServerPMReportForm_Edit_Review = () => {
               >
                 📋 Basic Information Summary
               </Typography>
-              
-              <Grid container spacing={3} sx={{ marginTop: 1 }}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Job No"
-                    value={formData?.jobNo || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="System Description"
-                    value={formData?.systemDescription || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Station Name"
-                    value={formData?.stationName || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Customer"
-                    value={formData?.customer || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Project No"
-                    value={formData?.projectNo || ''}
-                    disabled
-                    sx={fieldStyle}
-                  />
-                </Grid>
-              </Grid>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Job No"
+                  value={formData?.jobNo || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+
+                <TextField
+                  fullWidth
+                  label="System Description"
+                  value={formData?.systemDescription || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Station Name"
+                  value={formData?.stationName || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Customer"
+                  value={formData?.customer || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Project No"
+                  value={formData?.projectNo || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+              </Box>
             </Paper>
 
             <Paper sx={{
@@ -615,12 +652,12 @@ const ServerPMReportForm_Edit_Review = () => {
                   gap: 1
                 }}
               >
-                        <AssignmentTurnedInIcon
-                          fontSize="small"
-                          sx={{ color: themeColor }}
-                        />
-                        Form-Status
-                    </Typography>
+                <AssignmentTurnedInIcon
+                  fontSize="small"
+                  sx={{ color: themeColor }}
+                />
+                Form-Status
+              </Typography>
               <TextField
                 fullWidth
                 label="Form Status"
@@ -635,30 +672,30 @@ const ServerPMReportForm_Edit_Review = () => {
               // Helper function to check if component has data - Following reference pattern
               const hasData = (data, dataKey) => {
                 if (!data || typeof data !== 'object') return false;
-                
+
                 // Special handling for DatabaseBackup data structure
                 if (dataKey === 'databaseBackupData') {
                   const hasMssqlData = Array.isArray(data.mssqlBackupData) && data.mssqlBackupData.length > 0 &&
-                    data.mssqlBackupData.some(item => 
-                      (item.item && item.item.trim() !== '') || 
+                    data.mssqlBackupData.some(item =>
+                      (item.item && item.item.trim() !== '') ||
                       (item.monthlyDBBackupCreated && item.monthlyDBBackupCreated !== '')
                     );
                   const hasScadaData = Array.isArray(data.scadaBackupData) && data.scadaBackupData.length > 0 &&
-                    data.scadaBackupData.some(item => 
-                      (item.item && item.item.trim() !== '') || 
+                    data.scadaBackupData.some(item =>
+                      (item.item && item.item.trim() !== '') ||
                       (item.monthlyDBBackupCreated && item.monthlyDBBackupCreated !== '')
                     );
                   const hasRemarks = data.remarks && data.remarks.trim() !== '';
                   const hasLatestBackupFileName = data.latestBackupFileName && data.latestBackupFileName.trim() !== '';
-                  
+
                   return hasMssqlData || hasScadaData || hasRemarks || hasLatestBackupFileName;
                 }
-                
+
                 // Check for non-empty values
                 const hasNonEmptyValues = Object.values(data).some(value => {
                   if (Array.isArray(value)) {
-                    return value.length > 0 && value.some(item => 
-                      item && typeof item === 'object' && Object.values(item).some(v => 
+                    return value.length > 0 && value.some(item =>
+                      item && typeof item === 'object' && Object.values(item).some(v =>
                         v !== null && v !== undefined && v !== ''
                       )
                     );
@@ -670,10 +707,10 @@ const ServerPMReportForm_Edit_Review = () => {
                 if (data.remarks !== undefined) {
                   const hasRemarks = data.remarks && data.remarks.trim() !== '';
                   const dataArray = data[dataKey] || data.data || [];
-                  
-                  let hasDetails = Array.isArray(dataArray) && dataArray.length > 0 && 
-                                  dataArray.some(item => item && Object.keys(item).length > 0);
-                  
+
+                  let hasDetails = Array.isArray(dataArray) && dataArray.length > 0 &&
+                    dataArray.some(item => item && Object.keys(item).length > 0);
+
                   return hasRemarks || hasDetails;
                 }
 
@@ -701,50 +738,51 @@ const ServerPMReportForm_Edit_Review = () => {
               }
 
               return componentsWithData.map(({ key, title, icon: Icon, Component, dataKey }) => {
-                
+
                 return (
-                <Paper key={key} elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-                  <Box sx={{ 
-                    '& .MuiTextField-root': {
-                      '& .MuiOutlinedInput-root': {
-                        backgroundColor: '#f9f9f9',
-                        '& fieldset': {
-                          borderColor: '#e0e0e0'
+                  <Paper key={key} elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+                    <Box sx={{
+                      '& .MuiTextField-root': {
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: '#f9f9f9',
+                          '& fieldset': {
+                            borderColor: '#e0e0e0'
+                          }
                         }
-                      }
-                    },
-                    '& .MuiFormControl-root': {
-                      '& .MuiOutlinedInput-root': {
-                        backgroundColor: '#f9f9f9',
-                        '& fieldset': {
-                          borderColor: '#e0e0e0'
+                      },
+                      '& .MuiFormControl-root': {
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: '#f9f9f9',
+                          '& fieldset': {
+                            borderColor: '#e0e0e0'
+                          }
                         }
-                      }
-                    },
-                    '& input': {
-                      cursor: 'default !important'
-                    },
-                    '& textarea': {
-                      cursor: 'default !important'
-                    },
-                    '& .MuiSelect-select': {
-                      cursor: 'default !important'
-                    },
-                    '& .MuiInputBase-input.Mui-disabled': {
-                      WebkitTextFillColor: '#666 !important',
-                      color: '#666 !important'
-                    },
-                    pointerEvents: 'none'
-                  }}>
-                    <Component 
-                      data={formData[dataKey] || {}} 
-                      formData={formData}
-                      onDataChange={() => {}} // No-op function for review mode
-                      disabled={true}
-                    />
-                  </Box>
-                </Paper>
-              )});
+                      },
+                      '& input': {
+                        cursor: 'default !important'
+                      },
+                      '& textarea': {
+                        cursor: 'default !important'
+                      },
+                      '& .MuiSelect-select': {
+                        cursor: 'default !important'
+                      },
+                      '& .MuiInputBase-input.Mui-disabled': {
+                        WebkitTextFillColor: '#666 !important',
+                        color: '#666 !important'
+                      },
+                      pointerEvents: 'none'
+                    }}>
+                      <Component
+                        data={formData[dataKey] || {}}
+                        formData={formData}
+                        onDataChange={() => { }} // No-op function for review mode
+                        disabled={true}
+                      />
+                    </Box>
+                  </Paper>
+                )
+              });
             })()}
 
             {/* Error Display */}
@@ -792,10 +830,10 @@ const ServerPMReportForm_Edit_Review = () => {
           onClose={handleCloseNotification}
           anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
-          <Alert 
-            onClose={handleCloseNotification} 
+          <Alert
+            onClose={handleCloseNotification}
             severity={notification.severity}
-            sx={{ 
+            sx={{
               width: '100%',
               fontSize: '1rem',
               fontWeight: 500,
@@ -812,126 +850,126 @@ const ServerPMReportForm_Edit_Review = () => {
           </Alert>
         </Snackbar>
       </Box>
-    <Dialog
-      open={finalReportDialogOpen}
-      onClose={handleCloseFinalReportDialog}
-      fullWidth
-      maxWidth="xs"
-      TransitionComponent={Fade}
-      transitionDuration={{ enter: 400, exit: 250 }}
-      PaperProps={{
-        sx: {
-          minWidth: 320,
-          borderRadius: 4,
-          border: '1px solid rgba(255,255,255,0.15)',
-          background: 'linear-gradient(180deg, rgba(28,35,57,0.95) 0%, rgba(9,14,28,0.95) 80%)',
-          boxShadow: '0 25px 70px rgba(8,15,31,0.55)',
-          overflow: 'hidden'
-        }
-      }}
-      sx={{
-        '& .MuiBackdrop-root': {
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          backdropFilter: 'blur(4px)'
-        }
-      }}
-    >
-      <DialogTitle
+      <Dialog
+        open={finalReportDialogOpen}
+        onClose={handleCloseFinalReportDialog}
+        fullWidth
+        maxWidth="xs"
+        TransitionComponent={Fade}
+        transitionDuration={{ enter: 400, exit: 250 }}
+        PaperProps={{
+          sx: {
+            minWidth: 320,
+            borderRadius: 4,
+            border: '1px solid rgba(255,255,255,0.15)',
+            background: 'linear-gradient(180deg, rgba(28,35,57,0.95) 0%, rgba(9,14,28,0.95) 80%)',
+            boxShadow: '0 25px 70px rgba(8,15,31,0.55)',
+            overflow: 'hidden'
+          }
+        }}
         sx={{
-          textAlign: 'center',
-          fontWeight: 600,
-          color: '#f8fafc',
-          pb: 1
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)'
+          }
         }}
       >
-        Upload Final Report
-      </DialogTitle>
-      <DialogContent
-        sx={{
-          py: 2,
-          px: 4
-        }}
-      >
-        <Typography variant="body2" sx={{ mb: 2, textAlign: 'center', color: 'rgba(241,245,249,0.85)' }}>
-          Please attach the completed final report before submitting.
-        </Typography>
-        <Button
-          variant="outlined"
-          component="label"
-          startIcon={<UploadFileIcon />}
+        <DialogTitle
           sx={{
-            borderRadius: 2,
-            textTransform: 'none',
-            width: '100%',
-            py: 1.5,
-            borderColor: 'rgba(226,232,240,0.5)',
-            color: '#e2e8f0',
+            textAlign: 'center',
             fontWeight: 600,
-            '&:hover': {
-              borderColor: '#cbd5f5',
-              backgroundColor: 'rgba(148,163,184,0.15)'
-            }
+            color: '#f8fafc',
+            pb: 1
           }}
         >
-          {finalReportFile ? finalReportFile.name : 'Select File'}
-          <input
-            type="file"
-            hidden
-            accept="application/pdf"
-            onChange={handleFinalReportFileChange}
-          />
-        </Button>
-        {finalReportUploadError && (
-          <Typography color="#fca5a5" variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
-            {finalReportUploadError}
+          Upload Final Report
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            py: 2,
+            px: 4
+          }}
+        >
+          <Typography variant="body2" sx={{ mb: 2, textAlign: 'center', color: 'rgba(241,245,249,0.85)' }}>
+            Please attach the completed final report before submitting.
           </Typography>
-        )}
-      </DialogContent>
-      <DialogActions
-        sx={{
-          justifyContent: 'center',
-          px: 4,
-          pb: 3
-        }}
-      >
-        <Button
-          onClick={handleCloseFinalReportDialog}
-          disabled={finalReportUploading}
+          <Button
+            variant="outlined"
+            component="label"
+            startIcon={<UploadFileIcon />}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              width: '100%',
+              py: 1.5,
+              borderColor: 'rgba(226,232,240,0.5)',
+              color: '#e2e8f0',
+              fontWeight: 600,
+              '&:hover': {
+                borderColor: '#cbd5f5',
+                backgroundColor: 'rgba(148,163,184,0.15)'
+              }
+            }}
+          >
+            {finalReportFile ? finalReportFile.name : 'Select File'}
+            <input
+              type="file"
+              hidden
+              accept="application/pdf"
+              onChange={handleFinalReportFileChange}
+            />
+          </Button>
+          {finalReportUploadError && (
+            <Typography color="#fca5a5" variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
+              {finalReportUploadError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions
           sx={{
-            background: RMSTheme.components.button.primary.background,
-            color: RMSTheme.components.button.primary.text,
-            padding: '10px 28px',
-            borderRadius: RMSTheme.borderRadius.small,
-            border: `1px solid ${RMSTheme.components.button.primary.border}`,
-            boxShadow: RMSTheme.components.button.primary.shadow,
-            textTransform: 'none',
-            mr: 2,
-            '&:hover': { background: RMSTheme.components.button.primary.hover },
-            '&:disabled': { opacity: 0.6 }
+            justifyContent: 'center',
+            px: 4,
+            pb: 3
           }}
         >
-          Cancel
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleUploadFinalReport}
-          disabled={finalReportUploading}
-          sx={{
-            background: RMSTheme.components.button.primary.background,
-            color: RMSTheme.components.button.primary.text,
-            padding: '10px 28px',
-            borderRadius: RMSTheme.borderRadius.small,
-            border: `1px solid ${RMSTheme.components.button.primary.border}`,
-            boxShadow: RMSTheme.components.button.primary.shadow,
-            textTransform: 'none',
-            '&:hover': { background: RMSTheme.components.button.primary.hover },
-            '&:disabled': { opacity: 0.6 }
-          }}
-        >
-          {finalReportUploading ? 'Uploading...' : 'Upload & Submit'}
-        </Button>
-      </DialogActions>
-    </Dialog>
+          <Button
+            onClick={handleCloseFinalReportDialog}
+            disabled={finalReportUploading}
+            sx={{
+              background: RMSTheme.components.button.primary.background,
+              color: RMSTheme.components.button.primary.text,
+              padding: '10px 28px',
+              borderRadius: RMSTheme.borderRadius.small,
+              border: `1px solid ${RMSTheme.components.button.primary.border}`,
+              boxShadow: RMSTheme.components.button.primary.shadow,
+              textTransform: 'none',
+              mr: 2,
+              '&:hover': { background: RMSTheme.components.button.primary.hover },
+              '&:disabled': { opacity: 0.6 }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleUploadFinalReport}
+            disabled={finalReportUploading}
+            sx={{
+              background: RMSTheme.components.button.primary.background,
+              color: RMSTheme.components.button.primary.text,
+              padding: '10px 28px',
+              borderRadius: RMSTheme.borderRadius.small,
+              border: `1px solid ${RMSTheme.components.button.primary.border}`,
+              boxShadow: RMSTheme.components.button.primary.shadow,
+              textTransform: 'none',
+              '&:hover': { background: RMSTheme.components.button.primary.hover },
+              '&:disabled': { opacity: 0.6 }
+            }}
+          >
+            {finalReportUploading ? 'Uploading...' : 'Upload & Submit'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </LocalizationProvider>
   );
 };

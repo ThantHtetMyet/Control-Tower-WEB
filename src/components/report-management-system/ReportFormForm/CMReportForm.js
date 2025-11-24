@@ -50,11 +50,11 @@ const MultipleImageUploadField = ({ field, label, images, previews, onUpload, on
           <IconComponent sx={{ mr: 1, color: '#3498DB' }} />
           {label}
         </Typography>
-        
+
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Upload multiple images to document the maintenance process. Supported formats: JPG, PNG, GIF (Max 10MB each)
         </Typography>
-        
+
         {/* Upload Button */}
         <Box sx={{ mb: 2 }}>
           <input
@@ -86,7 +86,7 @@ const MultipleImageUploadField = ({ field, label, images, previews, onUpload, on
             Recommended: 800x600px or higher
           </Typography>
         </Box>
-  
+
         {/* Images Preview Grid */}
         {previews.length > 0 ? (
           <Grid container spacing={2}>
@@ -121,9 +121,9 @@ const MultipleImageUploadField = ({ field, label, images, previews, onUpload, on
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
-                  <Typography 
-                    variant="caption" 
-                    sx={{ 
+                  <Typography
+                    variant="caption"
+                    sx={{
                       position: 'absolute',
                       bottom: 8,
                       left: 8,
@@ -141,10 +141,10 @@ const MultipleImageUploadField = ({ field, label, images, previews, onUpload, on
             ))}
           </Grid>
         ) : (
-          <Box sx={{ 
-            textAlign: 'center', 
-            py: 4, 
-            border: '2px dashed #e0e0e0', 
+          <Box sx={{
+            textAlign: 'center',
+            py: 4,
+            border: '2px dashed #e0e0e0',
             borderRadius: '8px',
             backgroundColor: '#fafafa'
           }}>
@@ -162,12 +162,12 @@ const MultipleImageUploadField = ({ field, label, images, previews, onUpload, on
   );
 };
 
-const CMReportForm = ({ 
-  formData, 
-  reportFormTypes, 
-  onInputChange, 
-  onNext, 
-  onBack, 
+const CMReportForm = ({
+  formData,
+  reportFormTypes,
+  onInputChange,
+  onNext,
+  onBack,
   onImageDataUpdate,
   initialBeforeIssueImages = [],
   initialAfterActionImages = [],
@@ -195,7 +195,7 @@ const CMReportForm = ({
   const [materialUsedOldSerialPreviews, setMaterialUsedOldSerialPreviews] = useState([]);
   const [materialUsedNewSerialImages, setMaterialUsedNewSerialImages] = useState(initialMaterialUsedNewSerialImages);
   const [materialUsedNewSerialPreviews, setMaterialUsedNewSerialPreviews] = useState([]);
-  
+
   // Modal state for material used clear confirmation
   const [showMaterialUsedClearConfirm, setShowMaterialUsedClearConfirm] = useState(false);
 
@@ -250,7 +250,7 @@ const CMReportForm = ({
       }).filter(Boolean);
       setBeforeIssuePreviews(previews);
     }
-    
+
     // Create previews for initial after action images
     if (initialAfterActionImages.length > 0) {
       const previews = initialAfterActionImages.map(file => {
@@ -261,7 +261,7 @@ const CMReportForm = ({
       }).filter(Boolean);
       setAfterActionPreviews(previews);
     }
-    
+
     // Create previews for initial material used old serial images
     if (initialMaterialUsedOldSerialImages.length > 0) {
       const previews = initialMaterialUsedOldSerialImages.map(file => {
@@ -272,7 +272,7 @@ const CMReportForm = ({
       }).filter(Boolean);
       setMaterialUsedOldSerialPreviews(previews);
     }
-    
+
     // Create previews for initial material used new serial images
     if (initialMaterialUsedNewSerialImages.length > 0) {
       const previews = initialMaterialUsedNewSerialImages.map(file => {
@@ -330,30 +330,30 @@ const CMReportForm = ({
   const handleBeforeIssueUpload = (event) => {
     const files = Array.from(event.target.files);
     if (!files.length) return;
-    
+
     const validFiles = [];
     const newPreviews = [];
-    
+
     files.forEach(file => {
       // Validate file size
       if (file.size > 10 * 1024 * 1024) {
         alert(`File ${file.name} is too large. Maximum size is 10MB.`);
         return;
       }
-      
+
       validFiles.push(file);
       newPreviews.push(URL.createObjectURL(file));
     });
-    
+
     if (validFiles.length > 0) {
       setBeforeIssueImages(prev => [...prev, ...validFiles]);
       setBeforeIssuePreviews(prev => [...prev, ...newPreviews]);
-      
+
       // Update form data
       const allImages = [...beforeIssueImages, ...validFiles];
       onInputChange('beforeIssueImages', allImages);
     }
-    
+
     // Clear input
     event.target.value = '';
   };
@@ -363,10 +363,10 @@ const CMReportForm = ({
     if (beforeIssuePreviews[index]) {
       URL.revokeObjectURL(beforeIssuePreviews[index]);
     }
-    
+
     const newImages = beforeIssueImages.filter((_, i) => i !== index);
     const newPreviews = beforeIssuePreviews.filter((_, i) => i !== index);
-    
+
     setBeforeIssueImages(newImages);
     setBeforeIssuePreviews(newPreviews);
     onInputChange('beforeIssueImages', newImages);
@@ -375,30 +375,30 @@ const CMReportForm = ({
   const handleAfterActionUpload = (event) => {
     const files = Array.from(event.target.files);
     if (!files.length) return;
-    
+
     const validFiles = [];
     const newPreviews = [];
-    
+
     files.forEach(file => {
       // Validate file size
       if (file.size > 10 * 1024 * 1024) {
         alert(`File ${file.name} is too large. Maximum size is 10MB.`);
         return;
       }
-      
+
       validFiles.push(file);
       newPreviews.push(URL.createObjectURL(file));
     });
-    
+
     if (validFiles.length > 0) {
       setAfterActionImages(prev => [...prev, ...validFiles]);
       setAfterActionPreviews(prev => [...prev, ...newPreviews]);
-      
+
       // Update form data
       const allImages = [...afterActionImages, ...validFiles];
       onInputChange('afterActionImages', allImages);
     }
-    
+
     // Clear input
     event.target.value = '';
   };
@@ -408,10 +408,10 @@ const CMReportForm = ({
     if (afterActionPreviews[index]) {
       URL.revokeObjectURL(afterActionPreviews[index]);
     }
-    
+
     const newImages = afterActionImages.filter((_, i) => i !== index);
     const newPreviews = afterActionPreviews.filter((_, i) => i !== index);
-    
+
     setAfterActionImages(newImages);
     setAfterActionPreviews(newPreviews);
     onInputChange('afterActionImages', newImages);
@@ -421,25 +421,25 @@ const CMReportForm = ({
   const handleMaterialUsedOldSerialUpload = (event) => {
     const files = Array.from(event.target.files);
     if (!files.length) return;
-    
+
     const validFiles = [];
     const newPreviews = [];
-    
+
     files.forEach(file => {
       if (file.size > 10 * 1024 * 1024) {
         alert(`File ${file.name} is too large. Maximum size is 10MB.`);
         return;
       }
-      
+
       validFiles.push(file);
       newPreviews.push(URL.createObjectURL(file));
     });
-    
+
     if (validFiles.length > 0) {
       setMaterialUsedOldSerialImages(prev => [...prev, ...validFiles]);
       setMaterialUsedOldSerialPreviews(prev => [...prev, ...newPreviews]);
     }
-    
+
     event.target.value = '';
   };
 
@@ -447,7 +447,7 @@ const CMReportForm = ({
     if (materialUsedOldSerialPreviews[index]) {
       URL.revokeObjectURL(materialUsedOldSerialPreviews[index]);
     }
-    
+
     setMaterialUsedOldSerialImages(prev => prev.filter((_, i) => i !== index));
     setMaterialUsedOldSerialPreviews(prev => prev.filter((_, i) => i !== index));
   };
@@ -456,25 +456,25 @@ const CMReportForm = ({
   const handleMaterialUsedNewSerialUpload = (event) => {
     const files = Array.from(event.target.files);
     if (!files.length) return;
-    
+
     const validFiles = [];
     const newPreviews = [];
-    
+
     files.forEach(file => {
       if (file.size > 10 * 1024 * 1024) {
         alert(`File ${file.name} is too large. Maximum size is 10MB.`);
         return;
       }
-      
+
       validFiles.push(file);
       newPreviews.push(URL.createObjectURL(file));
     });
-    
+
     if (validFiles.length > 0) {
       setMaterialUsedNewSerialImages(prev => [...prev, ...validFiles]);
       setMaterialUsedNewSerialPreviews(prev => [...prev, ...newPreviews]);
     }
-    
+
     event.target.value = '';
   };
 
@@ -482,7 +482,7 @@ const CMReportForm = ({
     if (materialUsedNewSerialPreviews[index]) {
       URL.revokeObjectURL(materialUsedNewSerialPreviews[index]);
     }
-    
+
     setMaterialUsedNewSerialImages(prev => prev.filter((_, i) => i !== index));
     setMaterialUsedNewSerialPreviews(prev => prev.filter((_, i) => i !== index));
   };
@@ -517,7 +517,7 @@ const CMReportForm = ({
   const handleMaterialUsedClearValuesExecute = () => {
     // Clear table data
     setMaterialUsedData([]);
-    
+
     // Clear old serial images
     materialUsedOldSerialPreviews.forEach(preview => {
       if (preview && typeof preview === 'string') {
@@ -526,7 +526,7 @@ const CMReportForm = ({
     });
     setMaterialUsedOldSerialImages([]);
     setMaterialUsedOldSerialPreviews([]);
-    
+
     // Clear new serial images
     materialUsedNewSerialPreviews.forEach(preview => {
       if (preview && typeof preview === 'string') {
@@ -535,7 +535,7 @@ const CMReportForm = ({
     });
     setMaterialUsedNewSerialImages([]);
     setMaterialUsedNewSerialPreviews([]);
-    
+
     setShowMaterialUsedClearConfirm(false);
   };
 
@@ -553,7 +553,7 @@ const CMReportForm = ({
   const handleNext = () => {
     // Validate required fields
     const errors = {};
-    
+
     if (!formData.failureDetectedDate) {
       errors.failureDetectedDate = 'Failure detected date is required';
     }
@@ -568,7 +568,7 @@ const CMReportForm = ({
     }
 
     setFieldErrors(errors);
-    
+
     if (Object.keys(errors).length === 0) {
       // Pass image data to parent before proceeding
       if (onImageDataUpdate) {
@@ -712,507 +712,554 @@ const CMReportForm = ({
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
         }}>
           <Box sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #2C3E50 0%, #34495E 50%, #1A252F 100%)',
             color: 'white',
             padding: 4,
             textAlign: 'center'
           }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, marginBottom: 1 }}>
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 'bold',
+                marginBottom: 1,
+                letterSpacing: '0.5px'
+              }}
+            >
               {formData.reportTitle || 'Corrective Maintenance Report'}
             </Typography>
-            <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                opacity: 0.95,
+                fontSize: '16px',
+                fontWeight: 400
+              }}
+            >
               Complete the form below with accurate maintenance information
             </Typography>
-          </Box>
-          
-          <Box sx={{ padding: 4 }}>
-          
-          {/* Basic Information Summary Section */}
-          <Paper sx={{
-            ...sectionContainerStyle,
-            background: '#f8f9fa',
-            border: '2px solid #e9ecef'
-          }}>
-            <Typography variant="h5" sx={sectionHeaderStyle}>
-              📋 Basic Information Summary
-            </Typography>
-            
-            <Grid container spacing={3} sx={{ marginTop: 1 }}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Station Name"
-                  value={formData.stationName || ''}
-                  disabled
-                  sx={{
-                    ...fieldStyle,
-                    '& .MuiOutlinedInput-root': {
-                      ...fieldStyle['& .MuiOutlinedInput-root'],
-                      backgroundColor: '#f5f5f5',
-                      '& fieldset': {
-                        borderColor: '#d0d0d0'
-                      }
-                    }
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="System Description"
-                  value={formData.systemDescription || ''}
-                  disabled
-                  sx={{
-                    ...fieldStyle,
-                    '& .MuiOutlinedInput-root': {
-                      ...fieldStyle['& .MuiOutlinedInput-root'],
-                      backgroundColor: '#f5f5f5',
-                      '& fieldset': {
-                        borderColor: '#d0d0d0'
-                      }
-                    }
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Project No"
-                  value={formData.projectNo || ''}
-                  disabled
-                  sx={{
-                    ...fieldStyle,
-                    '& .MuiOutlinedInput-root': {
-                      ...fieldStyle['& .MuiOutlinedInput-root'],
-                      backgroundColor: '#f5f5f5',
-                      '& fieldset': {
-                        borderColor: '#d0d0d0'
-                      }
-                    }
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Customer"
-                  value={formData.customer || ''}
-                  disabled
-                  sx={{
-                    ...fieldStyle,
-                    '& .MuiOutlinedInput-root': {
-                      ...fieldStyle['& .MuiOutlinedInput-root'],
-                      backgroundColor: '#f5f5f5',
-                      '& fieldset': {
-                        borderColor: '#d0d0d0'
-                      }
-                    }
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12} sx={{ display: 'none' }}>
-                <TextField
-                  fullWidth
-                  label="Type of Services"
-                  value={getServiceTypeName()}
-                  disabled
-                  sx={{
-                    ...fieldStyle,
-                    '& .MuiOutlinedInput-root': {
-                      ...fieldStyle['& .MuiOutlinedInput-root'],
-                      backgroundColor: '#f5f5f5',
-                      '& fieldset': {
-                        borderColor: '#d0d0d0'
-                      }
-                    }
-                  }}
-                />
-              </Grid>
-            </Grid>
-          </Paper>
-          
-          {/* Date & Time Information Section */}
-          <Paper sx={sectionContainerStyle}>
-            <Typography variant="h5" sx={sectionHeaderStyle}>
-              📅 Date & Time Information
-            </Typography>
-            
-            <Grid container spacing={3} sx={{ marginTop: 1 }}>
-              <Grid item xs={12} md={6}>
-                <DateTimePicker
-                  label="Failure Detected"
-                  value={formData.failureDetectedDate ? new Date(formData.failureDetectedDate) : null}
-                  onChange={(newValue) => {
-                    const formattedDate = formatDateForInput(newValue);
-                    handleInputChange('failureDetectedDate', formattedDate);
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      error={!!fieldErrors.failureDetectedDate}
-                      helperText={fieldErrors.failureDetectedDate}
-                      sx={fieldErrors.failureDetectedDate ? errorDateTimePickerStyle : dateTimePickerStyle}
-                    />
-                  )}
-                  componentsProps={{
-                    actionBar: {
-                      actions: ['accept', 'cancel'],
-                    },
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <DateTimePicker
-                  label="Response"
-                  value={formData.responseDate ? new Date(formData.responseDate) : null}
-                  onChange={(newValue) => {
-                    const formattedDate = formatDateForInput(newValue);
-                    handleInputChange('responseDate', formattedDate);
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      error={!!fieldErrors.responseDate}
-                      helperText={fieldErrors.responseDate}
-                      sx={fieldErrors.responseDate ? errorDateTimePickerStyle : dateTimePickerStyle}
-                    />
-                  )}
-                  componentsProps={{
-                    actionBar: {
-                      actions: ['accept', 'cancel'],
-                    },
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <DateTimePicker
-                  label="Arrival"
-                  value={formData.arrivalDate ? new Date(formData.arrivalDate) : null}
-                  onChange={(newValue) => {
-                    const formattedDate = formatDateForInput(newValue);
-                    handleInputChange('arrivalDate', formattedDate);
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      error={!!fieldErrors.arrivalDate}
-                      helperText={fieldErrors.arrivalDate}
-                      sx={fieldErrors.arrivalDate ? errorDateTimePickerStyle : dateTimePickerStyle}
-                    />
-                  )}
-                  componentsProps={{
-                    actionBar: {
-                      actions: ['accept', 'cancel'],
-                    },
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <DateTimePicker
-                  label="Completion"
-                  value={formData.completionDate ? new Date(formData.completionDate) : null}
-                  onChange={(newValue) => {
-                    const formattedDate = formatDateForInput(newValue);
-                    handleInputChange('completionDate', formattedDate);
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      error={!!fieldErrors.completionDate}
-                      helperText={fieldErrors.completionDate}
-                      sx={fieldErrors.completionDate ? errorDateTimePickerStyle : dateTimePickerStyle}
-                    />
-                  )}
-                  componentsProps={{
-                    actionBar: {
-                      actions: ['accept', 'cancel'],
-                    },
-                  }}
-                />
-              </Grid>
-            </Grid>
-          </Paper>
-          
-          {/* Issue Details Section */}
-          <Paper sx={sectionContainerStyle}>
-            <Typography variant="h5" sx={sectionHeaderStyle}>
-              📝 Issue Details
-            </Typography>
-            
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-              {/* Before Issue Images - Multiple Upload */}
-              <MultipleImageUploadField 
-                field="beforeIssueImages"
-                label="Before Issue Images"
-                images={beforeIssueImages}
-                previews={beforeIssuePreviews}
-                onUpload={handleBeforeIssueUpload}
-                onRemove={handleRemoveBeforeIssue}
-                icon={PhotoCamera}
-              />
-              
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                label="Issue Reported Description"
-                value={formData.issueReportedDescription || ''}
-                onChange={(e) => handleInputChange('issueReportedDescription', e.target.value)}
-                placeholder="Describe the issue as reported by the user or system..."
-                sx={fieldStyle}
-              />
-              
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                label="Issue Found Description"
-                value={formData.issueFoundDescription || ''}
-                onChange={(e) => handleInputChange('issueFoundDescription', e.target.value)}
-                placeholder="Describe the actual issue found during investigation and diagnosis..."
-                sx={fieldStyle}
-              />
-              
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                label="Action Taken Description"
-                value={formData.actionTakenDescription || ''}
-                onChange={(e) => handleInputChange('actionTakenDescription', e.target.value)}
-                placeholder="Describe the corrective actions taken to resolve the issue..."
-                sx={fieldStyle}
-              />
-              
-              {/* After Action Images - Multiple Upload */}
-              <MultipleImageUploadField 
-                field="afterActionImages"
-                label="After Action Images"
-                images={afterActionImages}
-                previews={afterActionPreviews}
-                onUpload={handleAfterActionUpload}
-                onRemove={handleRemoveAfterAction}
-                icon={Build}
-              />
-            </Box>
-          </Paper>
-          
-          {/* Material Used Section */}
-          <Paper sx={sectionContainerStyle}>
-            <Typography variant="h5" sx={sectionHeaderStyle}>
-              <Settings sx={{ marginRight: 1, verticalAlign: 'middle' }} />
-              Material Used Information
-            </Typography>
-            
-            {/* Action Buttons */}
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 2, 
-              marginTop: 2, 
-              marginBottom: 2,
-              flexWrap: 'wrap'
+
+            {/* Job No Badge */}
+            <Box sx={{
+              marginTop: 2,
+              display: 'inline-block',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              padding: '8px 20px',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              backdropFilter: 'blur(10px)'
             }}>
-              <Button
-                startIcon={<AddIcon />}
-                onClick={handleAddMaterialUsedRow}
-                variant="contained"
+              <Typography
+                variant="body2"
                 sx={{
-                  background: RMSTheme.components.button.primary.background,
-                  color: RMSTheme.components.button.primary.text,
-                  '&:hover': {
-                    background: RMSTheme.components.button.primary.hover
-                  }
+                  color: '#e0e0e0',
+                  fontSize: '14px',
+                  fontWeight: 500
                 }}
               >
-                Add Material Used Row
-              </Button>
-              
-              <Button
-                onClick={handleMaterialUsedClearValuesConfirm}
-                disabled={materialUsedData.length === 0 && materialUsedOldSerialImages.length === 0 && materialUsedNewSerialImages.length === 0}
-                variant="contained"
-                sx={{
-                  background: '#f39c12',
-                  color: '#FFFFFF',
-                  '&:hover': {
-                    background: '#e67e22'
-                  },
-                  '&:disabled': {
-                    background: '#cccccc',
-                    color: '#666666'
-                  }
-                }}
-              >
-                Clear Values
-              </Button>
+                Job No:
+                <Typography
+                  component="span"
+                  sx={{
+                    color: '#FFD700',
+                    fontWeight: 'bold',
+                    marginLeft: '8px',
+                    fontSize: '16px'
+                  }}
+                >
+                  {formData.jobNo || 'Not assigned'}
+                </Typography>
+              </Typography>
             </Box>
-            
-            <Box sx={{ marginTop: 2 }}>
-              <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e0e0' }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
-                      <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>Item Description</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>New Serial No</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>Old Serial No</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>Remark</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {materialUsedData.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} sx={{ textAlign: 'center', padding: '24px', color: '#6c757d' }}>
-                          No material used data added yet. Click "Add Material Used Row" to get started.
-                        </TableCell>
+          </Box>
+
+          <Box sx={{ padding: 4 }}>
+
+            {/* Basic Information Summary Section */}
+            <Paper sx={{
+              ...sectionContainerStyle,
+              background: '#f8f9fa',
+              border: '2px solid #e9ecef'
+            }}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                📋 Basic Information Summary
+              </Typography>
+
+              <Grid container spacing={3} sx={{ marginTop: 1 }}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Station Name"
+                    value={formData.stationName || ''}
+                    disabled
+                    sx={{
+                      ...fieldStyle,
+                      '& .MuiOutlinedInput-root': {
+                        ...fieldStyle['& .MuiOutlinedInput-root'],
+                        backgroundColor: '#f5f5f5',
+                        '& fieldset': {
+                          borderColor: '#d0d0d0'
+                        }
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="System Description"
+                    value={formData.systemDescription || ''}
+                    disabled
+                    sx={{
+                      ...fieldStyle,
+                      '& .MuiOutlinedInput-root': {
+                        ...fieldStyle['& .MuiOutlinedInput-root'],
+                        backgroundColor: '#f5f5f5',
+                        '& fieldset': {
+                          borderColor: '#d0d0d0'
+                        }
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Project No"
+                    value={formData.projectNo || ''}
+                    disabled
+                    sx={{
+                      ...fieldStyle,
+                      '& .MuiOutlinedInput-root': {
+                        ...fieldStyle['& .MuiOutlinedInput-root'],
+                        backgroundColor: '#f5f5f5',
+                        '& fieldset': {
+                          borderColor: '#d0d0d0'
+                        }
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Customer"
+                    value={formData.customer || ''}
+                    disabled
+                    sx={{
+                      ...fieldStyle,
+                      '& .MuiOutlinedInput-root': {
+                        ...fieldStyle['& .MuiOutlinedInput-root'],
+                        backgroundColor: '#f5f5f5',
+                        '& fieldset': {
+                          borderColor: '#d0d0d0'
+                        }
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sx={{ display: 'none' }}>
+                  <TextField
+                    fullWidth
+                    label="Type of Services"
+                    value={getServiceTypeName()}
+                    disabled
+                    sx={{
+                      ...fieldStyle,
+                      '& .MuiOutlinedInput-root': {
+                        ...fieldStyle['& .MuiOutlinedInput-root'],
+                        backgroundColor: '#f5f5f5',
+                        '& fieldset': {
+                          borderColor: '#d0d0d0'
+                        }
+                      }
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
+
+            {/* Date & Time Information Section */}
+            <Paper sx={sectionContainerStyle}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                📅 Date & Time Information
+              </Typography>
+
+              <Grid container spacing={3} sx={{ marginTop: 1 }}>
+                <Grid item xs={12} md={6}>
+                  <DateTimePicker
+                    label="Failure Detected"
+                    value={formData.failureDetectedDate ? new Date(formData.failureDetectedDate) : null}
+                    onChange={(newValue) => {
+                      const formattedDate = formatDateForInput(newValue);
+                      handleInputChange('failureDetectedDate', formattedDate);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        error={!!fieldErrors.failureDetectedDate}
+                        helperText={fieldErrors.failureDetectedDate}
+                        sx={fieldErrors.failureDetectedDate ? errorDateTimePickerStyle : dateTimePickerStyle}
+                      />
+                    )}
+                    componentsProps={{
+                      actionBar: {
+                        actions: ['accept', 'cancel'],
+                      },
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <DateTimePicker
+                    label="Response"
+                    value={formData.responseDate ? new Date(formData.responseDate) : null}
+                    onChange={(newValue) => {
+                      const formattedDate = formatDateForInput(newValue);
+                      handleInputChange('responseDate', formattedDate);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        error={!!fieldErrors.responseDate}
+                        helperText={fieldErrors.responseDate}
+                        sx={fieldErrors.responseDate ? errorDateTimePickerStyle : dateTimePickerStyle}
+                      />
+                    )}
+                    componentsProps={{
+                      actionBar: {
+                        actions: ['accept', 'cancel'],
+                      },
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <DateTimePicker
+                    label="Arrival"
+                    value={formData.arrivalDate ? new Date(formData.arrivalDate) : null}
+                    onChange={(newValue) => {
+                      const formattedDate = formatDateForInput(newValue);
+                      handleInputChange('arrivalDate', formattedDate);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        error={!!fieldErrors.arrivalDate}
+                        helperText={fieldErrors.arrivalDate}
+                        sx={fieldErrors.arrivalDate ? errorDateTimePickerStyle : dateTimePickerStyle}
+                      />
+                    )}
+                    componentsProps={{
+                      actionBar: {
+                        actions: ['accept', 'cancel'],
+                      },
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <DateTimePicker
+                    label="Completion"
+                    value={formData.completionDate ? new Date(formData.completionDate) : null}
+                    onChange={(newValue) => {
+                      const formattedDate = formatDateForInput(newValue);
+                      handleInputChange('completionDate', formattedDate);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        error={!!fieldErrors.completionDate}
+                        helperText={fieldErrors.completionDate}
+                        sx={fieldErrors.completionDate ? errorDateTimePickerStyle : dateTimePickerStyle}
+                      />
+                    )}
+                    componentsProps={{
+                      actionBar: {
+                        actions: ['accept', 'cancel'],
+                      },
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
+
+            {/* Issue Details Section */}
+            <Paper sx={sectionContainerStyle}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                📝 Issue Details
+              </Typography>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                {/* Before Issue Images - Multiple Upload */}
+                <MultipleImageUploadField
+                  field="beforeIssueImages"
+                  label="Before Issue Images"
+                  images={beforeIssueImages}
+                  previews={beforeIssuePreviews}
+                  onUpload={handleBeforeIssueUpload}
+                  onRemove={handleRemoveBeforeIssue}
+                  icon={PhotoCamera}
+                />
+
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  label="Issue Reported Description"
+                  value={formData.issueReportedDescription || ''}
+                  onChange={(e) => handleInputChange('issueReportedDescription', e.target.value)}
+                  placeholder="Describe the issue as reported by the user or system..."
+                  sx={fieldStyle}
+                />
+
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  label="Issue Found Description"
+                  value={formData.issueFoundDescription || ''}
+                  onChange={(e) => handleInputChange('issueFoundDescription', e.target.value)}
+                  placeholder="Describe the actual issue found during investigation and diagnosis..."
+                  sx={fieldStyle}
+                />
+
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  label="Action Taken Description"
+                  value={formData.actionTakenDescription || ''}
+                  onChange={(e) => handleInputChange('actionTakenDescription', e.target.value)}
+                  placeholder="Describe the corrective actions taken to resolve the issue..."
+                  sx={fieldStyle}
+                />
+
+                {/* After Action Images - Multiple Upload */}
+                <MultipleImageUploadField
+                  field="afterActionImages"
+                  label="After Action Images"
+                  images={afterActionImages}
+                  previews={afterActionPreviews}
+                  onUpload={handleAfterActionUpload}
+                  onRemove={handleRemoveAfterAction}
+                  icon={Build}
+                />
+              </Box>
+            </Paper>
+
+            {/* Material Used Section */}
+            <Paper sx={sectionContainerStyle}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                <Settings sx={{ marginRight: 1, verticalAlign: 'middle' }} />
+                Material Used Information
+              </Typography>
+
+              {/* Action Buttons */}
+              <Box sx={{
+                display: 'flex',
+                gap: 2,
+                marginTop: 2,
+                marginBottom: 2,
+                flexWrap: 'wrap'
+              }}>
+                <Button
+                  startIcon={<AddIcon />}
+                  onClick={handleAddMaterialUsedRow}
+                  variant="contained"
+                  sx={{
+                    background: RMSTheme.components.button.primary.background,
+                    color: RMSTheme.components.button.primary.text,
+                    '&:hover': {
+                      background: RMSTheme.components.button.primary.hover
+                    }
+                  }}
+                >
+                  Add Material Used Row
+                </Button>
+
+                <Button
+                  onClick={handleMaterialUsedClearValuesConfirm}
+                  disabled={materialUsedData.length === 0 && materialUsedOldSerialImages.length === 0 && materialUsedNewSerialImages.length === 0}
+                  variant="contained"
+                  sx={{
+                    background: '#f39c12',
+                    color: '#FFFFFF',
+                    '&:hover': {
+                      background: '#e67e22'
+                    },
+                    '&:disabled': {
+                      background: '#cccccc',
+                      color: '#666666'
+                    }
+                  }}
+                >
+                  Clear Values
+                </Button>
+              </Box>
+
+              <Box sx={{ marginTop: 2 }}>
+                <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e0e0' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
+                        <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>Item Description</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>New Serial No</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>Old Serial No</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>Remark</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#2C3E50', padding: '12px 8px' }}>Actions</TableCell>
                       </TableRow>
-                    ) : (
-                      materialUsedData.map((row, index) => (
-                        <TableRow 
-                          key={index} 
-                          sx={{ 
-                            '&:hover': { backgroundColor: '#f5f5f5' }
-                          }}
-                        >
-                          {/* Item Description */}
-                          <TableCell>
-                            <TextField
-                              size="small"
-                              value={row.ItemDescription}
-                              onChange={(e) => handleMaterialUsedChange(index, 'ItemDescription', e.target.value)}
-                              placeholder="Enter item description"
-                              sx={{
-                                minWidth: '200px',
-                                '& .MuiOutlinedInput-root': {
-                                  backgroundColor: '#fafafa',
-                                  '& fieldset': {
-                                    borderColor: '#d0d0d0'
-                                  },
-                                  '&:hover fieldset': {
-                                    borderColor: '#2C3E50'
-                                  },
-                                  '&.Mui-focused fieldset': {
-                                    borderColor: '#3498DB'
-                                  }
-                                }
-                              }}
-                            />
-                          </TableCell>
-                          
-                          {/* New Serial No */}
-                          <TableCell>
-                            <TextField
-                              size="small"
-                              value={row.NewSerialNo}
-                              onChange={(e) => handleMaterialUsedChange(index, 'NewSerialNo', e.target.value)}
-                              placeholder="Enter new serial no"
-                              sx={{
-                                minWidth: '150px',
-                                '& .MuiOutlinedInput-root': {
-                                  backgroundColor: '#fafafa',
-                                  '& fieldset': {
-                                    borderColor: '#d0d0d0'
-                                  },
-                                  '&:hover fieldset': {
-                                    borderColor: '#2C3E50'
-                                  },
-                                  '&.Mui-focused fieldset': {
-                                    borderColor: '#3498DB'
-                                  }
-                                }
-                              }}
-                            />
-                          </TableCell>
-                          
-                          {/* Old Serial No */}
-                          <TableCell>
-                            <TextField
-                              size="small"
-                              value={row.OldSerialNo}
-                              onChange={(e) => handleMaterialUsedChange(index, 'OldSerialNo', e.target.value)}
-                              placeholder="Enter old serial no"
-                              sx={{
-                                minWidth: '150px',
-                                '& .MuiOutlinedInput-root': {
-                                  backgroundColor: '#fafafa',
-                                  '& fieldset': {
-                                    borderColor: '#d0d0d0'
-                                  },
-                                  '&:hover fieldset': {
-                                    borderColor: '#2C3E50'
-                                  },
-                                  '&.Mui-focused fieldset': {
-                                    borderColor: '#3498DB'
-                                  }
-                                }
-                              }}
-                            />
-                          </TableCell>
-                          
-                          {/* Remark */}
-                          <TableCell>
-                            <TextField
-                              size="small"
-                              value={row.Remark}
-                              onChange={(e) => handleMaterialUsedChange(index, 'Remark', e.target.value)}
-                              placeholder="Enter remark"
-                              sx={{
-                                minWidth: '200px',
-                                '& .MuiOutlinedInput-root': {
-                                  backgroundColor: '#fafafa',
-                                  '& fieldset': {
-                                    borderColor: '#d0d0d0'
-                                  },
-                                  '&:hover fieldset': {
-                                    borderColor: '#2C3E50'
-                                  },
-                                  '&.Mui-focused fieldset': {
-                                    borderColor: '#3498DB'
-                                  }
-                                }
-                              }}
-                            />
-                          </TableCell>
-                          
-                          {/* Actions */}
-                          <TableCell>
-                            <IconButton
-                              onClick={() => handleRemoveMaterialUsedRow(index)}
-                              size="small"
-                              sx={{
-                                color: '#e74c3c',
-                                '&:hover': {
-                                  backgroundColor: '#fdf2f2'
-                                }
-                              }}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
+                    </TableHead>
+                    <TableBody>
+                      {materialUsedData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} sx={{ textAlign: 'center', padding: '24px', color: '#6c757d' }}>
+                            No material used data added yet. Click "Add Material Used Row" to get started.
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
+                      ) : (
+                        materialUsedData.map((row, index) => (
+                          <TableRow
+                            key={index}
+                            sx={{
+                              '&:hover': { backgroundColor: '#f5f5f5' }
+                            }}
+                          >
+                            {/* Item Description */}
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.ItemDescription}
+                                onChange={(e) => handleMaterialUsedChange(index, 'ItemDescription', e.target.value)}
+                                placeholder="Enter item description"
+                                sx={{
+                                  minWidth: '200px',
+                                  '& .MuiOutlinedInput-root': {
+                                    backgroundColor: '#fafafa',
+                                    '& fieldset': {
+                                      borderColor: '#d0d0d0'
+                                    },
+                                    '&:hover fieldset': {
+                                      borderColor: '#2C3E50'
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                      borderColor: '#3498DB'
+                                    }
+                                  }
+                                }}
+                              />
+                            </TableCell>
 
-            {/* Material Used Images Upload - Two Sections */}
-            <Box sx={{ marginTop: 3 }}>
+                            {/* New Serial No */}
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.NewSerialNo}
+                                onChange={(e) => handleMaterialUsedChange(index, 'NewSerialNo', e.target.value)}
+                                placeholder="Enter new serial no"
+                                sx={{
+                                  minWidth: '150px',
+                                  '& .MuiOutlinedInput-root': {
+                                    backgroundColor: '#fafafa',
+                                    '& fieldset': {
+                                      borderColor: '#d0d0d0'
+                                    },
+                                    '&:hover fieldset': {
+                                      borderColor: '#2C3E50'
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                      borderColor: '#3498DB'
+                                    }
+                                  }
+                                }}
+                              />
+                            </TableCell>
+
+                            {/* Old Serial No */}
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.OldSerialNo}
+                                onChange={(e) => handleMaterialUsedChange(index, 'OldSerialNo', e.target.value)}
+                                placeholder="Enter old serial no"
+                                sx={{
+                                  minWidth: '150px',
+                                  '& .MuiOutlinedInput-root': {
+                                    backgroundColor: '#fafafa',
+                                    '& fieldset': {
+                                      borderColor: '#d0d0d0'
+                                    },
+                                    '&:hover fieldset': {
+                                      borderColor: '#2C3E50'
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                      borderColor: '#3498DB'
+                                    }
+                                  }
+                                }}
+                              />
+                            </TableCell>
+
+                            {/* Remark */}
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.Remark}
+                                onChange={(e) => handleMaterialUsedChange(index, 'Remark', e.target.value)}
+                                placeholder="Enter remark"
+                                sx={{
+                                  minWidth: '200px',
+                                  '& .MuiOutlinedInput-root': {
+                                    backgroundColor: '#fafafa',
+                                    '& fieldset': {
+                                      borderColor: '#d0d0d0'
+                                    },
+                                    '&:hover fieldset': {
+                                      borderColor: '#2C3E50'
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                      borderColor: '#3498DB'
+                                    }
+                                  }
+                                }}
+                              />
+                            </TableCell>
+
+                            {/* Actions */}
+                            <TableCell>
+                              <IconButton
+                                onClick={() => handleRemoveMaterialUsedRow(index)}
+                                size="small"
+                                sx={{
+                                  color: '#e74c3c',
+                                  '&:hover': {
+                                    backgroundColor: '#fdf2f2'
+                                  }
+                                }}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+
+              {/* Material Used Images Upload - Two Sections */}
+              <Box sx={{ marginTop: 3 }}>
                 {/* Old Serial No Images */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-                  <MultipleImageUploadField 
+                  <MultipleImageUploadField
                     field="materialUsedOldSerialImages"
                     label="Old Serial No Images"
                     images={materialUsedOldSerialImages}
@@ -1222,10 +1269,10 @@ const CMReportForm = ({
                     icon={Settings}
                   />
                 </Box>
-                
+
                 {/* New Serial No Images */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-                  <MultipleImageUploadField 
+                  <MultipleImageUploadField
                     field="materialUsedNewSerialImages"
                     label="New Serial No Images"
                     images={materialUsedNewSerialImages}
@@ -1235,210 +1282,210 @@ const CMReportForm = ({
                     icon={Settings}
                   />
                 </Box>
-            </Box>
-          </Paper>
-          
-          {/* Remark Section */}
-          <Paper sx={{
-            ...sectionContainerStyle,
-            background: '#ffffff'
-          }}>
-            <Typography variant="h5" sx={sectionHeaderStyle}>
-              📝 Remark
-            </Typography>
-            
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                label="Additional Remarks"
-                value={formData.Remark || ''}
-                onChange={(e) => handleInputChange('Remark', e.target.value)}
-                placeholder="Enter any additional remarks or comments..."
-                sx={fieldStyle}
-              />
-            </Box>
-          </Paper>
+              </Box>
+            </Paper>
 
-          {/* Approval Information Section */}
-          <Paper sx={{
-            ...sectionContainerStyle,
-            background: '#ffffff'
-          }}>
-            <Typography variant="h5" sx={sectionHeaderStyle}>
-              ✅ Approval Information
-            </Typography>
-            
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-              <TextField
-                fullWidth
-                label="Attended By"
-                value={formData.attendedBy || ''}
-                onChange={(e) => handleInputChange('attendedBy', e.target.value)}
-                placeholder="Enter the name of the person who attended to this issue..."
-                sx={fieldStyle}
-              />
-              
-              <TextField
-                fullWidth
-                label="Approved By"
-                value={formData.approvedBy || ''}
-                onChange={(e) => handleInputChange('approvedBy', e.target.value)}
-                placeholder="Enter the name of the person who approved this report..."
-                sx={fieldStyle}
-              />
-            </Box>
-          </Paper>
-          
-          {/* Reference Information Section */}
-          <Paper sx={{
-            ...sectionContainerStyle,
-            background: '#ffffff'
-          }}>
-            <Typography variant="h5" sx={sectionHeaderStyle}>
-              🔗 Reference Information
-            </Typography>
-            
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-              <FormControl fullWidth sx={fieldStyle}>
-                <InputLabel id="further-action-taken-label">Further Action Taken</InputLabel>
-                <Select
-                  labelId="further-action-taken-label"
-                  value={formData.furtherActionTakenID || ''}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    const selectedOption = warehouseData.furtherActions.find(option => option.id === selectedId);
-                    handleInputChange('furtherActionTakenID', selectedId);
-                    handleInputChange('furtherActionTakenName', selectedOption ? (selectedOption.name || selectedOption.description || `Action ${selectedOption.id}`) : '');
-                  }}
-                  label="Further Action Taken"
-                  disabled={loading}
-                >
-                  <MenuItem value="">
-                    <em>Select Further Action Taken</em>
-                  </MenuItem>
-                  {warehouseData.furtherActions.map((option) => (
-                    <MenuItem key={option.id} value={option.id}>
-                      {option.name || option.description || `Action ${option.id}`}
+            {/* Remark Section */}
+            <Paper sx={{
+              ...sectionContainerStyle,
+              background: '#ffffff'
+            }}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                📝 Remark
+              </Typography>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  label="Additional Remarks"
+                  value={formData.Remark || ''}
+                  onChange={(e) => handleInputChange('Remark', e.target.value)}
+                  placeholder="Enter any additional remarks or comments..."
+                  sx={fieldStyle}
+                />
+              </Box>
+            </Paper>
+
+            {/* Approval Information Section */}
+            <Paper sx={{
+              ...sectionContainerStyle,
+              background: '#ffffff'
+            }}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                ✅ Approval Information
+              </Typography>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Attended By"
+                  value={formData.attendedBy || ''}
+                  onChange={(e) => handleInputChange('attendedBy', e.target.value)}
+                  placeholder="Enter the name of the person who attended to this issue..."
+                  sx={fieldStyle}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Approved By"
+                  value={formData.approvedBy || ''}
+                  onChange={(e) => handleInputChange('approvedBy', e.target.value)}
+                  placeholder="Enter the name of the person who approved this report..."
+                  sx={fieldStyle}
+                />
+              </Box>
+            </Paper>
+
+            {/* Reference Information Section */}
+            <Paper sx={{
+              ...sectionContainerStyle,
+              background: '#ffffff'
+            }}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                🔗 Reference Information
+              </Typography>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                <FormControl fullWidth sx={fieldStyle}>
+                  <InputLabel id="further-action-taken-label">Further Action Taken</InputLabel>
+                  <Select
+                    labelId="further-action-taken-label"
+                    value={formData.furtherActionTakenID || ''}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      const selectedOption = warehouseData.furtherActions.find(option => option.id === selectedId);
+                      handleInputChange('furtherActionTakenID', selectedId);
+                      handleInputChange('furtherActionTakenName', selectedOption ? (selectedOption.name || selectedOption.description || `Action ${selectedOption.id}`) : '');
+                    }}
+                    label="Further Action Taken"
+                    disabled={loading}
+                  >
+                    <MenuItem value="">
+                      <em>Select Further Action Taken</em>
                     </MenuItem>
-                  ))}
-                </Select>
-                <FormHelperText>
-                  {loading ? 'Loading options...' : 'Select from FurtherActionTakenWarehouse'}
-                </FormHelperText>
-              </FormControl>
-              
-              <FormControl fullWidth sx={fieldStyle}>
-                <InputLabel id="form-status-label">Form Status</InputLabel>
-                <Select
-                  labelId="form-status-label"
-                  value={formData.formstatusID || ''}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    const selectedOption = warehouseData.formStatuses.find(option => option.id === selectedId);
-                    handleInputChange('formstatusID', selectedId);
-                    handleInputChange('formStatusName', selectedOption ? (selectedOption.status || selectedOption.name || `Status ${selectedOption.id}`) : '');
-                  }}
-                  label="Form Status"
-                  disabled={loading}
-                >
-                  <MenuItem value="">
-                    <em>Select Form Status</em>
-                  </MenuItem>
-                  {warehouseData.formStatuses.map((option) => (
-                    <MenuItem key={option.id} value={option.id}>
-                      {option.status || option.name || `Status ${option.id}`}
+                    {warehouseData.furtherActions.map((option) => (
+                      <MenuItem key={option.id} value={option.id}>
+                        {option.name || option.description || `Action ${option.id}`}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>
+                    {loading ? 'Loading options...' : 'Select from FurtherActionTakenWarehouse'}
+                  </FormHelperText>
+                </FormControl>
+
+                <FormControl fullWidth sx={fieldStyle}>
+                  <InputLabel id="form-status-label">Form Status</InputLabel>
+                  <Select
+                    labelId="form-status-label"
+                    value={formData.formstatusID || ''}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      const selectedOption = warehouseData.formStatuses.find(option => option.id === selectedId);
+                      handleInputChange('formstatusID', selectedId);
+                      handleInputChange('formStatusName', selectedOption ? (selectedOption.status || selectedOption.name || `Status ${selectedOption.id}`) : '');
+                    }}
+                    label="Form Status"
+                    disabled={loading}
+                  >
+                    <MenuItem value="">
+                      <em>Select Form Status</em>
                     </MenuItem>
-                  ))}
-                </Select>
-                <FormHelperText>
-                  {loading ? 'Loading options...' : 'Select from FormStatusWarehouse'}
-                </FormHelperText>
-              </FormControl>
-            </Box>
-          </Paper>
-          
-          {/* Navigation Buttons Section */}
-          <Paper sx={{
-            ...sectionContainerStyle,
-            background: '#ffffff',
-            marginBottom: 0
-          }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Button
-                variant="contained"
-                onClick={onBack}
-                sx={{
-                  background: RMSTheme.components.button.primary.background,
-                  color: RMSTheme.components.button.primary.text,
-                  padding: '12px 32px',
-                  borderRadius: RMSTheme.borderRadius.small,
-                  border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                  boxShadow: RMSTheme.components.button.primary.shadow,
-                  '&:hover': {
-                    background: RMSTheme.components.button.primary.hover
-                  }
-                }}
-              >
-                ← Back
-              </Button>
-              
-              <Button
-                variant="contained"
-                onClick={handleNext}
-                sx={{
-                  background: RMSTheme.components.button.primary.background,
-                  color: RMSTheme.components.button.primary.text,
-                  padding: '12px 32px',
-                  borderRadius: RMSTheme.borderRadius.small,
-                  border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                  boxShadow: RMSTheme.components.button.primary.shadow,
-                  '&:hover': {
-                    background: RMSTheme.components.button.primary.hover
-                  }
-                }}
-              >
-                Next: Review →
-              </Button>
-            </Box>
-          </Paper>
-          
-          {/* Material Used Clear Values Confirmation Modal */}
-          <Dialog
-            open={showMaterialUsedClearConfirm}
-            onClose={() => setShowMaterialUsedClearConfirm(false)}
-            aria-labelledby="material-used-clear-dialog-title"
-            aria-describedby="material-used-clear-dialog-description"
-          >
-            <DialogTitle id="material-used-clear-dialog-title">
-              Clear Material Used Values
-            </DialogTitle>
-            <DialogContent>
-              <DialogContentText id="material-used-clear-dialog-description">
-                Are you sure you want to clear all values in the Material Used table? This action will keep the table structure but remove all entered data.
-              </DialogContentText>
-            </DialogContent>
-            <DialogActions>
-              <Button 
-                onClick={() => setShowMaterialUsedClearConfirm(false)} 
-                color="primary"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleMaterialUsedClearValuesExecute} 
-                color="warning" 
-                variant="contained"
-              >
-                Clear Values
-              </Button>
-            </DialogActions>
-          </Dialog>
+                    {warehouseData.formStatuses.map((option) => (
+                      <MenuItem key={option.id} value={option.id}>
+                        {option.status || option.name || `Status ${option.id}`}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>
+                    {loading ? 'Loading options...' : 'Select from FormStatusWarehouse'}
+                  </FormHelperText>
+                </FormControl>
+              </Box>
+            </Paper>
+
+            {/* Navigation Buttons Section */}
+            <Paper sx={{
+              ...sectionContainerStyle,
+              background: '#ffffff',
+              marginBottom: 0
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Button
+                  variant="contained"
+                  onClick={onBack}
+                  sx={{
+                    background: RMSTheme.components.button.primary.background,
+                    color: RMSTheme.components.button.primary.text,
+                    padding: '12px 32px',
+                    borderRadius: RMSTheme.borderRadius.small,
+                    border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                    boxShadow: RMSTheme.components.button.primary.shadow,
+                    '&:hover': {
+                      background: RMSTheme.components.button.primary.hover
+                    }
+                  }}
+                >
+                  ← Back
+                </Button>
+
+                <Button
+                  variant="contained"
+                  onClick={handleNext}
+                  sx={{
+                    background: RMSTheme.components.button.primary.background,
+                    color: RMSTheme.components.button.primary.text,
+                    padding: '12px 32px',
+                    borderRadius: RMSTheme.borderRadius.small,
+                    border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                    boxShadow: RMSTheme.components.button.primary.shadow,
+                    '&:hover': {
+                      background: RMSTheme.components.button.primary.hover
+                    }
+                  }}
+                >
+                  Next: Review →
+                </Button>
+              </Box>
+            </Paper>
+
+            {/* Material Used Clear Values Confirmation Modal */}
+            <Dialog
+              open={showMaterialUsedClearConfirm}
+              onClose={() => setShowMaterialUsedClearConfirm(false)}
+              aria-labelledby="material-used-clear-dialog-title"
+              aria-describedby="material-used-clear-dialog-description"
+            >
+              <DialogTitle id="material-used-clear-dialog-title">
+                Clear Material Used Values
+              </DialogTitle>
+              <DialogContent>
+                <DialogContentText id="material-used-clear-dialog-description">
+                  Are you sure you want to clear all values in the Material Used table? This action will keep the table structure but remove all entered data.
+                </DialogContentText>
+              </DialogContent>
+              <DialogActions>
+                <Button
+                  onClick={() => setShowMaterialUsedClearConfirm(false)}
+                  color="primary"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleMaterialUsedClearValuesExecute}
+                  color="warning"
+                  variant="contained"
+                >
+                  Clear Values
+                </Button>
+              </DialogActions>
+            </Dialog>
           </Box>
         </Paper>
-      </Box>
-    </LocalizationProvider>
+      </Box >
+    </LocalizationProvider >
   );
 };
 

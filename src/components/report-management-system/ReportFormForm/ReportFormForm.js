@@ -40,22 +40,22 @@ const ReportFormForm = () => {
   const [beforeIssueImages, setBeforeIssueImages] = useState([]);
   const [afterActionImages, setAfterActionImages] = useState([]);
   const [formStatusOptions, setFormStatusOptions] = useState([]);
-  
+
   // Add toast notification state
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-  
+
   // Add notification state for CM reports
   const [notification, setNotification] = useState({
     open: false,
     message: '',
     severity: 'success'
   });
-  
+
   // Add CM material used data state management
   const [materialUsedData, setMaterialUsedData] = useState([]);
   const [materialUsedOldSerialImages, setMaterialUsedOldSerialImages] = useState([]);
   const [materialUsedNewSerialImages, setMaterialUsedNewSerialImages] = useState([]);
-  
+
   // Add RTU PM data state management
   const [rtuPMData, setRtuPMData] = useState({
     pmMainRtuCabinetImages: [],
@@ -67,7 +67,7 @@ const ReportFormForm = () => {
     pmRTUCabinetCoolingData: [],
     pmDVREquipmentData: []
   });
-  
+
   const [formData, setFormData] = useState({
     reportFormTypeID: '',
     systemNameWarehouseID: '',
@@ -128,12 +128,12 @@ const ReportFormForm = () => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
 
-    
+
   // Updated RTU PM detection logic
-  const isRTUPreventativeMaintenance = formData.pmReportFormTypeName === 'RTU' || 
-    (formData.reportFormTypeID && reportFormTypes.some(type => 
-      type.id === formData.reportFormTypeID && 
-      type.name?.toLowerCase().includes('preventative') && 
+  const isRTUPreventativeMaintenance = formData.pmReportFormTypeName === 'RTU' ||
+    (formData.reportFormTypeID && reportFormTypes.some(type =>
+      type.id === formData.reportFormTypeID &&
+      type.name?.toLowerCase().includes('preventative') &&
       type.name?.toLowerCase().includes('rtu')
     ));
 
@@ -159,20 +159,20 @@ const ReportFormForm = () => {
   const handleSubmit = async (finalReportFile = null) => {
     // Prevent double submission immediately
     if (loading) return;
-    
+
     setLoading(true);
     setError('');
     setSuccessMessage('');
-    
+
     try {
       // Check if this is a CM report form
       const isCorrectiveMaintenance = reportFormTypes.find(type => type.id === formData.reportFormTypeID)?.name?.toLowerCase().includes('corrective');
 
       // Check if this is a PM report form (generic check first)
       // Remove the hardcoded ID check (=== 1) since IDs are UUIDs
-      const isPreventativeMaintenance = 
+      const isPreventativeMaintenance =
         reportFormTypes.find(type => type.id === formData.reportFormTypeID)?.name?.toLowerCase().includes('preventative');
-      
+
       // More specific check for RTU PM reports
       const isRTUPreventativeMaintenance = isPreventativeMaintenance && (
         formData.pmReportFormTypeName?.toLowerCase() === 'rtu' ||
@@ -186,9 +186,9 @@ const ReportFormForm = () => {
         // Fallback: check if we're in Server PM context by checking if serverPMData has content
         (formData.serverHealthData || formData.hardDriveHealthData || formData.diskUsageData)
       );
-            
+
       let result;
-      
+
       if (isCorrectiveMaintenance) {
         // Add user ID to formData before submission
         const formDataWithUser = {
@@ -196,27 +196,27 @@ const ReportFormForm = () => {
           userId: user.id
         };
         result = await submitCMReportForm(
-          formDataWithUser, 
-          beforeIssueImages, 
+          formDataWithUser,
+          beforeIssueImages,
           afterActionImages,
           materialUsedData,
           materialUsedOldSerialImages,
           materialUsedNewSerialImages
         );
         // console.log('CM Report Form submitted successfully:', result);
-        
+
         // Show success toast for CM reports
         setNotification({
           open: true,
           message: 'CM Report Form created successfully!',
           severity: 'success'
         });
-        
+
         // Navigate after a short delay to show the toast
         setTimeout(() => {
           navigate('/report-management-system/report-forms');
         }, 2000);
-        
+
         return true;
       } else if (isServerPreventativeMaintenance) {
         // console.log("Server Preventative Maintenance is working");
@@ -236,30 +236,42 @@ const ReportFormForm = () => {
             return false;
           }
         }
-        
+
         // Show success toast for Server PM reports
         setShowSuccessToast(true);
-        
+
         // Navigate after a short delay to show the toast
         setTimeout(() => {
           navigate('/report-management-system/report-forms');
         }, 2000);
-        
+
         return true;
       } else if (isRTUPreventativeMaintenance) {
-        // console.log("RTU Preventative Maintenance is working");
         // Handle RTU PM report submission
         result = await submitRTUPMReportForm(formData, rtuPMData, user);
-        // console.log('RTU PM Report Form submitted successfully:', result);
-        
+
+        if (finalReportFile) {
+          const newReportFormId = result?.reportForm?.id || result?.reportForm?.ID;
+          if (!newReportFormId) {
+            setError('Report saved, but failed to retrieve the ReportForm ID for final report upload.');
+            return false;
+          }
+          try {
+            await uploadFinalReportAttachment(newReportFormId, finalReportFile);
+          } catch (uploadError) {
+            setError(uploadError?.response?.data?.message || 'Failed to upload final report.');
+            return false;
+          }
+        }
+
         // Show success toast for RTU PM reports
         setShowSuccessToast(true);
-        
+
         // Navigate after a short delay to show the toast
         setTimeout(() => {
           navigate('/report-management-system/report-forms');
         }, 2000);
-        
+
         return true;
       } else if (isPreventativeMaintenance) {
         // console.log("Other PM type (not RTU) - not implemented yet");
@@ -280,12 +292,12 @@ const ReportFormForm = () => {
         result = await createReportForm(completeFormData);
         console.log('Report Form created successfully:', result);
       }
-      
+
       // Update formData with the returned JobNo
       if (result && result.jobNo) {
         setFormData(prev => ({ ...prev, jobNo: result.jobNo }));
         setSuccessMessage(`Report form created successfully! Job No: ${result.jobNo}`);
-        
+
         // Show success message for 3 seconds before navigating
         setTimeout(() => {
           navigate('/report-management-system/report-forms');
@@ -297,9 +309,9 @@ const ReportFormForm = () => {
           navigate('/report-management-system/report-forms');
         }, 2000);
       }
-      
+
       return true;
-      
+
     } catch (error) {
       // console.error('Error creating report form:', error);
       setError('Failed to create report form: ' + (error.message || 'Unknown error'));
@@ -322,18 +334,18 @@ const ReportFormForm = () => {
     setMaterialUsedNewSerialImages(newSerialImages);
   };
 
-// Add Server PM data state management
-const [serverPMData, setServerPMData] = useState({
-  serverHealthData: [{ serverName: '', result: '' }],
-  serverHealthImages: [],
-  serverHealthPreviews: [],
-  remarks: ''
-});
+  // Add Server PM data state management
+  const [serverPMData, setServerPMData] = useState({
+    serverHealthData: [{ serverName: '', result: '' }],
+    serverHealthImages: [],
+    serverHealthPreviews: [],
+    remarks: ''
+  });
 
-// Add function to handle Server PM data update
-const handleServerPMDataUpdate = (data) => {
-  setServerPMData(data);
-};
+  // Add function to handle Server PM data update
+  const handleServerPMDataUpdate = (data) => {
+    setServerPMData(data);
+  };
 
   // Handle close notification
   const handleCloseNotification = () => {
@@ -341,16 +353,16 @@ const handleServerPMDataUpdate = (data) => {
   };
 
   const getStepContent = (step) => {
-    const isCorrectiveMaintenance = formData.reportFormTypeID === 2 || 
+    const isCorrectiveMaintenance = formData.reportFormTypeID === 2 ||
       reportFormTypes.find(type => type.id === formData.reportFormTypeID)?.name?.toLowerCase().includes('corrective');
-      
-    const isRTUPreventativeMaintenance = formData.pmReportFormTypeName && 
+
+    const isRTUPreventativeMaintenance = formData.pmReportFormTypeName &&
       formData.pmReportFormTypeName.toLowerCase() === 'rtu';
-    
-    const isServerPreventativeMaintenance = formData.pmReportFormTypeName && 
+
+    const isServerPreventativeMaintenance = formData.pmReportFormTypeName &&
       formData.pmReportFormTypeName.toLowerCase().includes('server');
-    
-    const isLVPreventativeMaintenance = formData.pmReportFormTypeName && 
+
+    const isLVPreventativeMaintenance = formData.pmReportFormTypeName &&
       formData.pmReportFormTypeName.toLowerCase() === 'lv pm';
 
     const isPreventativeMaintenance = isRTUPreventativeMaintenance || isServerPreventativeMaintenance || isLVPreventativeMaintenance;
@@ -488,18 +500,18 @@ const handleServerPMDataUpdate = (data) => {
           );
         }
         if (isPreventativeMaintenance) {
-            // Other PM types - keep existing placeholder
-            return (
-              <Box sx={{ padding: 4, textAlign: 'center' }}>
-                <Typography variant="h6" color="text.secondary">
-                  PM Review component not implemented yet.
-                </Typography>
-                <Button variant="outlined" onClick={handleBack} sx={{ marginTop: 2 }}>
-                  Back
-                </Button>
-              </Box>
-            );
-          }
+          // Other PM types - keep existing placeholder
+          return (
+            <Box sx={{ padding: 4, textAlign: 'center' }}>
+              <Typography variant="h6" color="text.secondary">
+                PM Review component not implemented yet.
+              </Typography>
+              <Button variant="outlined" onClick={handleBack} sx={{ marginTop: 2 }}>
+                Back
+              </Button>
+            </Box>
+          );
+        }
         return (
           <Box sx={{ padding: 4, textAlign: 'center' }}>
             <Typography variant="h6" color="text.secondary">
@@ -521,14 +533,14 @@ const handleServerPMDataUpdate = (data) => {
   };
 
   return (
-    <Box sx={{ 
+    <Box sx={{
       padding: 3,
       background: 'white',
       minHeight: '100vh'
     }}>
-      <Paper 
+      <Paper
         elevation={0}
-        sx={{ 
+        sx={{
           padding: 4,
           background: 'white',
           borderRadius: 2,
@@ -537,43 +549,34 @@ const handleServerPMDataUpdate = (data) => {
         }}
       >
         {/* Header with JobNo in top right corner */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 3
         }}>
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              color: '#2C3E50',
-              fontWeight: 'bold'
-            }}
-          >
-            Create New Report Form
-          </Typography>
-          
           {/* JobNo display in top right corner */}
           <Box sx={{
             backgroundColor: '#f5f5f5',
             padding: '8px 16px',
             borderRadius: '8px',
-            border: '1px solid #ddd'
+            border: '1px solid #ddd',
+            alignItems: 'center'
           }}>
-            <Typography 
-              variant="body1" 
-              sx={{ 
+            <Typography
+              variant="body1"
+              sx={{
                 color: '#2C3E50',
                 fontWeight: 'normal',
                 fontSize: '14px',
                 display: 'inline'
               }}
             >
-              Job No: 
+              Job No:
             </Typography>
-            <Typography 
-              variant="h4" 
-              sx={{ 
+            <Typography
+              variant="h4"
+              sx={{
                 color: '#FF0000',
                 fontWeight: 'bold',
                 fontSize: '24px',
@@ -586,7 +589,7 @@ const handleServerPMDataUpdate = (data) => {
           </Box>
         </Box>
 
-        <Stepper activeStep={activeStep} sx={{ 
+        <Stepper activeStep={activeStep} sx={{
           marginBottom: 4,
           '& .MuiStepLabel-root .Mui-completed': {
             color: '#27AE60'
@@ -612,7 +615,7 @@ const handleServerPMDataUpdate = (data) => {
         </Stepper>
 
         {error && (
-          <Alert severity="error" sx={{ 
+          <Alert severity="error" sx={{
             marginBottom: 2,
             backgroundColor: '#ffebee',
             color: '#c62828'
@@ -622,7 +625,7 @@ const handleServerPMDataUpdate = (data) => {
         )}
 
         {successMessage && (
-          <Alert severity="success" sx={{ 
+          <Alert severity="success" sx={{
             marginBottom: 2,
             backgroundColor: '#e8f5e8',
             color: '#2e7d32',

@@ -19,7 +19,8 @@ import {
   Alert,
   Modal,
   IconButton,
-  Snackbar
+  Snackbar,
+  TextField
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -30,12 +31,20 @@ import {
   RemoveCircle as RemoveCircleIcon,
   AccessTime,
   Close as CloseIcon,
-  Print as PrintIcon
+  Print as PrintIcon,
+  AssignmentTurnedIn as AssignmentTurnedInIcon,
+  ArrowBackIosNew as ArrowBackIosNewIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import RMSTheme from '../../theme-resource/RMSTheme';
-import { getRTUPMReportForm, generateRTUPMReportPdf } from '../../api-services/reportFormService';
+import {
+  getRTUPMReportForm,
+  generateRTUPMReportPdf,
+  getFinalReportsByReportForm,
+  downloadFinalReportAttachment
+} from '../../api-services/reportFormService';
 import { API_BASE_URL } from '../../../config/apiConfig';
+import warehouseService from '../../api-services/warehouseService';
 
 // Styling constants matching RTUPMReviewReportForm
 const sectionContainer = {
@@ -62,6 +71,19 @@ const fieldContainer = {
   border: '1px solid #e0e0e0'
 };
 
+const fieldStyle = {
+  '& .MuiOutlinedInput-root': {
+    backgroundColor: '#f5f5f5',
+    '& fieldset': {
+      borderColor: '#d0d0d0'
+    }
+  },
+  '& .MuiInputBase-input.Mui-disabled': {
+    color: '#333',
+    WebkitTextFillColor: '#333'
+  }
+};
+
 // Helper functions matching RTUPMReviewReportForm
 // Updated formatDate function to show both date and time
 const formatDate = (dateString) => {
@@ -84,9 +106,9 @@ const getStatusChip = (status) => {
       />
     );
   }
-  
+
   const statusStr = status.toString();
-  
+
   if (statusStr === 'Acceptable') {
     return (
       <Chip
@@ -170,6 +192,17 @@ const getStatusChip = (status) => {
   }
 };
 
+const getFieldValue = (item, ...keys) => {
+  if (!item) return '';
+  for (const key of keys) {
+    const value = item[key];
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+  return '';
+};
+
 
 // Image preview component matching RTUPMReviewReportForm
 // Image preview component
@@ -207,7 +240,7 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon, r
         {images.map((image, index) => {
           // Handle different image data structures - following News system pattern
           let imageUrl;
-          
+
           if (image instanceof File) {
             // For File objects (during upload)
             imageUrl = URL.createObjectURL(image);
@@ -234,11 +267,11 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon, r
             console.warn('Unable to determine image URL for:', image);
             return null;
           }
-          
+
           return (
             <Grid item xs={6} sm={4} md={3} key={index}>
-              <Card 
-                sx={{ 
+              <Card
+                sx={{
                   position: 'relative',
                   cursor: 'pointer',
                   transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
@@ -264,8 +297,8 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon, r
                     e.target.style.display = 'none';
                   }}
                 />
-                <Typography 
-                  variant="caption" 
+                <Typography
+                  variant="caption"
                   sx={{
                     position: 'absolute',
                     bottom: 4,
@@ -346,16 +379,36 @@ const RTUPMReportFormDetails = () => {
   const [error, setError] = useState(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
+  const [formStatusName, setFormStatusName] = useState('');
+  const [formStatusId, setFormStatusId] = useState('');
+  const [finalReports, setFinalReports] = useState([]);
+  const [finalReportsLoading, setFinalReportsLoading] = useState(false);
+  const [formStatusOptions, setFormStatusOptions] = useState([]);
   const reportTitle = formData?.pmReportFormRTU?.reportTitle || 'RTU Preventive Maintenance Report';
+  const normalizedFormStatus = (formStatusName || '').trim().toLowerCase();
+  const isFormStatusClosed = normalizedFormStatus === 'close';
+  const formStatusDisplay =
+    formStatusName ||
+    formData?.pmReportFormRTU?.formstatusName ||
+    formData?.pmReportFormRTU?.formstatusID ||
+    'Not specified';
 
-    useEffect(() => {
+  useEffect(() => {
     const fetchReportDetails = async () => {
       try {
         setLoading(true);
         // Use the new RTU PM specific API
         const response = await getRTUPMReportForm(id);
         setFormData(response);
-        
+        const statusId =
+          response.formStatus ||
+          response.formstatusID ||
+          response.pmReportFormRTU?.formstatusID ||
+          response.pmReportFormRTU?.formStatusID ||
+          response.pmReportFormRTU?.formstatus ||
+          '';
+        setFormStatusId(statusId);
+
         // Structure the RTU PM data from the new API response
         // Apply News system pattern: construct image URLs similar to NewsController
         const rtuData = {
@@ -365,24 +418,24 @@ const RTUPMReportFormDetails = () => {
             imageUrl: image.imageName ? `${API_BASE_URL}/api/ReportFormImage/image/${id}/${image.imageName}` : null
           })),
           pmMainRtuCabinetData: response.pmMainRtuCabinet || [],
-          
+
           pmChamberMagneticContactImages: (response.pmChamberMagneticContactImages || []).map(image => ({
             ...image,
             imageUrl: image.imageName ? `${API_BASE_URL}/api/ReportFormImage/image/${id}/${image.imageName}` : null
           })),
           pmChamberMagneticContactData: response.pmChamberMagneticContact || [],
-          
-          pmRTUCabinetCoolingImages: (response.pmrtuCabinetCoolingImages || []).map(image => ({
+
+          pmRTUCabinetCoolingImages: (response.pmrtuCabinetCoolingImages || response.pmRTUCabinetCoolingImages || []).map(image => ({
             ...image,
             imageUrl: image.imageName ? `${API_BASE_URL}/api/ReportFormImage/image/${id}/${image.imageName}` : null
           })),
-          pmrtuCabinetCooling: response.pmrtuCabinetCooling || [],
-          
-          pmDVREquipmentImages: (response.pmdvrEquipmentImages || []).map(image => ({
+          pmRTUCabinetCoolingData: response.pmrtuCabinetCooling || response.pmRTUCabinetCooling || [],
+
+          pmDVREquipmentImages: (response.pmdvrEquipmentImages || response.pmDVREquipmentImages || []).map(image => ({
             ...image,
             imageUrl: image.imageName ? `${API_BASE_URL}/api/ReportFormImage/image/${id}/${image.imageName}` : null
           })),
-          pmDVREquipmentData: response.pmdvrEquipment || []
+          pmDVREquipmentData: response.pmdvrEquipment || response.pmDVREquipment || []
         };
         setRtuPMData(rtuData);
       } catch (err) {
@@ -397,6 +450,53 @@ const RTUPMReportFormDetails = () => {
       fetchReportDetails();
     }
   }, [id]);
+
+  useEffect(() => {
+    const loadStatuses = async () => {
+      try {
+        const statuses = await warehouseService.getFormStatus();
+        setFormStatusOptions(statuses || []);
+      } catch (err) {
+        console.error('Failed to fetch form status options:', err);
+      }
+    };
+
+    loadStatuses();
+  }, []);
+
+  useEffect(() => {
+    if (!formStatusId) return;
+
+    const match = (formStatusOptions || []).find((status) => (status.id || status.ID) === formStatusId);
+    const resolvedName = match?.name || match?.Name || formStatusId;
+    setFormStatusName(resolvedName);
+  }, [formStatusId, formStatusOptions]);
+
+  useEffect(() => {
+    if (!id || !isFormStatusClosed) {
+      setFinalReports([]);
+      return;
+    }
+
+    const fetchFinalReports = async () => {
+      try {
+        setFinalReportsLoading(true);
+        const response = await getFinalReportsByReportForm(id);
+        setFinalReports(response || []);
+      } catch (err) {
+        console.error('Error fetching final reports:', err);
+        setNotification({
+          open: true,
+          message: err.response?.data?.message || err.message || 'Failed to load final reports.',
+          severity: 'error'
+        });
+      } finally {
+        setFinalReportsLoading(false);
+      }
+    };
+
+    fetchFinalReports();
+  }, [id, isFormStatusClosed]);
 
   const handleBack = () => {
     navigate('/report-management-system/report-forms');
@@ -471,6 +571,33 @@ const RTUPMReportFormDetails = () => {
     console.log('Report viewed');
   };
 
+  const handleDownloadFinalReport = async (report) => {
+    if (!report?.id) {
+      return;
+    }
+
+    try {
+      const response = await downloadFinalReportAttachment(report.id);
+      const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const fileName = report.attachmentName || `FinalReport_${formData?.jobNo || 'report'}.pdf`;
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Error downloading final report:', error);
+      setNotification({
+        open: true,
+        message: error.response?.data?.message || error.message || 'Failed to download final report.',
+        severity: 'error'
+      });
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -508,22 +635,22 @@ const RTUPMReportFormDetails = () => {
   return (
     <Box sx={{ padding: 3 }}>
       {/* Header with JobNo in top right corner */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 3
       }}>
-        <Typography 
-          variant="h4" 
-          sx={{ 
-            color: '#1976d2', 
-            fontWeight: 'bold' 
+        <Typography
+          variant="h4"
+          sx={{
+            color: '#1976d2',
+            fontWeight: 'bold'
           }}
         >
           {reportTitle}
         </Typography>
-        
+
         {/* JobNo display in top right corner */}
         <Box sx={{
           backgroundColor: '#f5f5f5',
@@ -531,20 +658,20 @@ const RTUPMReportFormDetails = () => {
           borderRadius: '8px',
           border: '1px solid #ddd'
         }}>
-          <Typography 
-            variant="body1" 
-            sx={{ 
+          <Typography
+            variant="body1"
+            sx={{
               color: '#2C3E50',
               fontWeight: 'normal',
               fontSize: '14px',
               display: 'inline'
             }}
           >
-            Job No: 
+            Job No:
           </Typography>
-          <Typography 
-            variant="body1" 
-            sx={{ 
+          <Typography
+            variant="body1"
+            sx={{
               color: '#FF0000',
               fontWeight: 'bold',
               fontSize: '16px',
@@ -562,79 +689,162 @@ const RTUPMReportFormDetails = () => {
           {error}
         </Alert>
       )}
-
       {/* Action Buttons - Moved to top */}
+
       <Paper sx={{
+
         backgroundColor: '#ffffff',
+
         borderRadius: '12px',
+
         padding: '24px',
+
         marginBottom: '24px',
+
         border: '1px solid #e0e0e0',
+
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+
         transition: 'box-shadow 0.3s ease',
+
         '&:hover': {
+
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)'
+
         }
+
       }}>
+
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
           <Button
+
             variant="contained"
+
             onClick={handleBack}
+
+            startIcon={<ArrowBackIosNewIcon fontSize="small" />}
+
             sx={{
+
               background: RMSTheme.components.button.primary.background,
+
               color: RMSTheme.components.button.primary.text,
+
               padding: '12px 32px',
+
               borderRadius: RMSTheme.borderRadius.small,
+
               border: `1px solid ${RMSTheme.components.button.primary.border}`,
+
               boxShadow: RMSTheme.components.button.primary.shadow,
+
               '&:hover': {
+
                 background: RMSTheme.components.button.primary.hover
+
               }
+
             }}
+
           >
-            ← Back
+
+            Back
+
           </Button>
-          
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="contained"
-              onClick={() => navigate(`/report-management-system/rtu-pm-edit/${id}`)}
-              sx={{
-                background: RMSTheme.components.button.primary.background,
-                color: RMSTheme.components.button.primary.text,
-                padding: '12px 32px',
-                borderRadius: RMSTheme.borderRadius.small,
-                border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                boxShadow: RMSTheme.components.button.primary.shadow,
-                '&:hover': {
-                  background: RMSTheme.components.button.primary.hover
-                }
-              }}
-            >
-              Edit Report
-            </Button>
-            
-            <Button
-              variant="contained"
-              onClick={handlePrintReport}
-              startIcon={<PrintIcon />}
-              disabled={isGeneratingPDF}
-              sx={{
-                background: RMSTheme.components.button.primary.background,
-                color: RMSTheme.components.button.primary.text,
-                padding: '12px 32px',
-                borderRadius: RMSTheme.borderRadius.small,
-                border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                boxShadow: RMSTheme.components.button.primary.shadow,
-                '&:hover': {
-                  background: RMSTheme.components.button.primary.hover
-                }
-              }}
-            >
-              {isGeneratingPDF ? 'Generating PDF...' : 'Print Report'}
-            </Button>
-          </Box>
+
+
+
+          {isFormStatusClosed ? (
+
+            <Typography variant="body2" color="text.secondary">
+
+            </Typography>
+
+          ) : (
+
+            <Box sx={{ display: 'flex', gap: 2 }}>
+
+              <Button
+
+                variant="contained"
+
+                onClick={() => navigate(`/report-management-system/rtu-pm-edit/${id}`)}
+
+                sx={{
+
+                  background: RMSTheme.components.button.primary.background,
+
+                  color: RMSTheme.components.button.primary.text,
+
+                  padding: '12px 32px',
+
+                  borderRadius: RMSTheme.borderRadius.small,
+
+                  border: `1px solid ${RMSTheme.components.button.primary.border}`,
+
+                  boxShadow: RMSTheme.components.button.primary.shadow,
+
+                  '&:hover': {
+
+                    background: RMSTheme.components.button.primary.hover
+
+                  }
+
+                }}
+
+              >
+
+                Edit Report
+
+              </Button>
+
+
+
+              <Button
+
+                variant="contained"
+
+                onClick={handlePrintReport}
+
+                startIcon={<PrintIcon />}
+
+                disabled={isGeneratingPDF}
+
+                sx={{
+
+                  background: RMSTheme.components.button.primary.background,
+
+                  color: RMSTheme.components.button.primary.text,
+
+                  padding: '12px 32px',
+
+                  borderRadius: RMSTheme.borderRadius.small,
+
+                  border: `1px solid ${RMSTheme.components.button.primary.border}`,
+
+                  boxShadow: RMSTheme.components.button.primary.shadow,
+
+                  '&:hover': {
+
+                    background: RMSTheme.components.button.primary.hover
+
+                  }
+
+                }}
+
+              >
+
+                {isGeneratingPDF ? 'Generating PDF...' : 'Print Report'}
+
+              </Button>
+
+            </Box>
+
+          )}
+
         </Box>
+
       </Paper>
 
       {/* Basic Information Section */}
@@ -642,45 +852,151 @@ const RTUPMReportFormDetails = () => {
         <Typography variant="h5" sx={sectionHeader}>
           Basic Information
         </Typography>
-        <Grid container spacing={3}>
-          
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>System Description</Typography>
-              <Typography variant="body1">{formData.systemNameWarehouseName || 'Not specified'}</Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <TextField
+            fullWidth
+            label="Job Number"
+            value={formData.jobNo || ''}
+            disabled
+            sx={fieldStyle}
+          />
+
+          <TextField
+            fullWidth
+            label="System Description"
+            value={formData.systemNameWarehouseName || ''}
+            disabled
+            sx={fieldStyle}
+          />
+
+          <TextField
+            fullWidth
+            label="Station Name"
+            value={formData.stationNameWarehouseName || ''}
+            disabled
+            sx={fieldStyle}
+          />
+
+          <TextField
+            fullWidth
+            label="Project No"
+            value={formData.pmReportFormRTU?.projectNo || ''}
+            disabled
+            sx={fieldStyle}
+          />
+
+          <TextField
+            fullWidth
+            label="Customer"
+            value={formData.pmReportFormRTU?.customer || ''}
+            disabled
+            sx={fieldStyle}
+          />
+
+          <TextField
+            fullWidth
+            label="Report Form Type"
+            value={formData.reportFormTypeName || 'Preventative Maintenance'}
+            disabled
+            sx={fieldStyle}
+          />
+
+          <TextField
+            fullWidth
+            label="PM Report Form Type"
+            value={formData.pmReportFormTypeName || 'RTU'}
+            disabled
+            sx={fieldStyle}
+          />
+        </Box>
+      </Paper>
+
+      {isFormStatusClosed && (
+        <Paper sx={{
+          padding: 3,
+          marginBottom: 3,
+          backgroundColor: '#ffffff',
+          borderRadius: 2,
+          border: '1px solid #e0e0e0',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        }}>
+          <Typography variant="h5" sx={{
+            color: '#1976d2',
+            fontWeight: 'bold',
+            marginBottom: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}>
+            Final Report
+          </Typography>
+
+          {finalReportsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <CircularProgress size={24} />
             </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Station Name</Typography>
-              <Typography variant="body1">{formData.stationNameWarehouseName || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Project No</Typography>
-              <Typography variant="body1">{formData.pmReportFormRTU.projectNo || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Customer</Typography>
-              <Typography variant="body1">{formData.pmReportFormRTU.customer || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Report Form Type</Typography>
-              <Typography variant="body1">{formData.reportFormTypeName || 'Preventative Maintenance'}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>PM Report Form Type</Typography>
-              <Typography variant="body1">{formData.pmReportFormTypeName || 'RTU'}</Typography>
-            </Box>
-          </Grid>
-        </Grid>
+          ) : finalReports.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No final report has been uploaded for this record.
+            </Typography>
+          ) : (
+            finalReports.map((report) => (
+              <Box
+                key={report.id}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 2,
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 1,
+                  mb: 2,
+                  backgroundColor: '#f9f9f9'
+                }}
+              >
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    {report.attachmentName || 'Final Report'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Uploaded on {report.uploadedDate ? new Date(report.uploadedDate).toLocaleString() : 'N/A'}
+                  </Typography>
+                </Box>
+                <Button
+                  variant="contained"
+                  onClick={() => handleDownloadFinalReport(report)}
+                  sx={{
+                    background: RMSTheme.components.button.primary.background,
+                    color: RMSTheme.components.button.primary.text,
+                    padding: '8px 20px',
+                    borderRadius: RMSTheme.borderRadius.small,
+                    border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                    '&:hover': {
+                      background: RMSTheme.components.button.primary.hover
+                    }
+                  }}
+                >
+                  Download
+                </Button>
+              </Box>
+            ))
+          )}
+        </Paper>
+      )}
+
+      {/* Form Status Section */}
+      <Paper sx={sectionContainer}>
+        <Typography variant="h5" sx={sectionHeader}>
+          <AssignmentTurnedInIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
+          Form Status
+        </Typography>
+        <TextField
+          fullWidth
+          label="Form Status"
+          value={formStatusDisplay || 'Not specified'}
+          disabled
+          sx={fieldStyle}
+        />
       </Paper>
 
       {/* Date of Service Section */}
@@ -688,32 +1004,29 @@ const RTUPMReportFormDetails = () => {
         <Typography variant="h5" sx={sectionHeader}>
           📅 Date of Service
         </Typography>
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>Service Date & Time</Typography>
-              <Typography variant="body1" sx={{ fontSize: '1.1rem', color: '#1976d2', fontWeight: 'medium' }}>
-                {formatDate(formData?.pmReportFormRTU?.dateOfService)}
-              </Typography>
-            </Box>
-          </Grid>
-        </Grid>
+        <TextField
+          fullWidth
+          label="Service Date & Time"
+          value={formatDate(formData?.pmReportFormRTU?.dateOfService)}
+          disabled
+          sx={fieldStyle}
+        />
       </Paper>
-      
+
       {/* Main RTU Cabinet Section */}
       <Paper sx={sectionContainer}>
         <Typography variant="h5" sx={sectionHeader}>
           <BuildIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
           Main RTU Cabinet
         </Typography>
-        
-        <ImagePreviewSection 
-          images={rtuPMData.pmMainRtuCabinetImages || []} 
-          title="Main RTU Cabinet Images" 
+
+        <ImagePreviewSection
+          images={rtuPMData.pmMainRtuCabinetImages || []}
+          title="Main RTU Cabinet Images"
           icon={BuildIcon}
           reportFormId={id}
         />
-        
+
         {rtuPMData.pmMainRtuCabinetData && rtuPMData.pmMainRtuCabinetData.length > 0 ? (
           <TableContainer component={Paper} sx={{ marginTop: 2 }}>
             <Table size="small">
@@ -738,20 +1051,20 @@ const RTUPMReportFormDetails = () => {
               <TableBody>
                 {rtuPMData.pmMainRtuCabinetData.map((row, index) => (
                   <TableRow key={index}>
-                    <TableCell>{getStatusChip(row.rtuCabinet)}</TableCell>
-                    <TableCell>{getStatusChip(row.equipmentRack)}</TableCell>
-                    <TableCell>{getStatusChip(row.monitor)}</TableCell>
-                    <TableCell>{getStatusChip(row.mouseKeyboard)}</TableCell>
-                    <TableCell>{getStatusChip(row.cpU6000Card)}</TableCell>
-                    <TableCell>{getStatusChip(row.inputCard)}</TableCell>
-                    <TableCell>{getStatusChip(row.megapopNTU)}</TableCell>
-                    <TableCell>{getStatusChip(row.networkRouter)}</TableCell>
-                    <TableCell>{getStatusChip(row.networkSwitch)}</TableCell>
-                    <TableCell>{getStatusChip(row.digitalVideoRecorder)}</TableCell>
-                    <TableCell>{getStatusChip(row.rtuDoorContact)}</TableCell>
-                    <TableCell>{getStatusChip(row.powerSupplyUnit)}</TableCell>
-                    <TableCell>{getStatusChip(row.upsBattery)}</TableCell>
-                    <TableCell>{row.remarks || '-'}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'rtuCabinet', 'RTUCabinet'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'equipmentRack', 'EquipmentRack'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'monitor', 'Monitor'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'mouseKeyboard', 'MouseKeyboard'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'cpU6000Card', 'CPU6000Card'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'inputCard', 'InputCard'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'megapopNTU', 'MegapopNTU'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'networkRouter', 'NetworkRouter'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'networkSwitch', 'NetworkSwitch'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'digitalVideoRecorder', 'DigitalVideoRecorder'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'rtuDoorContact', 'RTUDoorContact'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'powerSupplyUnit', 'PowerSupplyUnit'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'upsBattery', 'UPSBattery'))}</TableCell>
+                    <TableCell>{getFieldValue(row, 'remarks', 'Remarks') || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -770,14 +1083,14 @@ const RTUPMReportFormDetails = () => {
           <SettingsIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
           PM Chamber Magnetic Contact
         </Typography>
-        
-        <ImagePreviewSection 
-          images={rtuPMData.pmChamberMagneticContactImages || []} 
-          title="PM Chamber Magnetic Contact Images" 
+
+        <ImagePreviewSection
+          images={rtuPMData.pmChamberMagneticContactImages || []}
+          title="PM Chamber Magnetic Contact Images"
           icon={SettingsIcon}
           reportFormId={id}
         />
-        
+
         {rtuPMData.pmChamberMagneticContactData && rtuPMData.pmChamberMagneticContactData.length > 0 ? (
           <TableContainer component={Paper} sx={{ marginTop: 2 }}>
             <Table size="small">
@@ -794,12 +1107,12 @@ const RTUPMReportFormDetails = () => {
               <TableBody>
                 {rtuPMData.pmChamberMagneticContactData.map((row, index) => (
                   <TableRow key={index}>
-                    <TableCell>{row.chamberNumber || '-'}</TableCell>
-                    <TableCell>{getStatusChip(row.chamberOGBox)}</TableCell>
-                    <TableCell>{getStatusChip(row.chamberContact1)}</TableCell>
-                    <TableCell>{getStatusChip(row.chamberContact2)}</TableCell>
-                    <TableCell>{getStatusChip(row.chamberContact3)}</TableCell>
-                    <TableCell>{row.remarks || '-'}</TableCell>
+                    <TableCell>{getFieldValue(row, 'chamberNumber', 'ChamberNumber') || '-'}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'chamberOGBox', 'ChamberOGBox'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'chamberContact1', 'ChamberContact1'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'chamberContact2', 'ChamberContact2'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'chamberContact3', 'ChamberContact3'))}</TableCell>
+                    <TableCell>{getFieldValue(row, 'remarks', 'Remarks') || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -818,15 +1131,15 @@ const RTUPMReportFormDetails = () => {
           <SettingsIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
           PM RTU Cabinet Cooling
         </Typography>
-        
-        <ImagePreviewSection 
-          images={rtuPMData.pmRTUCabinetCoolingImages || []} 
-          title="PM RTU Cabinet Cooling Images" 
+
+        <ImagePreviewSection
+          images={rtuPMData.pmRTUCabinetCoolingImages || []}
+          title="PM RTU Cabinet Cooling Images"
           icon={SettingsIcon}
           reportFormId={id}
         />
-        
-        {rtuPMData.pmrtuCabinetCooling && rtuPMData.pmrtuCabinetCooling.length > 0 ? (
+
+        {rtuPMData.pmRTUCabinetCoolingData && rtuPMData.pmRTUCabinetCoolingData.length > 0 ? (
           <TableContainer component={Paper} sx={{ marginTop: 2 }}>
             <Table size="small">
               <TableHead>
@@ -837,11 +1150,11 @@ const RTUPMReportFormDetails = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {rtuPMData.pmrtuCabinetCooling.map((row, index) => (
+                {rtuPMData.pmRTUCabinetCoolingData.map((row, index) => (
                   <TableRow key={index}>
-                    <TableCell>{row.fanNumber || '-'}</TableCell>
-                    <TableCell>{getStatusChip(row.functionalStatus)}</TableCell>
-                    <TableCell>{row.remarks || '-'}</TableCell>
+                    <TableCell>{row.fanNumber || row.FanNumber || '-'}</TableCell>
+                    <TableCell>{getStatusChip(row.functionalStatus || row.FunctionalStatus)}</TableCell>
+                    <TableCell>{row.remarks || row.Remarks || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -860,14 +1173,14 @@ const RTUPMReportFormDetails = () => {
           <VideocamIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
           PM DVR Equipment
         </Typography>
-        
-        <ImagePreviewSection 
-          images={rtuPMData.pmDVREquipmentImages || []} 
-          title="PM DVR Equipment Images" 
+
+        <ImagePreviewSection
+          images={rtuPMData.pmDVREquipmentImages || []}
+          title="PM DVR Equipment Images"
           icon={VideocamIcon}
           reportFormId={id}
         />
-        
+
         {rtuPMData.pmDVREquipmentData && rtuPMData.pmDVREquipmentData.length > 0 ? (
           <TableContainer component={Paper} sx={{ marginTop: 2 }}>
             <Table size="small">
@@ -883,11 +1196,11 @@ const RTUPMReportFormDetails = () => {
               <TableBody>
                 {rtuPMData.pmDVREquipmentData.map((row, index) => (
                   <TableRow key={index}>
-                    <TableCell>{getStatusChip(row.dvrComm)}</TableCell>
-                    <TableCell>{getStatusChip(row.dvrraidComm)}</TableCell>
-                    <TableCell>{getStatusChip(row.timeSyncNTPServer)}</TableCell>
-                    <TableCell>{getStatusChip(row.recording24x7)}</TableCell>
-                    <TableCell>{row.remarks || '-'}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'dvrComm', 'DVRComm'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'dvrraidComm', 'DVRRAIDComm'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'timeSyncNTPServer', 'TimeSyncNTPServer'))}</TableCell>
+                    <TableCell>{getStatusChip(getFieldValue(row, 'recording24x7', 'Recording24x7'))}</TableCell>
+                    <TableCell>{getFieldValue(row, 'remarks', 'Remarks') || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -900,37 +1213,57 @@ const RTUPMReportFormDetails = () => {
         )}
       </Paper>
 
-      {/* Service Details Section - Moved to Bottom */}
+      {/* Cleaning of Cabinet / Equipment Section */}
       <Paper sx={sectionContainer}>
         <Typography variant="h5" sx={sectionHeader}>
-          Service Details
+          Cleaning of Cabinet / Equipment
         </Typography>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>Cleaning of Cabinet</Typography>
-              <Typography variant="body1">{getStatusChip(formData?.pmReportFormRTU?.cleaningOfCabinet)}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>Remarks</Typography>
-              <Typography variant="body1">{formData?.pmReportFormRTU?.remarks || 'No remarks'}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>Approved By</Typography>
-              <Typography variant="body1">{formData?.pmReportFormRTU?.approvedBy || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>Attended By</Typography>
-              <Typography variant="body1">{formData?.pmReportFormRTU?.attendedBy || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-        </Grid>
+        <TextField
+          fullWidth
+          label="Cleaning Status"
+          value={formData?.pmReportFormRTU?.cleaningOfCabinet || 'Not specified'}
+          disabled
+          sx={fieldStyle}
+        />
+      </Paper>
+
+      {/* Remarks Section */}
+      <Paper sx={sectionContainer}>
+        <Typography variant="h5" sx={sectionHeader}>
+          Remarks
+        </Typography>
+        <TextField
+          fullWidth
+          label="Remarks"
+          value={formData?.pmReportFormRTU?.remarks || ''}
+          disabled
+          multiline
+          rows={3}
+          sx={fieldStyle}
+        />
+      </Paper>
+
+      {/* Approval Information Section */}
+      <Paper sx={sectionContainer}>
+        <Typography variant="h5" sx={sectionHeader}>
+          Approval Information
+        </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <TextField
+            fullWidth
+            label="Attended By"
+            value={formData?.pmReportFormRTU?.attendedBy || ''}
+            disabled
+            sx={fieldStyle}
+          />
+          <TextField
+            fullWidth
+            label="Approved By"
+            value={formData?.pmReportFormRTU?.approvedBy || ''}
+            disabled
+            sx={fieldStyle}
+          />
+        </Box>
       </Paper>
 
       <Snackbar

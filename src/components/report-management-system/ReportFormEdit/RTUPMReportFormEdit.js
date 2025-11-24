@@ -29,22 +29,27 @@ import {
   Videocam as VideocamIcon,
   CloudUpload as CloudUploadIcon,
   Close as CloseIcon,
-  ArrowBack as ArrowBackIcon
+  Assignment as AssignmentIcon,
+  ArrowBack as ArrowBackIcon,
+
+  ArrowBackIosNew as ArrowBackIosNewIcon,
+  ArrowForwardIos as ArrowForwardIosIcon,
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import RMSTheme from '../../theme-resource/RMSTheme';
 import { getRTUPMReportForm, updateRTUPMReportForm, getReportFormTypes } from '../../api-services/reportFormService';
+
 import warehouseService from '../../api-services/warehouseService';
 import { getPMReportFormTypes } from '../../api-services/reportFormService';
 import { API_BASE_URL } from '../../../config/apiConfig';
 
 // MultipleImageUploadField Component
-const MultipleImageUploadField = ({ 
-  images, 
-  onImagesChange, 
-  label, 
+const MultipleImageUploadField = ({
+  images,
+  onImagesChange,
+  label,
   maxImages = 10,
   accept = "image/*"
 }) => {
@@ -108,7 +113,7 @@ const MultipleImageUploadField = ({
       <Typography variant="subtitle1" sx={{ marginBottom: 1, fontWeight: 'bold' }}>
         {label}
       </Typography>
-      
+
       {/* Upload Button */}
       {images.length < maxImages && (
         <Button
@@ -117,7 +122,7 @@ const MultipleImageUploadField = ({
           startIcon={<CloudUploadIcon />}
           sx={{ marginBottom: 2 }}
         >
-          Upload Images 
+          Upload Images
           <input
             type="file"
             hidden
@@ -190,7 +195,7 @@ const MultipleImageUploadField = ({
 const RTUPMReportFormEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   // Loading and error states
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -204,9 +209,11 @@ const RTUPMReportFormEdit = () => {
   const [pmReportFormTypes, setPmReportFormTypes] = useState([]);
   const [showPMTypeDropdown, setShowPMTypeDropdown] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [formStatusOptions, setFormStatusOptions] = useState([]);
 
   // Form data state
   const [formData, setFormData] = useState({
+    reportTitle: '',
     systemDescription: '',
     systemNameWarehouseID: '',
     stationName: '',
@@ -284,12 +291,12 @@ const RTUPMReportFormEdit = () => {
   const [selectedCoolingRowIndex, setSelectedCoolingRowIndex] = useState(null);
   const [selectedDVRRowIndex, setSelectedDVRRowIndex] = useState(null);
 
-// Helper function to format date without timezone conversion
+  // Helper function to format date without timezone conversion
   const formatDateForInput = (date) => {
     if (!date) return '';
-    
+
     let dateObj;
-    
+
     // Handle Moment.js objects
     if (date._isAMomentObject) {
       dateObj = date.toDate(); // Convert Moment to native Date
@@ -306,13 +313,13 @@ const RTUPMReportFormEdit = () => {
       console.error('Invalid date object:', date);
       return '';
     }
-    
+
     // Check if the date is valid
     if (isNaN(dateObj.getTime())) {
       console.error('Invalid date object:', date);
       return '';
     }
-    
+
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
     const day = String(dateObj.getDate()).padStart(2, '0');
@@ -378,8 +385,31 @@ const RTUPMReportFormEdit = () => {
 
       try {
         setLoading(true);
-        const response = await getRTUPMReportForm(id);
-        
+        const [response, statuses] = await Promise.all([
+          getRTUPMReportForm(id),
+          warehouseService.getFormStatus()
+        ]);
+        const statusId =
+          response.formStatus ||
+          response.formstatusId ||
+          response.formstatusID ||
+          response.pmReportFormRTU?.formstatusID ||
+          response.pmReportFormRTU?.formStatusID ||
+          '';
+        const matchedStatus = (statuses || []).find(
+          (status) => (status.id || status.ID) === statusId
+        );
+        const statusName =
+          (matchedStatus?.name || matchedStatus?.Name || response.formStatusName || response.formStatus || '')
+            .trim()
+            .toLowerCase();
+
+        if (statusName === 'close') {
+          setError('This RTU PM report is closed and cannot be edited.');
+          navigate(`/report-management-system/report-forms/rtu-pm-details/${id}`, { replace: true });
+          return;
+        }
+
         // Set basic form data - Set system ID first to trigger station loading
         setFormData(prev => ({
           ...prev,
@@ -391,12 +421,15 @@ const RTUPMReportFormEdit = () => {
           reportFormTypeID: response.reportFormTypeID || '',
           pmReportFormTypeID: response.pmReportFormRTU.pmReportFormTypeID || '',
           pmReportFormTypeName: response.pmReportFormRTU?.pmReportFormTypeName || '',
-          dateOfService: response.pmReportFormRTU?.dateOfService ? 
+          reportTitle: response.pmReportFormRTU?.reportTitle || response.reportTitle || '',
+          dateOfService: response.pmReportFormRTU?.dateOfService ?
             new Date(response.pmReportFormRTU.dateOfService).toISOString().slice(0, 16) : '',
           cleaningOfCabinet: response.pmReportFormRTU?.cleaningOfCabinet || '',
           remarks: response.pmReportFormRTU?.remarks || '',
           approvedBy: response.pmReportFormRTU?.approvedBy || '',
-          attendedBy: response.pmReportFormRTU?.attendedBy || ''
+          attendedBy: response.pmReportFormRTU?.attendedBy || '',
+          formstatusID: statusId,
+          formStatusName: matchedStatus?.name || matchedStatus?.Name || response.formStatusName || ''
         }));
 
         // Set station data after a brief delay to ensure station names are loaded
@@ -517,6 +550,19 @@ const RTUPMReportFormEdit = () => {
     fetchReportData();
   }, [id]);
 
+  useEffect(() => {
+    const loadFormStatuses = async () => {
+      try {
+        const statuses = await warehouseService.getFormStatus();
+        setFormStatusOptions(statuses || []);
+      } catch (err) {
+        console.error('Failed to load form status options', err);
+      }
+    };
+
+    loadFormStatuses();
+  }, []);
+
   // Cleanup blob URLs on unmount
   useEffect(() => {
     return () => {
@@ -532,11 +578,20 @@ const RTUPMReportFormEdit = () => {
 
   // Handle input changes
   const handleInputChange = (field, value) => {
+    if (field === 'formstatusID') {
+      const match = (formStatusOptions || []).find((s) => (s.id || s.ID) === value);
+      setFormData((prev) => ({
+        ...prev,
+        formstatusID: value,
+        formStatusName: match?.name || match?.Name || ''
+      }));
+      return;
+    }
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
-    
+
     // Clear field error when user starts typing
     if (fieldErrors[field]) {
       setFieldErrors(prev => ({
@@ -590,13 +645,13 @@ const RTUPMReportFormEdit = () => {
         setPmChamberMagneticContactData(prev => {
           // Get all existing chamber numbers (including deleted rows to avoid conflicts)
           const existingChamberNumbers = prev.map(row => parseInt(row.chamberNumber) || 0);
-          
+
           // Find the next available chamber number
           let nextChamberNumber = 1;
           while (existingChamberNumbers.includes(nextChamberNumber)) {
             nextChamberNumber++;
           }
-          
+
           return [...prev, {
             id: null, // Explicitly set to null for new records
             chamberNumber: nextChamberNumber.toString(),
@@ -612,13 +667,13 @@ const RTUPMReportFormEdit = () => {
         setPmRTUCabinetCoolingData(prev => {
           // Get all existing fan numbers (including deleted rows to avoid conflicts)
           const existingFanNumbers = prev.map(row => parseInt(row.fanNumber) || 0);
-          
+
           // Find the next available fan number
           let nextFanNumber = 1;
           while (existingFanNumbers.includes(nextFanNumber)) {
             nextFanNumber++;
           }
-          
+
           return [...prev, {
             id: null, // Explicitly set to null for new records
             fanNumber: nextFanNumber.toString(),
@@ -643,22 +698,22 @@ const RTUPMReportFormEdit = () => {
   const handleRemoveRow = (tableType, index) => {
     switch (tableType) {
       case 'mainRTU':
-        setMainRTUCabinetData(prev => prev.map((row, i) => 
+        setMainRTUCabinetData(prev => prev.map((row, i) =>
           i === index ? { ...row, isDeleted: true } : row
         ));
         break;
       case 'chamber':
-        setPmChamberMagneticContactData(prev => prev.map((row, i) => 
+        setPmChamberMagneticContactData(prev => prev.map((row, i) =>
           i === index ? { ...row, isDeleted: true } : row
         ));
         break;
       case 'cooling':
-        setPmRTUCabinetCoolingData(prev => prev.map((row, i) => 
+        setPmRTUCabinetCoolingData(prev => prev.map((row, i) =>
           i === index ? { ...row, isDeleted: true } : row
         ));
         break;
       case 'dvr':
-        setPmDVREquipmentData(prev => prev.map((row, i) => 
+        setPmDVREquipmentData(prev => prev.map((row, i) =>
           i === index ? { ...row, isDeleted: true } : row
         ));
         break;
@@ -668,22 +723,22 @@ const RTUPMReportFormEdit = () => {
   const handleRestoreRow = (tableType, index) => {
     switch (tableType) {
       case 'mainRTU':
-        setMainRTUCabinetData(prev => prev.map((row, i) => 
+        setMainRTUCabinetData(prev => prev.map((row, i) =>
           i === index ? { ...row, isDeleted: false } : row
         ));
         break;
       case 'chamber':
-        setPmChamberMagneticContactData(prev => prev.map((row, i) => 
+        setPmChamberMagneticContactData(prev => prev.map((row, i) =>
           i === index ? { ...row, isDeleted: false } : row
         ));
         break;
       case 'cooling':
-        setPmRTUCabinetCoolingData(prev => prev.map((row, i) => 
+        setPmRTUCabinetCoolingData(prev => prev.map((row, i) =>
           i === index ? { ...row, isDeleted: false } : row
         ));
         break;
       case 'dvr':
-        setPmDVREquipmentData(prev => prev.map((row, i) => 
+        setPmDVREquipmentData(prev => prev.map((row, i) =>
           i === index ? { ...row, isDeleted: false } : row
         ));
         break;
@@ -693,22 +748,22 @@ const RTUPMReportFormEdit = () => {
   const handleTableCellChange = (tableType, rowIndex, field, value) => {
     switch (tableType) {
       case 'mainRTU':
-        setMainRTUCabinetData(prev => prev.map((row, index) => 
+        setMainRTUCabinetData(prev => prev.map((row, index) =>
           index === rowIndex ? { ...row, [field]: value } : row
         ));
         break;
       case 'chamber':
-        setPmChamberMagneticContactData(prev => prev.map((row, index) => 
+        setPmChamberMagneticContactData(prev => prev.map((row, index) =>
           index === rowIndex ? { ...row, [field]: value } : row
         ));
         break;
       case 'cooling':
-        setPmRTUCabinetCoolingData(prev => prev.map((row, index) => 
+        setPmRTUCabinetCoolingData(prev => prev.map((row, index) =>
           index === rowIndex ? { ...row, [field]: value } : row
         ));
         break;
       case 'dvr':
-        setPmDVREquipmentData(prev => prev.map((row, index) => 
+        setPmDVREquipmentData(prev => prev.map((row, index) =>
           index === rowIndex ? { ...row, [field]: value } : row
         ));
         break;
@@ -737,8 +792,8 @@ const RTUPMReportFormEdit = () => {
     if (selectedRowIndex !== null && mainRTUCabinetData[selectedRowIndex]) {
       const selectedRow = mainRTUCabinetData[selectedRowIndex];
       const { id, ...rowDataWithoutId } = selectedRow; // Exclude ID
-      const newData = mainRTUCabinetData.map((row) => ({ 
-        ...row, 
+      const newData = mainRTUCabinetData.map((row) => ({
+        ...row,
         ...rowDataWithoutId,
         id: row.id // Preserve original ID
       }));
@@ -810,7 +865,9 @@ const RTUPMReportFormEdit = () => {
       remarks: formData.remarks,
       approvedBy: formData.approvedBy,
       attendedBy: formData.attendedBy,
-      
+      formStatusName: formData.formStatusName,
+      formstatusID: formData.formstatusID,
+
       // PM Report Form RTU data
       pmReportFormRTU: {
         projectNo: formData.projectNo,
@@ -821,9 +878,11 @@ const RTUPMReportFormEdit = () => {
         remarks: formData.remarks,
         approvedBy: formData.approvedBy,
         attendedBy: formData.attendedBy,
-        pmReportFormTypeID: formData.pmReportFormTypeID
+        pmReportFormTypeID: formData.pmReportFormTypeID,
+        formStatusName: formData.formStatusName,
+        formstatusID: formData.formstatusID
       },
-      
+
       // Table data
       pmMainRtuCabinet: mainRTUCabinetData.map(row => ({
         ID: row.id,
@@ -843,7 +902,7 @@ const RTUPMReportFormEdit = () => {
         Remarks: row.remarks,
         isDeleted: row.isDeleted || false
       })),
-      
+
       pmChamberMagneticContact: pmChamberMagneticContactData.map(row => ({
         ID: row.id,
         ChamberNumber: row.chamberNumber,
@@ -854,7 +913,7 @@ const RTUPMReportFormEdit = () => {
         Remarks: row.remarks,
         isDeleted: row.isDeleted || false
       })),
-      
+
       pmRTUCabinetCooling: pmRTUCabinetCoolingData.map(row => ({
         ID: row.id,
         FanNumber: row.fanNumber,
@@ -862,7 +921,7 @@ const RTUPMReportFormEdit = () => {
         Remarks: row.remarks,
         isDeleted: row.isDeleted || false
       })),
-      
+
       pmDVREquipment: pmDVREquipmentData.map(row => ({
         ID: row.id,
         DVRComm: row.dvrComm,
@@ -872,13 +931,13 @@ const RTUPMReportFormEdit = () => {
         Remarks: row.remarks,
         isDeleted: row.isDeleted || false
       })),
-      
+
       // Image data with change tracking
       pmMainRtuCabinetImages: pmMainRtuCabinetImages,
       pmChamberMagneticContactImages: pmChamberMagneticContactImages,
       pmRTUCabinetCoolingImages: pmRTUCabinetCoolingImages,
       pmDVREquipmentImages: pmDVREquipmentImages,
-      
+
       // Add metadata to help track changes
       _imageChangeMetadata: {
         hasImageChanges: true,
@@ -890,7 +949,7 @@ const RTUPMReportFormEdit = () => {
         }
       }
     };
-    
+
     // Navigate to review page with form data
     navigate(`/report-management-system/rtu-pm-report-review-edit/${id}`, {
       state: { formData: reviewData }
@@ -912,54 +971,68 @@ const RTUPMReportFormEdit = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ padding: 3, maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Header with JobNo in top right corner */}
-        <Paper sx={{ padding: 3, marginBottom: 3 }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center'
+        {/* Header Section */}
+        <Paper sx={{
+          padding: 4,
+          marginBottom: 3,
+          background: 'linear-gradient(135deg, #2C3E50 0%, #34495E 50%, #1A252F 100%)',
+          color: 'white',
+          textAlign: 'center',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+        }}>
+          <Typography
+            variant="h3"
+            sx={{
+              fontWeight: 'bold',
+              marginBottom: 1,
+              letterSpacing: '0.5px'
+            }}
+          >
+            {formData.reportTitle || formData.pmReportFormRTU?.reportTitle || 'xxx'}
+          </Typography>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              opacity: 0.95,
+              fontSize: '16px',
+              fontWeight: 400
+            }}
+          >
+            Edit the form below with accurate maintenance information
+          </Typography>
+
+          {/* Job No Badge */}
+          <Box sx={{
+            marginTop: 2,
+            display: 'inline-block',
+            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+            padding: '8px 20px',
+            borderRadius: '20px',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            backdropFilter: 'blur(10px)'
           }}>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                color: '#2C3E50', 
-                fontWeight: 'bold' 
+            <Typography
+              variant="body2"
+              sx={{
+                color: '#e0e0e0',
+                fontSize: '14px',
+                fontWeight: 500
               }}
             >
-              Edit RTU PM Report
-            </Typography>
-            
-            {/* JobNo display in top right corner */}
-            <Box sx={{
-              backgroundColor: '#f5f5f5',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: '1px solid #ddd'
-            }}>
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  color: '#2C3E50',
-                  fontWeight: 'normal',
-                  fontSize: '14px',
-                  display: 'inline'
-                }}
-              >
-                Job No: 
-              </Typography>
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  color: '#FF0000',
+              Job No:
+              <Typography
+                component="span"
+                sx={{
+                  color: '#FFD700',
                   fontWeight: 'bold',
-                  fontSize: '16px',
-                  display: 'inline',
-                  marginLeft: '4px'
+                  marginLeft: '8px',
+                  fontSize: '16px'
                 }}
               >
                 {formData.jobNo || 'Not assigned'}
               </Typography>
-            </Box>
+            </Typography>
           </Box>
         </Paper>
 
@@ -977,17 +1050,10 @@ const RTUPMReportFormEdit = () => {
 
         {/* Basic Information Section */}
         <Paper sx={{ padding: 3, marginBottom: 3 }}>
-          <Typography 
-            variant="h5" 
-            sx={{
-              color: '#2C3E50',
-              fontWeight: 'bold',
-              marginBottom: 3
-            }}
-          >
-            Basic Information
+          <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 'bold', marginBottom: 2 }}>
+            📋 Basic Information
           </Typography>
-          
+
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {/* System Description */}
             <TextField
@@ -1028,8 +1094,8 @@ const RTUPMReportFormEdit = () => {
               }}
             >
               {systemNames.map((system) => (
-                <MenuItem 
-                  key={system.id} 
+                <MenuItem
+                  key={system.id}
                   value={system.id}
                   sx={{
                     color: '#2C3E50',
@@ -1043,7 +1109,7 @@ const RTUPMReportFormEdit = () => {
                 </MenuItem>
               ))}
             </TextField>
-            
+
             {/* Station Name */}
             <Autocomplete
               fullWidth
@@ -1126,7 +1192,7 @@ const RTUPMReportFormEdit = () => {
               noOptionsText="No stations available"
               loadingText="Loading stations..."
             />
-            
+
             {/* Project No */}
             <TextField
               fullWidth
@@ -1164,7 +1230,7 @@ const RTUPMReportFormEdit = () => {
                 },
               }}
             />
-            
+
             {/* Customer */}
             <TextField
               fullWidth
@@ -1202,7 +1268,7 @@ const RTUPMReportFormEdit = () => {
                 },
               }}
             />
-            
+
             {/* Type of Services - Read Only */}
             <TextField
               fullWidth
@@ -1277,8 +1343,8 @@ const RTUPMReportFormEdit = () => {
                 }}
               >
                 {pmReportFormTypes.map((pmType) => (
-                  <MenuItem 
-                    key={pmType.id} 
+                  <MenuItem
+                    key={pmType.id}
                     value={pmType.id}
                     sx={{
                       color: '#2C3E50',
@@ -1297,28 +1363,53 @@ const RTUPMReportFormEdit = () => {
 
           </Box>
         </Paper>
-        
+
+        {/* Form Status Section */}
+        <Paper sx={{ padding: 3, marginBottom: 3 }}>
+
+          <Typography variant="h5" sx={{
+            color: '#1976d2',
+            fontWeight: 'bold',
+            marginBottom: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}>
+            <AssignmentIcon />
+            Form Status
+          </Typography>
+
+          <TextField
+            fullWidth
+            select
+            label="Form Status"
+            value={formData.formstatusID || ''}
+            onChange={(e) => handleInputChange('formstatusID', e.target.value)}
+            sx={{ backgroundColor: 'white' }}
+          >
+            <MenuItem value="">
+              <em>Select Form Status</em>
+            </MenuItem>
+            {(formStatusOptions || []).map((status) => (
+              <MenuItem key={status.id || status.ID} value={status.id || status.ID}>
+                {status.name || status.Name}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Paper>
+
         {/* Date of Service Section */}
         <Paper sx={{ padding: 3, marginBottom: 3 }}>
-          <Typography 
-            variant="h5" 
-            sx={{
-              color: '#2C3E50',
-              fontWeight: 'bold',
-              marginBottom: 3,
-              paddingBottom: 1,
-              borderBottom: '2px solid #3498DB'
-            }}
-          >
+          <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 'bold', marginBottom: 2 }}>
             📅 Date of Service
           </Typography>
-          
+
           <DateTimePicker
             label="Date of Service"
             value={formData.dateOfService ? new Date(formData.dateOfService) : null}
             onChange={(newValue) => {
-               const formattedDate = formatDateForInput(newValue); 
-               handleInputChange('dateOfService', formattedDate);  
+              const formattedDate = formatDateForInput(newValue);
+              handleInputChange('dateOfService', formattedDate);
             }}
             renderInput={(params) => (
               <TextField
@@ -1364,7 +1455,7 @@ const RTUPMReportFormEdit = () => {
             <BuildIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
             Main RTU Cabinet
           </Typography>
-          
+
           <Button
             startIcon={<AddIcon />}
             onClick={() => handleAddRow('mainRTU')}
@@ -1436,7 +1527,7 @@ const RTUPMReportFormEdit = () => {
               </TableHead>
               <TableBody>
                 {mainRTUCabinetData.map((row, index) => (
-                  <TableRow 
+                  <TableRow
                     key={index}
                     sx={{
                       backgroundColor: row.isDeleted ? '#ffebee' : (selectedRowIndex === index ? '#e3f2fd' : 'inherit'),
@@ -1689,7 +1780,7 @@ const RTUPMReportFormEdit = () => {
             <SettingsIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
             PM Chamber Magnetic Contact
           </Typography>
-          
+
           <Button
             startIcon={<AddIcon />}
             onClick={() => handleAddRow('chamber')}
@@ -1753,7 +1844,7 @@ const RTUPMReportFormEdit = () => {
               </TableHead>
               <TableBody>
                 {pmChamberMagneticContactData.map((row, index) => (
-                  <TableRow 
+                  <TableRow
                     key={index}
                     sx={{
                       backgroundColor: row.isDeleted ? '#ffebee' : (selectedChamberRowIndex === index ? '#e3f2fd' : 'inherit'),
@@ -1878,7 +1969,7 @@ const RTUPMReportFormEdit = () => {
             <SettingsIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
             PM RTU Cabinet Cooling
           </Typography>
-          
+
           <Button
             startIcon={<AddIcon />}
             onClick={() => handleAddRow('cooling')}
@@ -1939,7 +2030,7 @@ const RTUPMReportFormEdit = () => {
               </TableHead>
               <TableBody>
                 {pmRTUCabinetCoolingData.map((row, index) => (
-                  <TableRow 
+                  <TableRow
                     key={index}
                     sx={{
                       backgroundColor: row.isDeleted ? '#ffebee' : (selectedCoolingRowIndex === index ? '#e3f2fd' : 'inherit'),
@@ -2019,7 +2110,7 @@ const RTUPMReportFormEdit = () => {
             <VideocamIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
             PM DVR Equipment
           </Typography>
-          
+
           <Button
             startIcon={<AddIcon />}
             onClick={() => handleAddRow('dvr')}
@@ -2043,6 +2134,7 @@ const RTUPMReportFormEdit = () => {
 
           <Button
             onClick={handleApplySelectedDVRRow}
+
             disabled={selectedDVRRowIndex === null || pmDVREquipmentData.length === 0}
             variant="contained"
             sx={{
@@ -2082,7 +2174,7 @@ const RTUPMReportFormEdit = () => {
               </TableHead>
               <TableBody>
                 {pmDVREquipmentData.map((row, index) => (
-                  <TableRow 
+                  <TableRow
                     key={index}
                     sx={{
                       backgroundColor: row.isDeleted ? '#ffebee' : (selectedDVRRowIndex === index ? '#e3f2fd' : 'inherit'),
@@ -2196,15 +2288,15 @@ const RTUPMReportFormEdit = () => {
 
         {/* Footer Sections */}
         {/* Cleaning of Cabinet / Equipment Section */}
-        <Paper sx={{ 
-          padding: 3, 
+        <Paper sx={{
+          padding: 3,
           margin: '16px 0',
           backgroundColor: '#f8f9fa',
           border: '1px solid #e9ecef'
         }}>
-          <Typography 
-            variant="h6" 
-            sx={{ 
+          <Typography
+            variant="h6"
+            sx={{
               marginBottom: 2,
               color: '#ff6b35',
               fontWeight: 600,
@@ -2233,15 +2325,15 @@ const RTUPMReportFormEdit = () => {
         </Paper>
 
         {/* Remarks Section */}
-        <Paper sx={{ 
-          padding: 3, 
+        <Paper sx={{
+          padding: 3,
           margin: '16px 0',
           backgroundColor: '#f8f9fa',
           border: '1px solid #e9ecef'
         }}>
-          <Typography 
-            variant="h6" 
-            sx={{ 
+          <Typography
+            variant="h6"
+            sx={{
               marginBottom: 2,
               color: '#ff6b35',
               fontWeight: 600,
@@ -2268,15 +2360,15 @@ const RTUPMReportFormEdit = () => {
         </Paper>
 
         {/* Approval Information Section */}
-        <Paper sx={{ 
-          padding: 3, 
+        <Paper sx={{
+          padding: 3,
           margin: '16px 0',
           backgroundColor: '#f8f9fa',
           border: '1px solid #e9ecef'
         }}>
-          <Typography 
-            variant="h6" 
-            sx={{ 
+          <Typography
+            variant="h6"
+            sx={{
               marginBottom: 2,
               color: '#28a745',
               fontWeight: 600,
@@ -2286,42 +2378,40 @@ const RTUPMReportFormEdit = () => {
           >
             ✅ Approval Information
           </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Attended By"
-                placeholder="Attended By"
-                value={formData.attendedBy || ''}
-                onChange={(e) => setFormData({ ...formData, attendedBy: e.target.value })}
-                sx={{
-                  backgroundColor: 'white',
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px'
-                  }
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Approved By"
-                placeholder="Approved By"
-                value={formData.approvedBy || ''}
-                onChange={(e) => setFormData({ ...formData, approvedBy: e.target.value })}
-                sx={{
-                  backgroundColor: 'white',
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px'
-                  }
-                }}
-              />
-            </Grid>
-          </Grid>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              fullWidth
+              label="Attended By"
+              value={formData.attendedBy || ''}
+              onChange={(e) => setFormData({ ...formData, attendedBy: e.target.value })}
+              sx={{
+                backgroundColor: '#ffffff',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1,
+                  borderColor: '#e0e0e0'
+                }
+              }}
+            />
+
+            <TextField
+              fullWidth
+              label="Approved By"
+              value={formData.approvedBy || ''}
+              onChange={(e) => setFormData({ ...formData, approvedBy: e.target.value })}
+              sx={{
+                backgroundColor: '#ffffff',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1,
+                  borderColor: '#e0e0e0'
+                }
+              }}
+            />
+          </Box>
         </Paper>
 
         {/* Action Buttons Footer */}
-        <Paper sx={{ 
+        <Paper sx={{
           padding: 3,
           backgroundColor: '#f8f9fa',
           border: '1px solid #e9ecef',
@@ -2334,20 +2424,21 @@ const RTUPMReportFormEdit = () => {
             <Button
               variant="contained"
               startIcon={<ArrowBackIcon />}
-              onClick={() => navigate('/report-management')}
+              onClick={() => navigate('/report-management-system/report-forms')}
+              startIcon={<ArrowBackIosNewIcon fontSize="small" />}
               sx={{
-                    background: RMSTheme.components.button.primary.background,
-                    color: RMSTheme.components.button.primary.text,
-                    padding: '12px 32px',
-                    borderRadius: RMSTheme.borderRadius.small,
-                    border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                    boxShadow: RMSTheme.components.button.primary.shadow,
-                    '&:hover': {
-                      background: RMSTheme.components.button.primary.hover
-                    }
-                  }}
-                >
-               Back
+                background: RMSTheme.components.button.primary.background,
+                color: RMSTheme.components.button.primary.text,
+                padding: '12px 32px',
+                borderRadius: RMSTheme.borderRadius.small,
+                border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                boxShadow: RMSTheme.components.button.primary.shadow,
+                '&:hover': {
+                  background: RMSTheme.components.button.primary.hover
+                }
+              }}
+            >
+              Back
             </Button>
 
             {/* Right side buttons */}
@@ -2355,19 +2446,25 @@ const RTUPMReportFormEdit = () => {
               variant="contained"
               onClick={handleSubmit}
               disabled={saving}
+              endIcon={<ArrowForwardIosIcon fontSize="small" />}
               sx={{
-                    background: RMSTheme.components.button.primary.background,
-                    color: RMSTheme.components.button.primary.text,
-                    padding: '12px 32px',
-                    borderRadius: RMSTheme.borderRadius.small,
-                    border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                    boxShadow: RMSTheme.components.button.primary.shadow,
-                    '&:hover': {
-                      background: RMSTheme.components.button.primary.hover
-                    }
-                  }}
-                >
-              {saving ? <CircularProgress size={20} color="inherit" /> : 'Review →'}
+                background: RMSTheme.components.button.primary.background,
+                color: RMSTheme.components.button.primary.text,
+                padding: '12px 32px',
+                borderRadius: RMSTheme.borderRadius.small,
+                border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                boxShadow: RMSTheme.components.button.primary.shadow,
+                '&:hover': {
+                  background: RMSTheme.components.button.primary.hover
+                },
+                '&:disabled': {
+                  opacity: 0.6,
+                  cursor: 'not-allowed'
+                }
+              }}
+              disabled={!formData.formstatusID || saving}
+            >
+              {saving ? <CircularProgress size={20} color="inherit" /> : 'Review'}
             </Button>
           </Box>
         </Paper>

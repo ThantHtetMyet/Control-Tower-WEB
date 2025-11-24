@@ -19,7 +19,14 @@ import {
   Alert,
   Modal,
   IconButton,
-  Snackbar
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Fade,
+  TextField,
+  Tooltip
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -31,12 +38,13 @@ import {
   AccessTime,
   ArrowBack,
   Save as SaveIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  UploadFile as UploadFileIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import RMSTheme from '../../theme-resource/RMSTheme';
-import { 
-  getRTUPMReportForm, 
+import {
+  getRTUPMReportForm,
   updateReportForm,
   updatePMReportFormRTU,
   updatePMMainRtuCabinet,
@@ -51,6 +59,8 @@ import {
   deleteReportFormImage,
   getReportFormImageTypes
 } from '../../api-services/reportFormService';
+import { uploadFinalReportAttachment } from '../../api-services/reportFormService';
+import warehouseService from '../../api-services/warehouseService';
 import { API_BASE_URL } from '../../../config/apiConfig';
 
 const fieldContainer = {
@@ -83,9 +93,9 @@ const getStatusChip = (status) => {
       />
     );
   }
-  
+
   const statusStr = status.toString();
-  
+
   if (statusStr === 'Acceptable') {
     return (
       <Chip
@@ -184,7 +194,7 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon })
     setModalOpen(false);
     setSelectedImage(null);
   };
-  
+
   if (!images || images.length === 0) {
     //console.log(`No images found for ${title}`);
     return (
@@ -207,7 +217,7 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon })
       </Typography>
       <Grid container spacing={2}>
         {images.map((image, index) => {
-          
+
           // Safely determine the image source
           let imageSrc = '';
           let imageAlt = `Image ${index + 1}`;
@@ -280,8 +290,8 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon })
 
           return (
             <Grid item xs={12} sm={6} md={4} key={index}>
-              <Card 
-                sx={{ 
+              <Card
+                sx={{
                   position: 'relative',
                   cursor: 'pointer',
                   transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
@@ -308,10 +318,10 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon })
                     e.target.style.display = 'none';
                   }}
                   onLoad={() => {
-                   }}
+                  }}
                 />
-                <Typography 
-                  variant="caption" 
+                <Typography
+                  variant="caption"
                   sx={{
                     position: 'absolute',
                     bottom: 4,
@@ -387,21 +397,25 @@ const RTUPMReviewReportFormEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // State management
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [rtuPMData, setRtuPMData] = useState(null);
   const [saveProgress, setSaveProgress] = useState('');
-  
+  const [finalReportDialogOpen, setFinalReportDialogOpen] = useState(false);
+  const [finalReportFile, setFinalReportFile] = useState(null);
+  const [finalReportUploadError, setFinalReportUploadError] = useState('');
+  const [finalReportUploading, setFinalReportUploading] = useState(false);
+
   // Toast notification state
   const [notification, setNotification] = useState({
     open: false,
     message: '',
     severity: 'success' // 'success' or 'error'
   });
-  
+
   // Add state to track original images for comparison
   const [originalImages, setOriginalImages] = useState({
     pmMainRtuCabinetImages: [],
@@ -410,45 +424,104 @@ const RTUPMReviewReportFormEdit = () => {
     pmDVREquipmentImages: []
   });
 
-  // Load report data
+  // Load report data from location state (passed from RTUPMReportFormEdit)
   useEffect(() => {
-    const fetchReportData = async () => {
-      if (!id) return;
+    try {
+      setLoading(true);
+      setError(null);
 
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Always fetch original data from database for comparison
-        const originalResponse = await getRTUPMReportForm(id);
+      // Get data from location state passed from parent component
+      if (location.state && location.state.formData) {
+        const formData = location.state.formData;
+
+        // Set original images for comparison
         setOriginalImages({
-          pmMainRtuCabinetImages: originalResponse.pmMainRtuCabinetImages || [],
-          pmChamberMagneticContactImages: originalResponse.pmChamberMagneticContactImages || [],
-          pmRTUCabinetCoolingImages: originalResponse.pmrtuCabinetCoolingImages || [],
-          pmDVREquipmentImages: originalResponse.pmdvrEquipmentImages || []
+          pmMainRtuCabinetImages: formData.pmMainRtuCabinetImages || [],
+          pmChamberMagneticContactImages: formData.pmChamberMagneticContactImages || [],
+          pmRTUCabinetCoolingImages: formData.pmRTUCabinetCoolingImages || [],
+          pmDVREquipmentImages: formData.pmDVREquipmentImages || []
         });
-        
-        // Check if form data was passed from edit form
-        if (location.state && location.state.formData) {
-          // Use the passed form data instead of fetching from database
-          setRtuPMData(location.state.formData);
-        } else {
-          // Fallback to fetching from database if no form data passed
-          setRtuPMData(originalResponse);
-        }
-      } catch (error) {
-        console.error('Error fetching RTU PM report data:', error);
-        setError('Failed to load report data. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    fetchReportData();
-  }, [id, location.state]);
+        setRtuPMData(formData);
+      } else {
+        setError('No report data provided. Please access this page from the report edit form.');
+      }
+    } catch (error) {
+      console.error('Error loading RTU PM report data:', error);
+      setError('Failed to load report data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [location.state]);
 
   const handleBack = () => {
     navigate(`/report-management-system/rtu-pm-edit/${id}`);
+  };
+
+  const resolvedStatusName = (rtuPMData?.formStatusName ||
+    rtuPMData?.pmReportFormRTU?.formStatusName ||
+    '').toString().trim().toLowerCase();
+  const isStatusClose = resolvedStatusName === 'close';
+
+  const handleFinalReportFileChange = (event) => {
+    setFinalReportUploadError('');
+    const file = event.target.files?.[0] || null;
+    setFinalReportFile(file);
+  };
+
+  const handleCloseFinalReportDialog = () => {
+    if (!finalReportUploading) {
+      setFinalReportDialogOpen(false);
+      setFinalReportFile(null);
+      setFinalReportUploadError('');
+    }
+  };
+
+  const handleUploadFinalReport = async () => {
+    if (!finalReportFile) {
+      setFinalReportUploadError('Please select a file to upload.');
+      return;
+    }
+    setFinalReportUploading(true);
+
+    try {
+      // First save the report
+      await handleSave();
+
+      // Then upload the final report
+      const reportFormId = id;
+      await uploadFinalReportAttachment(reportFormId, finalReportFile);
+
+      setFinalReportDialogOpen(false);
+      setFinalReportFile(null);
+      setFinalReportUploadError('');
+
+      // Show success notification
+      setNotification({
+        open: true,
+        message: 'RTU PM Report and Final Report saved successfully!',
+        severity: 'success'
+      });
+
+      setTimeout(() => {
+        navigate(`/report-management-system`);
+      }, 1000);
+
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.message || 'Failed to submit report.';
+      setFinalReportUploadError(message);
+    } finally {
+      setFinalReportUploading(false);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (isStatusClose) {
+      setFinalReportUploadError('');
+      setFinalReportDialogOpen(true);
+      return;
+    }
+    handleSave();
   };
 
   // Helper function to process image changes
@@ -456,25 +529,25 @@ const RTUPMReviewReportFormEdit = () => {
     try {
       // First, get the correct image type IDs from the database
       const imageTypes = await getReportFormImageTypes();
-      
+
       const imageTypeMapping = [
-        { 
-          key: 'pmMainRtuCabinetImages', 
+        {
+          key: 'pmMainRtuCabinetImages',
           typeName: 'PMMainRtuCabinet',
           sectionName: 'PMMainRtuCabinets'
         },
-        { 
-          key: 'pmChamberMagneticContactImages', 
+        {
+          key: 'pmChamberMagneticContactImages',
           typeName: 'PMChamberMagneticContact',
           sectionName: 'PMChamberMagneticContacts'
         },
-        { 
-          key: 'pmRTUCabinetCoolingImages', 
+        {
+          key: 'pmRTUCabinetCoolingImages',
           typeName: 'PMRTUCabinetCooling',
           sectionName: 'PMRTUCabinetCoolings'
         },
-        { 
-          key: 'pmDVREquipmentImages', 
+        {
+          key: 'pmDVREquipmentImages',
           typeName: 'PMDVREquipment',
           sectionName: 'PMDVREquipments'
         }
@@ -511,7 +584,7 @@ const RTUPMReviewReportFormEdit = () => {
         for (const newImage of newImages) {
           if (newImage.file) {
             //console.log(`Uploading new image for type ${imageMapping.typeName}`);
-            
+
             // Use the correct createReportFormImage function signature
             await createReportFormImage(
               reportFormId,           // reportFormId
@@ -533,13 +606,13 @@ const RTUPMReviewReportFormEdit = () => {
       setSaving(true);
       setError(null);
       setSaveProgress('Starting save process...');
-      
+
       // Get the Report Form ID from URL parameter (this is the main report form ID)
       const reportFormId = id;
-      
+
       // Get PM Report Form RTU ID - try multiple sources
       let pmReportFormRTUID = null;
-      
+
       if (rtuPMData.pmReportFormRTU?.id) {
         pmReportFormRTUID = rtuPMData.pmReportFormRTU.id;
       } else if (rtuPMData.pmReportFormRTUID) {
@@ -552,11 +625,11 @@ const RTUPMReviewReportFormEdit = () => {
         const apiResponse = await getRTUPMReportForm(id);
         pmReportFormRTUID = apiResponse.pmReportFormRTU?.id || apiResponse.pmReportFormRTUID;
       }
-      
+
       if (!reportFormId) {
         throw new Error('Report Form ID not found in URL parameters');
       }
-      
+
       if (!pmReportFormRTUID) {
         throw new Error('PM Report Form RTU ID not found. Please ensure the report has been properly created.');
       }
@@ -576,7 +649,7 @@ const RTUPMReviewReportFormEdit = () => {
         UploadIPAddress: rtuPMData.uploadIPAddress || '',
         FormStatus: rtuPMData.formStatus || 'Draft'
       };
-      
+
       //console.log('Step 1: Updating Report Form with data:', reportFormData);
       const reportFormResponse = await updateReportForm(reportFormId, reportFormData);
       //console.log('Step 1 completed:', reportFormResponse);
@@ -584,6 +657,7 @@ const RTUPMReviewReportFormEdit = () => {
       // Step 2: Update PM Report Form RTU basic data
       setSaveProgress('Updating RTU PM basic data...');
       const pmReportFormRTUData = {
+        formstatusID: rtuPMData.formstatusID || rtuPMData.pmReportFormRTU?.formstatusID,
         projectNo: rtuPMData.pmReportFormRTU?.projectNo || rtuPMData.projectNo,
         customer: rtuPMData.pmReportFormRTU?.customer || rtuPMData.customer,
         dateOfService: rtuPMData.pmReportFormRTU?.dateOfService || rtuPMData.dateOfService,
@@ -593,114 +667,114 @@ const RTUPMReviewReportFormEdit = () => {
         approvedBy: rtuPMData.pmReportFormRTU?.approvedBy || rtuPMData.approvedBy,
         pmReportFormTypeID: rtuPMData.pmReportFormRTU?.pmReportFormTypeID || rtuPMData.pmReportFormTypeID
       };
-      
+
       //console.log('Step 2: Updating PM Report Form RTU with data:', pmReportFormRTUData);
       const pmReportFormRTUResponse = await updatePMReportFormRTU(pmReportFormRTUID, pmReportFormRTUData);
       //console.log('Step 2 completed:', pmReportFormRTUResponse);
 
       // Step 3: Handle deletions first
-    setSaveProgress('Processing deletions...');
-    
-    // Delete PM Main RTU Cabinet records marked for deletion
-    if (rtuPMData.pmMainRtuCabinet && rtuPMData.pmMainRtuCabinet.length > 0) {
-      const recordsToDelete = rtuPMData.pmMainRtuCabinet.filter(record => record.isDeleted && record.ID);
-      if (recordsToDelete.length > 0) {
-        //console.log('Deleting PM Main RTU Cabinet records:', recordsToDelete);
-        await Promise.all(recordsToDelete.map(record => deletePMMainRtuCabinet(record.ID)));
-      }
-    }
+      setSaveProgress('Processing deletions...');
 
-    // Delete PM Chamber Magnetic Contact records marked for deletion
-    if (rtuPMData.pmChamberMagneticContact && rtuPMData.pmChamberMagneticContact.length > 0) {
-      const recordsToDelete = rtuPMData.pmChamberMagneticContact.filter(record => record.isDeleted && record.ID);
-      if (recordsToDelete.length > 0) {
-        //console.log('Deleting PM Chamber Magnetic Contact records:', recordsToDelete);
-        await Promise.all(recordsToDelete.map(record => deletePMChamberMagneticContact(record.ID)));
+      // Delete PM Main RTU Cabinet records marked for deletion
+      if (rtuPMData.pmMainRtuCabinet && rtuPMData.pmMainRtuCabinet.length > 0) {
+        const recordsToDelete = rtuPMData.pmMainRtuCabinet.filter(record => record.isDeleted && record.ID);
+        if (recordsToDelete.length > 0) {
+          //console.log('Deleting PM Main RTU Cabinet records:', recordsToDelete);
+          await Promise.all(recordsToDelete.map(record => deletePMMainRtuCabinet(record.ID)));
+        }
       }
-    }
 
-    // Delete PM RTU Cabinet Cooling records marked for deletion
-    if (rtuPMData.pmRTUCabinetCooling && rtuPMData.pmRTUCabinetCooling.length > 0) {
-      const recordsToDelete = rtuPMData.pmRTUCabinetCooling.filter(record => record.isDeleted && record.ID);
-      if (recordsToDelete.length > 0) {
-        //console.log('Deleting PM RTU Cabinet Cooling records:', recordsToDelete);
-        await Promise.all(recordsToDelete.map(record => deletePMRTUCabinetCooling(record.ID)));
+      // Delete PM Chamber Magnetic Contact records marked for deletion
+      if (rtuPMData.pmChamberMagneticContact && rtuPMData.pmChamberMagneticContact.length > 0) {
+        const recordsToDelete = rtuPMData.pmChamberMagneticContact.filter(record => record.isDeleted && record.ID);
+        if (recordsToDelete.length > 0) {
+          //console.log('Deleting PM Chamber Magnetic Contact records:', recordsToDelete);
+          await Promise.all(recordsToDelete.map(record => deletePMChamberMagneticContact(record.ID)));
+        }
       }
-    }
 
-    // Delete PM DVR Equipment records marked for deletion
-    if (rtuPMData.pmDVREquipment && rtuPMData.pmDVREquipment.length > 0) {
-      const recordsToDelete = rtuPMData.pmDVREquipment.filter(record => record.isDeleted && record.ID);
-      if (recordsToDelete.length > 0) {
-        //console.log('Deleting PM DVR Equipment records:', recordsToDelete);
-        await Promise.all(recordsToDelete.map(record => deletePMDVREquipment(record.ID)));
+      // Delete PM RTU Cabinet Cooling records marked for deletion
+      if (rtuPMData.pmRTUCabinetCooling && rtuPMData.pmRTUCabinetCooling.length > 0) {
+        const recordsToDelete = rtuPMData.pmRTUCabinetCooling.filter(record => record.isDeleted && record.ID);
+        if (recordsToDelete.length > 0) {
+          //console.log('Deleting PM RTU Cabinet Cooling records:', recordsToDelete);
+          await Promise.all(recordsToDelete.map(record => deletePMRTUCabinetCooling(record.ID)));
+        }
       }
-    }
 
-    // Step 4: Update PM Main RTU Cabinet data (exclude deleted records)
-    if (rtuPMData.pmMainRtuCabinet && rtuPMData.pmMainRtuCabinet.length > 0) {
-      setSaveProgress('Updating Main RTU Cabinet data...');
-      const activeRecords = rtuPMData.pmMainRtuCabinet.filter(record => !record.isDeleted);
-      if (activeRecords.length > 0) {
-        //console.log('Step 4: Updating PM Main RTU Cabinet with data:', activeRecords);
-        const pmMainRtuCabinetResponse = await updatePMMainRtuCabinet(pmReportFormRTUID, activeRecords);
-        //console.log('Step 4 completed:', pmMainRtuCabinetResponse);
+      // Delete PM DVR Equipment records marked for deletion
+      if (rtuPMData.pmDVREquipment && rtuPMData.pmDVREquipment.length > 0) {
+        const recordsToDelete = rtuPMData.pmDVREquipment.filter(record => record.isDeleted && record.ID);
+        if (recordsToDelete.length > 0) {
+          //console.log('Deleting PM DVR Equipment records:', recordsToDelete);
+          await Promise.all(recordsToDelete.map(record => deletePMDVREquipment(record.ID)));
+        }
       }
-    }
 
-    // Step 5: Update PM Chamber Magnetic Contact data (exclude deleted records)
-    if (rtuPMData.pmChamberMagneticContact && rtuPMData.pmChamberMagneticContact.length > 0) {
-      setSaveProgress('Updating Chamber Magnetic Contact data...');
-      const activeRecords = rtuPMData.pmChamberMagneticContact.filter(record => !record.isDeleted);
-      if (activeRecords.length > 0) {
-        //console.log('Step 5: Updating PM Chamber Magnetic Contact with data:', activeRecords);
-        const pmChamberResponse = await updatePMChamberMagneticContact(pmReportFormRTUID, activeRecords);
-        //console.log('Step 5 completed:', pmChamberResponse);
+      // Step 4: Update PM Main RTU Cabinet data (exclude deleted records)
+      if (rtuPMData.pmMainRtuCabinet && rtuPMData.pmMainRtuCabinet.length > 0) {
+        setSaveProgress('Updating Main RTU Cabinet data...');
+        const activeRecords = rtuPMData.pmMainRtuCabinet.filter(record => !record.isDeleted);
+        if (activeRecords.length > 0) {
+          //console.log('Step 4: Updating PM Main RTU Cabinet with data:', activeRecords);
+          const pmMainRtuCabinetResponse = await updatePMMainRtuCabinet(pmReportFormRTUID, activeRecords);
+          //console.log('Step 4 completed:', pmMainRtuCabinetResponse);
+        }
       }
-    }
 
-    // Step 6: Update PM RTU Cabinet Cooling data (exclude deleted records)
-    if (rtuPMData.pmRTUCabinetCooling && rtuPMData.pmRTUCabinetCooling.length > 0) {
-      setSaveProgress('Updating RTU Cabinet Cooling data...');
-      const activeRecords = rtuPMData.pmRTUCabinetCooling.filter(record => !record.isDeleted);
-      if (activeRecords.length > 0) {
-        //console.log('Step 6: Updating PM RTU Cabinet Cooling with data:', activeRecords);
-        const pmCoolingResponse = await updatePMRTUCabinetCooling(pmReportFormRTUID, activeRecords);
-        //console.log('Step 6 completed:', pmCoolingResponse);
+      // Step 5: Update PM Chamber Magnetic Contact data (exclude deleted records)
+      if (rtuPMData.pmChamberMagneticContact && rtuPMData.pmChamberMagneticContact.length > 0) {
+        setSaveProgress('Updating Chamber Magnetic Contact data...');
+        const activeRecords = rtuPMData.pmChamberMagneticContact.filter(record => !record.isDeleted);
+        if (activeRecords.length > 0) {
+          //console.log('Step 5: Updating PM Chamber Magnetic Contact with data:', activeRecords);
+          const pmChamberResponse = await updatePMChamberMagneticContact(pmReportFormRTUID, activeRecords);
+          //console.log('Step 5 completed:', pmChamberResponse);
+        }
       }
-    }
 
-    // Step 7: Update PM DVR Equipment data (exclude deleted records)
-    if (rtuPMData.pmDVREquipment && rtuPMData.pmDVREquipment.length > 0) {
-      setSaveProgress('Updating DVR Equipment data...');
-      const activeRecords = rtuPMData.pmDVREquipment.filter(record => !record.isDeleted);
-      if (activeRecords.length > 0) {
-        //console.log('Step 7: Updating PM DVR Equipment with data:', activeRecords);
-        const pmDVRResponse = await updatePMDVREquipment(pmReportFormRTUID, activeRecords);
-        //console.log('Step 7 completed:', pmDVRResponse);
+      // Step 6: Update PM RTU Cabinet Cooling data (exclude deleted records)
+      if (rtuPMData.pmRTUCabinetCooling && rtuPMData.pmRTUCabinetCooling.length > 0) {
+        setSaveProgress('Updating RTU Cabinet Cooling data...');
+        const activeRecords = rtuPMData.pmRTUCabinetCooling.filter(record => !record.isDeleted);
+        if (activeRecords.length > 0) {
+          //console.log('Step 6: Updating PM RTU Cabinet Cooling with data:', activeRecords);
+          const pmCoolingResponse = await updatePMRTUCabinetCooling(pmReportFormRTUID, activeRecords);
+          //console.log('Step 6 completed:', pmCoolingResponse);
+        }
       }
-    }
+
+      // Step 7: Update PM DVR Equipment data (exclude deleted records)
+      if (rtuPMData.pmDVREquipment && rtuPMData.pmDVREquipment.length > 0) {
+        setSaveProgress('Updating DVR Equipment data...');
+        const activeRecords = rtuPMData.pmDVREquipment.filter(record => !record.isDeleted);
+        if (activeRecords.length > 0) {
+          //console.log('Step 7: Updating PM DVR Equipment with data:', activeRecords);
+          const pmDVRResponse = await updatePMDVREquipment(pmReportFormRTUID, activeRecords);
+          //console.log('Step 7 completed:', pmDVRResponse);
+        }
+      }
 
       // Add image processing before the final navigation
       setSaveProgress('Processing image changes...');
       await processImageChanges(reportFormId);
 
       setSaveProgress('Save completed successfully!');
-      
+
       // Show success toast
       setNotification({
         open: true,
         message: 'RTU PM Report saved successfully!',
         severity: 'success'
       });
-      
+
       setTimeout(() => {
         navigate(`/report-management-system`);
       }, 1000);
-      
+
     } catch (error) {
       console.error('Error saving RTU PM report:', error);
-      
+
       // Extract error message from response if available
       let errorMessage = 'Failed to save report. Please try again.';
       if (error.response?.data?.message) {
@@ -708,9 +782,9 @@ const RTUPMReviewReportFormEdit = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       setError(`${errorMessage} (Failed at: ${saveProgress})`);
-      
+
       // Show error toast
       setNotification({
         open: true,
@@ -805,431 +879,644 @@ const RTUPMReviewReportFormEdit = () => {
 
       {!loading && !error && rtuPMData && (
         <Box sx={{ maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Header with JobNo in top right corner */}
-      <Paper sx={{ padding: 3, marginBottom: 3 }}>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center'
-        }}>
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              color: '#2C3E50', 
-              fontWeight: 'bold' 
-            }}
-          >
-            RTU PM Report Review - Edit
-          </Typography>
-          
-          {/* JobNo display in top right corner */}
-          <Box sx={{
-            backgroundColor: '#f5f5f5',
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: '1px solid #ddd'
-          }}>
-            <Typography 
-              variant="body1" 
-              sx={{ 
-                color: '#2C3E50',
-                fontWeight: 'normal',
-                fontSize: '14px',
-                display: 'inline'
-              }}
-            >
-              Job No: 
-            </Typography>
-            <Typography 
-              variant="body1" 
-              sx={{ 
-                color: '#FF0000',
-                fontWeight: 'bold',
-                fontSize: '16px',
-                display: 'inline',
-                marginLeft: '4px'
-              }}
-            >
-              {rtuPMData.jobNo || 'Not assigned'}
-            </Typography>
-          </Box>
-        </Box>
-      </Paper>
-
-
-      {/* Basic Information Section */}
-      <Paper sx={{ padding: 3, marginBottom: 3 }}>
-        <Typography 
-          variant="h5" 
-          sx={{
-            color: '#2C3E50',
-            fontWeight: 'bold',
-            marginBottom: 3
-          }}
-        >
-          Basic Information
-        </Typography>
-        
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" color="text.secondary">System Description</Typography>
-              <Typography variant="body1">{rtuPMData.systemNameWarehouseName || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" color="text.secondary">Station Name</Typography>
-              <Typography variant="body1">{rtuPMData.stationNameWarehouseName || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" color="text.secondary">Project No</Typography>
-              <Typography variant="body1">{rtuPMData.pmReportFormRTU?.projectNo || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" color="text.secondary">Customer</Typography>
-              <Typography variant="body1">{rtuPMData.pmReportFormRTU?.customer || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* Date of Service Section */}
-      <Paper sx={{ padding: 3, marginBottom: 3 }}>
-        <Typography 
-          variant="h5" 
-          sx={{
-            color: '#2C3E50',
-            fontWeight: 'bold',
+          {/* Header Section with Gradient */}
+          <Paper sx={{
+            padding: 4,
             marginBottom: 3,
-            paddingBottom: 1,
-            borderBottom: '2px solid #3498DB'
-          }}
-        >
-          Date of Service
-        </Typography>
-        
-        <Box sx={fieldContainer}>
-          <Typography variant="subtitle2" color="text.secondary">Date of Service</Typography>
-          <Typography variant="body1">{formatDate(rtuPMData.pmReportFormRTU?.dateOfService)}</Typography>
-        </Box>
-      </Paper>
+            background: 'linear-gradient(135deg, #2C3E50 0%, #34495E 50%, #1A252F 100%)',
+            color: 'white',
+            textAlign: 'center',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+          }}>
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 'bold',
+                marginBottom: 1,
+                letterSpacing: '0.5px'
+              }}
+            >
+              {rtuPMData.pmReportFormRTU?.reportTitle || 'Preventative Maintenance (RTU)'}
+            </Typography>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                opacity: 0.95,
+                fontSize: '16px',
+                fontWeight: 400
+              }}
+            >
+              Review and submit the maintenance report below
+            </Typography>
 
-      {/* Main RTU Cabinet Section */}
-      <Paper sx={{ padding: 3, marginBottom: 3 }}>
-        <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 'bold', marginBottom: 2 }}>
-          <BuildIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
-          Main RTU Cabinet
-        </Typography>
-        
-        {rtuPMData.pmMainRtuCabinet && rtuPMData.pmMainRtuCabinet.length > 0 ? (
-          <>
-            <TableContainer component={Paper} sx={{ marginTop: 2 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>RTU Cabinet</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Equipment Rack</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Monitor</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Mouse & Keyboard</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>CPU 6000 Card</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Input Card</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Megapop NTU</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Network Router</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Network Switch</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Digital Video Recorder</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>RTU Door Contact</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Power Supply Unit</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>UPS Battery</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rtuPMData.pmMainRtuCabinet
-                    .filter(row => !row.isDeleted)
-                    .map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{getStatusChip(row.RTUCabinet)}</TableCell>
-                      <TableCell>{getStatusChip(row.EquipmentRack)}</TableCell>
-                      <TableCell>{getStatusChip(row.Monitor)}</TableCell>
-                      <TableCell>{getStatusChip(row.MouseKeyboard)}</TableCell>
-                      <TableCell>{getStatusChip(row.CPU6000Card)}</TableCell>
-                      <TableCell>{getStatusChip(row.InputCard)}</TableCell>
-                      <TableCell>{getStatusChip(row.MegapopNTU)}</TableCell>
-                      <TableCell>{getStatusChip(row.NetworkRouter)}</TableCell>
-                      <TableCell>{getStatusChip(row.NetworkSwitch)}</TableCell>
-                      <TableCell>{getStatusChip(row.DigitalVideoRecorder)}</TableCell>
-                      <TableCell>{getStatusChip(row.RTUDoorContact)}</TableCell>
-                      <TableCell>{getStatusChip(row.PowerSupplyUnit)}</TableCell>
-                      <TableCell>{getStatusChip(row.UPSBattery)}</TableCell>
-                      <TableCell>{row.Remarks || 'No remarks'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            {rtuPMData.pmMainRtuCabinetImages && (
-              <ImagePreviewSection 
-                images={rtuPMData.pmMainRtuCabinetImages}
-                title="Main RTU Cabinet Images"
-                icon={BuildIcon}
-              />
-            )}
-          </>
-        ) : (
-          <Alert severity="info" sx={{ marginTop: 2 }}>
-            No Main RTU Cabinet data available.
-          </Alert>
-        )}
-      </Paper>
-
-      {/* PM Chamber Magnetic Contact Section */}
-      <Paper sx={{ padding: 3, marginBottom: 3 }}>
-        <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 'bold', marginBottom: 2 }}>
-          <SettingsIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
-          PM Chamber Magnetic Contact
-        </Typography>
-        
-        {rtuPMData.pmChamberMagneticContact && rtuPMData.pmChamberMagneticContact.length > 0 ? (
-          <>
-            <TableContainer component={Paper} sx={{ marginTop: 2 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Chamber Number</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Chamber OG Box</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Chamber Contact 1</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Chamber Contact 2</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Chamber Contact 3</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rtuPMData.pmChamberMagneticContact
-                    .filter(row => !row.isDeleted)
-                    .map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{row.ChamberNumber || 'Not specified'}</TableCell>
-                      <TableCell>{getStatusChip(row.ChamberOGBox)}</TableCell>
-                      <TableCell>{getStatusChip(row.ChamberContact1)}</TableCell>
-                      <TableCell>{getStatusChip(row.ChamberContact2)}</TableCell>
-                      <TableCell>{getStatusChip(row.ChamberContact3)}</TableCell>
-                      <TableCell>{row.Remarks || 'No remarks'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            {rtuPMData.pmChamberMagneticContactImages && (
-              <ImagePreviewSection 
-                images={rtuPMData.pmChamberMagneticContactImages}
-                title="PM Chamber Magnetic Contact Images"
-                icon={SettingsIcon}
-              />
-            )}
-          </>
-        ) : (
-          <Alert severity="info" sx={{ marginTop: 2 }}>
-            No PM Chamber Magnetic Contact data available.
-          </Alert>
-        )}
-      </Paper>
-
-      {/* PM RTU Cabinet Cooling Section */}
-      <Paper sx={{ padding: 3, marginBottom: 3 }}>
-        <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 'bold', marginBottom: 2 }}>
-          <SettingsIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
-          PM RTU Cabinet Cooling
-        </Typography>
-        
-        {rtuPMData.pmRTUCabinetCooling && rtuPMData.pmRTUCabinetCooling.length > 0 ? (
-          <>
-            <TableContainer component={Paper} sx={{ marginTop: 2 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Fan Number</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Functional Status</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rtuPMData.pmRTUCabinetCooling
-                    .filter(row => !row.isDeleted)
-                    .map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{row.FanNumber || 'Not specified'}</TableCell>
-                      <TableCell>{getStatusChip(row.FunctionalStatus)}</TableCell>
-                      <TableCell>{row.Remarks || 'No remarks'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            {rtuPMData.pmRTUCabinetCoolingImages && (
-              <ImagePreviewSection 
-                images={rtuPMData.pmRTUCabinetCoolingImages}
-                title="PM RTU Cabinet Cooling Images"
-                icon={SettingsIcon}
-              />
-            )}
-          </>
-        ) : (
-          <Alert severity="info" sx={{ marginTop: 2 }}>
-            No PM RTU Cabinet Cooling data available.
-          </Alert>
-        )}
-      </Paper>
-
-      {/* PM DVR Equipment Section */}
-      <Paper sx={{ padding: 3, marginBottom: 3 }}>
-        <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 'bold', marginBottom: 2 }}>
-          <VideocamIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
-          PM DVR Equipment
-        </Typography>
-        
-        {rtuPMData.pmDVREquipment && rtuPMData.pmDVREquipment.length > 0 ? (
-          <>
-            <TableContainer component={Paper} sx={{ marginTop: 2 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>DVR Comm</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>DVR RAID Comm</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Time Sync NTP Server</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Recording 24x7</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rtuPMData.pmDVREquipment
-                    .filter(row => !row.isDeleted)
-                    .map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{getStatusChip(row.DVRComm)}</TableCell>
-                      <TableCell>{getStatusChip(row.DVRRAIDComm)}</TableCell>
-                      <TableCell>{getStatusChip(row.TimeSyncNTPServer)}</TableCell>
-                      <TableCell>{getStatusChip(row.Recording24x7)}</TableCell>
-                      <TableCell>{row.Remarks || 'No remarks'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            {rtuPMData.pmDVREquipmentImages && (
-              <ImagePreviewSection 
-                images={rtuPMData.pmDVREquipmentImages}
-                title="PM DVR Equipment Images"
-                icon={VideocamIcon}
-              />
-            )}
-          </>
-        ) : (
-          <Alert severity="info" sx={{ marginTop: 2 }}>
-            No PM DVR Equipment data available.
-          </Alert>
-        )}
-      </Paper>
-
-      
-      {/* Cleaning of Cabinet / Equipment Section */}
-      <Paper sx={{ 
-        padding: 3, 
-        marginBottom: 3,
-        backgroundColor: '#f8f9fa',
-        border: '1px solid #e9ecef'
-      }}>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            marginBottom: 2,
-            color: '#ff6b35',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center'
-          }}
-        >
-          🧹 Cleaning of Cabinet / Equipment
-        </Typography>
-        <Box sx={fieldContainer}>
-          <Typography variant="subtitle2" color="text.secondary">Select Cleaning Status</Typography>
-          <Typography variant="body1">
-            {rtuPMData.pmReportFormRTU?.cleaningOfCabinet === 'DONE' ? '✅ DONE' : 
-             rtuPMData.pmReportFormRTU?.cleaningOfCabinet === 'PENDING' ? '⏳ PENDING' : 
-             'Not specified'}
-          </Typography>
-        </Box>
-      </Paper>
-
-      {/* Remarks Section */}
-      <Paper sx={{ 
-        padding: 3, 
-        marginBottom: 3,
-        backgroundColor: '#f8f9fa',
-        border: '1px solid #e9ecef'
-      }}>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            marginBottom: 2,
-            color: '#ff6b35',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center'
-          }}
-        >
-          📝 Remarks
-        </Typography>
-        <Box sx={fieldContainer}>
-          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-            {rtuPMData.pmReportFormRTU?.remarks || 'No remarks'}
-          </Typography>
-        </Box>
-      </Paper>
-
-      {/* Approval Information Section */}
-      <Paper sx={{ 
-        padding: 3, 
-        marginBottom: 3,
-        backgroundColor: '#f8f9fa',
-        border: '1px solid #e9ecef'
-      }}>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            marginBottom: 2,
-            color: '#28a745',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center'
-          }}
-        >
-          ✅ Approval Information
-        </Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" color="text.secondary">Attended By</Typography>
-              <Typography variant="body1">{rtuPMData.pmReportFormRTU?.attendedBy || 'Not specified'}</Typography>
+            {/* Job No Badge */}
+            <Box sx={{
+              marginTop: 2,
+              display: 'inline-block',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              padding: '8px 20px',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: '#e0e0e0',
+                  fontSize: '14px',
+                  fontWeight: 500
+                }}
+              >
+                Job No:
+                <Typography
+                  component="span"
+                  sx={{
+                    color: '#FFD700',
+                    fontWeight: 'bold',
+                    marginLeft: '8px',
+                    fontSize: '16px'
+                  }}
+                >
+                  {rtuPMData.jobNo || 'Not assigned'}
+                </Typography>
+              </Typography>
             </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" color="text.secondary">Approved By</Typography>
-              <Typography variant="body1">{rtuPMData.pmReportFormRTU?.approvedBy || 'Not specified'}</Typography>
+          </Paper>
+
+
+          {/* Success/Error Messages */}
+          {notification.severity === 'success' && notification.open && (
+            <Alert severity="success" sx={{ marginBottom: 2 }}>
+              Report updated successfully! Redirecting...
+            </Alert>
+          )}
+          {error && (
+            <Alert severity="error" sx={{ marginBottom: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          {/* Basic Information Section */}
+          <Paper sx={{ padding: 3, marginBottom: 3 }}>
+            <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 'bold', marginBottom: 2 }}>
+              📋 Basic Information
+            </Typography>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                fullWidth
+                label="Job Number"
+                value={rtuPMData.jobNo || 'Not assigned'}
+                disabled
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: '#f5f5f5',
+                    '& fieldset': {
+                      borderColor: '#d0d0d0'
+                    }
+                  },
+                  '& .MuiInputBase-input.Mui-disabled': {
+                    color: '#333',
+                    WebkitTextFillColor: '#333'
+                  }
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="System Description"
+                value={rtuPMData.systemNameWarehouseName || 'Not specified'}
+                disabled
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: '#f5f5f5',
+                    '& fieldset': {
+                      borderColor: '#d0d0d0'
+                    }
+                  },
+                  '& .MuiInputBase-input.Mui-disabled': {
+                    color: '#333',
+                    WebkitTextFillColor: '#333'
+                  }
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Station Name"
+                value={rtuPMData.stationNameWarehouseName || 'Not specified'}
+                disabled
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: '#f5f5f5',
+                    '& fieldset': {
+                      borderColor: '#d0d0d0'
+                    }
+                  },
+                  '& .MuiInputBase-input.Mui-disabled': {
+                    color: '#333',
+                    WebkitTextFillColor: '#333'
+                  }
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Project No"
+                value={rtuPMData.pmReportFormRTU?.projectNo || 'Not specified'}
+                disabled
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: '#f5f5f5',
+                    '& fieldset': {
+                      borderColor: '#d0d0d0'
+                    }
+                  },
+                  '& .MuiInputBase-input.Mui-disabled': {
+                    color: '#333',
+                    WebkitTextFillColor: '#333'
+                  }
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Customer"
+                value={rtuPMData.pmReportFormRTU?.customer || 'Not specified'}
+                disabled
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: '#f5f5f5',
+                    '& fieldset': {
+                      borderColor: '#d0d0d0'
+                    }
+                  },
+                  '& .MuiInputBase-input.Mui-disabled': {
+                    color: '#333',
+                    WebkitTextFillColor: '#333'
+                  }
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Report Form Type"
+                value="Preventative Maintenance"
+                disabled
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: '#f5f5f5',
+                    '& fieldset': {
+                      borderColor: '#d0d0d0'
+                    }
+                  },
+                  '& .MuiInputBase-input.Mui-disabled': {
+                    color: '#333',
+                    WebkitTextFillColor: '#333'
+                  }
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="PM Report Form Type"
+                value={rtuPMData.pmReportFormRTU?.pmReportFormTypeName || 'RTU'}
+                disabled
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: '#f5f5f5',
+                    '& fieldset': {
+                      borderColor: '#d0d0d0'
+                    }
+                  },
+                  '& .MuiInputBase-input.Mui-disabled': {
+                    color: '#333',
+                    WebkitTextFillColor: '#333'
+                  }
+                }}
+              />
             </Box>
-          </Grid>
-        </Grid>
-      </Paper>
+          </Paper>
+
+          {/* Form Status Section */}
+          <Paper sx={{ padding: 3, marginBottom: 3 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                color: '#1976d2',
+                fontWeight: 'bold',
+                marginBottom: 2
+              }}
+            >
+              ✓ Form Status
+            </Typography>
+
+            <TextField
+              fullWidth
+              label="Form Status"
+              value={rtuPMData.pmReportFormRTU?.formStatusName ||
+                rtuPMData.formStatusName ||
+                rtuPMData.pmReportFormRTU?.statusName ||
+                rtuPMData.statusName ||
+                'Not specified'}
+              disabled
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f5f5f5',
+                  '& fieldset': {
+                    borderColor: '#d0d0d0'
+                  }
+                },
+                '& .MuiInputBase-input.Mui-disabled': {
+                  color: '#333',
+                  WebkitTextFillColor: '#333'
+                }
+              }}
+            />
+          </Paper>
+
+          {/* Date of Service Section */}
+          <Paper sx={{ padding: 3, marginBottom: 3 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                color: '#1976d2',
+                fontWeight: 'bold',
+                marginBottom: 2
+              }}
+            >
+              📅 Date of Service
+            </Typography>
+
+            <TextField
+              fullWidth
+              label="Service Date & Time"
+              value={formatDate(rtuPMData.pmReportFormRTU?.dateOfService)}
+              disabled
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f5f5f5',
+                  '& fieldset': {
+                    borderColor: '#d0d0d0'
+                  }
+                },
+                '& .MuiInputBase-input.Mui-disabled': {
+                  color: '#333',
+                  WebkitTextFillColor: '#333'
+                }
+              }}
+            />
+          </Paper>
+
+          {/* Main RTU Cabinet Section */}
+          <Paper sx={{ padding: 3, marginBottom: 3 }}>
+            <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 'bold', marginBottom: 2 }}>
+              <BuildIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
+              Main RTU Cabinet
+            </Typography>
+
+            {rtuPMData.pmMainRtuCabinet && rtuPMData.pmMainRtuCabinet.length > 0 ? (
+              <>
+                <TableContainer component={Paper} sx={{ marginTop: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                        <TableCell sx={{ fontWeight: 'bold' }}>RTU Cabinet</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Equipment Rack</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Monitor</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Mouse & Keyboard</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>CPU 6000 Card</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Input Card</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Megapop NTU</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Network Router</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Network Switch</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Digital Video Recorder</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>RTU Door Contact</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Power Supply Unit</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>UPS Battery</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {rtuPMData.pmMainRtuCabinet
+                        .filter(row => !row.isDeleted)
+                        .map((row, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{getStatusChip(row.RTUCabinet)}</TableCell>
+                            <TableCell>{getStatusChip(row.EquipmentRack)}</TableCell>
+                            <TableCell>{getStatusChip(row.Monitor)}</TableCell>
+                            <TableCell>{getStatusChip(row.MouseKeyboard)}</TableCell>
+                            <TableCell>{getStatusChip(row.CPU6000Card)}</TableCell>
+                            <TableCell>{getStatusChip(row.InputCard)}</TableCell>
+                            <TableCell>{getStatusChip(row.MegapopNTU)}</TableCell>
+                            <TableCell>{getStatusChip(row.NetworkRouter)}</TableCell>
+                            <TableCell>{getStatusChip(row.NetworkSwitch)}</TableCell>
+                            <TableCell>{getStatusChip(row.DigitalVideoRecorder)}</TableCell>
+                            <TableCell>{getStatusChip(row.RTUDoorContact)}</TableCell>
+                            <TableCell>{getStatusChip(row.PowerSupplyUnit)}</TableCell>
+                            <TableCell>{getStatusChip(row.UPSBattery)}</TableCell>
+                            <TableCell>{row.Remarks || 'No remarks'}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {rtuPMData.pmMainRtuCabinetImages && (
+                  <ImagePreviewSection
+                    images={rtuPMData.pmMainRtuCabinetImages}
+                    title="Main RTU Cabinet Images"
+                    icon={BuildIcon}
+                  />
+                )}
+              </>
+            ) : (
+              <Alert severity="info" sx={{ marginTop: 2 }}>
+                No Main RTU Cabinet data available.
+              </Alert>
+            )}
+          </Paper>
+
+          {/* PM Chamber Magnetic Contact Section */}
+          <Paper sx={{ padding: 3, marginBottom: 3 }}>
+            <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 'bold', marginBottom: 2 }}>
+              <SettingsIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
+              PM Chamber Magnetic Contact
+            </Typography>
+
+            {rtuPMData.pmChamberMagneticContact && rtuPMData.pmChamberMagneticContact.length > 0 ? (
+              <>
+                <TableContainer component={Paper} sx={{ marginTop: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Chamber Number</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Chamber OG Box</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Chamber Contact 1</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Chamber Contact 2</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Chamber Contact 3</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {rtuPMData.pmChamberMagneticContact
+                        .filter(row => !row.isDeleted)
+                        .map((row, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{row.ChamberNumber || 'Not specified'}</TableCell>
+                            <TableCell>{getStatusChip(row.ChamberOGBox)}</TableCell>
+                            <TableCell>{getStatusChip(row.ChamberContact1)}</TableCell>
+                            <TableCell>{getStatusChip(row.ChamberContact2)}</TableCell>
+                            <TableCell>{getStatusChip(row.ChamberContact3)}</TableCell>
+                            <TableCell>{row.Remarks || 'No remarks'}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {rtuPMData.pmChamberMagneticContactImages && (
+                  <ImagePreviewSection
+                    images={rtuPMData.pmChamberMagneticContactImages}
+                    title="PM Chamber Magnetic Contact Images"
+                    icon={SettingsIcon}
+                  />
+                )}
+              </>
+            ) : (
+              <Alert severity="info" sx={{ marginTop: 2 }}>
+                No PM Chamber Magnetic Contact data available.
+              </Alert>
+            )}
+          </Paper>
+
+          {/* PM RTU Cabinet Cooling Section */}
+          <Paper sx={{ padding: 3, marginBottom: 3 }}>
+            <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 'bold', marginBottom: 2 }}>
+              <SettingsIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
+              PM RTU Cabinet Cooling
+            </Typography>
+
+            {rtuPMData.pmRTUCabinetCooling && rtuPMData.pmRTUCabinetCooling.length > 0 ? (
+              <>
+                <TableContainer component={Paper} sx={{ marginTop: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Fan Number</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Functional Status</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {rtuPMData.pmRTUCabinetCooling
+                        .filter(row => !row.isDeleted)
+                        .map((row, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{row.FanNumber || 'Not specified'}</TableCell>
+                            <TableCell>{getStatusChip(row.FunctionalStatus)}</TableCell>
+                            <TableCell>{row.Remarks || 'No remarks'}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {rtuPMData.pmRTUCabinetCoolingImages && (
+                  <ImagePreviewSection
+                    images={rtuPMData.pmRTUCabinetCoolingImages}
+                    title="PM RTU Cabinet Cooling Images"
+                    icon={SettingsIcon}
+                  />
+                )}
+              </>
+            ) : (
+              <Alert severity="info" sx={{ marginTop: 2 }}>
+                No PM RTU Cabinet Cooling data available.
+              </Alert>
+            )}
+          </Paper>
+
+          {/* PM DVR Equipment Section */}
+          <Paper sx={{ padding: 3, marginBottom: 3 }}>
+            <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 'bold', marginBottom: 2 }}>
+              <VideocamIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
+              PM DVR Equipment
+            </Typography>
+
+            {rtuPMData.pmDVREquipment && rtuPMData.pmDVREquipment.length > 0 ? (
+              <>
+                <TableContainer component={Paper} sx={{ marginTop: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                        <TableCell sx={{ fontWeight: 'bold' }}>DVR Comm</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>DVR RAID Comm</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Time Sync NTP Server</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Recording 24x7</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {rtuPMData.pmDVREquipment
+                        .filter(row => !row.isDeleted)
+                        .map((row, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{getStatusChip(row.DVRComm)}</TableCell>
+                            <TableCell>{getStatusChip(row.DVRRAIDComm)}</TableCell>
+                            <TableCell>{getStatusChip(row.TimeSyncNTPServer)}</TableCell>
+                            <TableCell>{getStatusChip(row.Recording24x7)}</TableCell>
+                            <TableCell>{row.Remarks || 'No remarks'}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {rtuPMData.pmDVREquipmentImages && (
+                  <ImagePreviewSection
+                    images={rtuPMData.pmDVREquipmentImages}
+                    title="PM DVR Equipment Images"
+                    icon={VideocamIcon}
+                  />
+                )}
+              </>
+            ) : (
+              <Alert severity="info" sx={{ marginTop: 2 }}>
+                No PM DVR Equipment data available.
+              </Alert>
+            )}
+          </Paper>
+
+
+          {/* Cleaning of Cabinet / Equipment Section */}
+          <Paper sx={{
+            padding: 3,
+            marginBottom: 3
+          }}>
+            <Typography
+              variant="h5"
+              sx={{
+                marginBottom: 2,
+                color: '#1976d2',
+                fontWeight: 'bold'
+              }}
+            >
+              🧹 Cleaning of Cabinet / Equipment
+            </Typography>
+            <TextField
+              fullWidth
+              label="Cleaning Status"
+              value={rtuPMData.pmReportFormRTU?.cleaningOfCabinet || 'Not specified'}
+              disabled
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f5f5f5',
+                  '& fieldset': {
+                    borderColor: '#d0d0d0'
+                  }
+                },
+                '& .MuiInputBase-input.Mui-disabled': {
+                  color: '#333',
+                  WebkitTextFillColor: '#333'
+                }
+              }}
+            />
+          </Paper>
+
+          {/* Remarks Section */}
+          <Paper sx={{
+            padding: 3,
+            marginBottom: 3
+          }}>
+            <Typography
+              variant="h5"
+              sx={{
+                marginBottom: 2,
+                color: '#1976d2',
+                fontWeight: 'bold'
+              }}
+            >
+              📝 Remarks
+            </Typography>
+            <TextField
+              fullWidth
+              label="Remarks"
+              multiline
+              rows={3}
+              value={rtuPMData.pmReportFormRTU?.remarks || ''}
+              disabled
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f5f5f5',
+                  '& fieldset': {
+                    borderColor: '#d0d0d0'
+                  }
+                },
+                '& .MuiInputBase-input.Mui-disabled': {
+                  color: '#333',
+                  WebkitTextFillColor: '#333'
+                }
+              }}
+            />
+          </Paper>
+
+          {/* Approval Information Section */}
+          <Paper sx={{
+            padding: 3,
+            marginBottom: 3
+          }}>
+            <Typography
+              variant="h5"
+              sx={{
+                marginBottom: 2,
+                color: '#1976d2',
+                fontWeight: 'bold'
+              }}
+            >
+              ✅ Approval Information
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                fullWidth
+                label="Attended By"
+                value={rtuPMData.pmReportFormRTU?.attendedBy || ''}
+                disabled
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: '#f5f5f5',
+                    '& fieldset': {
+                      borderColor: '#d0d0d0'
+                    }
+                  },
+                  '& .MuiInputBase-input.Mui-disabled': {
+                    color: '#333',
+                    WebkitTextFillColor: '#333'
+                  }
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Approved By"
+                value={rtuPMData.pmReportFormRTU?.approvedBy || ''}
+                disabled
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: '#f5f5f5',
+                    '& fieldset': {
+                      borderColor: '#d0d0d0'
+                    }
+                  },
+                  '& .MuiInputBase-input.Mui-disabled': {
+                    color: '#333',
+                    WebkitTextFillColor: '#333'
+                  }
+                }}
+              />
+            </Box>
+          </Paper>
 
           {/* Navigation Buttons Section */}
           <Paper sx={{
@@ -1241,7 +1528,7 @@ const RTUPMReviewReportFormEdit = () => {
             zIndex: 1000
           }}>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2 }}>
-              
+
               <Button
                 variant="outlined"
                 startIcon={<CancelIcon />}
@@ -1270,7 +1557,7 @@ const RTUPMReviewReportFormEdit = () => {
               <Button
                 variant="contained"
                 startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                onClick={handleSave}
+                onClick={handleSubmit}
                 disabled={saving}
                 sx={{
                   background: RMSTheme.components.button.primary.background,
@@ -1302,10 +1589,10 @@ const RTUPMReviewReportFormEdit = () => {
         onClose={handleCloseNotification}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert 
-          onClose={handleCloseNotification} 
+        <Alert
+          onClose={handleCloseNotification}
           severity={notification.severity}
-          sx={{ 
+          sx={{
             width: '100%',
             backgroundColor: notification.severity === 'success' ? '#4caf50' : '#f44336',
             color: 'white',
@@ -1320,8 +1607,129 @@ const RTUPMReviewReportFormEdit = () => {
           {notification.message}
         </Alert>
       </Snackbar>
-
+      {/* Final Report Upload Dialog */}
+      <Dialog
+        open={finalReportDialogOpen}
+        onClose={handleCloseFinalReportDialog}
+        fullWidth
+        maxWidth="xs"
+        TransitionComponent={Fade}
+        transitionDuration={{ enter: 400, exit: 250 }}
+        PaperProps={{
+          sx: {
+            minWidth: 320,
+            borderRadius: 4,
+            border: '1px solid rgba(255,255,255,0.15)',
+            background: 'linear-gradient(180deg, rgba(28,35,57,0.95) 0%, rgba(9,14,28,0.95) 80%)',
+            boxShadow: '0 25px 70px rgba(8,15,31,0.55)',
+            overflow: 'hidden'
+          }
+        }}
+        sx={{
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)'
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            textAlign: 'center',
+            fontWeight: 600,
+            color: '#f8fafc',
+            pb: 1
+          }}
+        >
+          Upload Final Report
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            py: 2,
+            px: 4
+          }}
+        >
+          <Typography variant="body2" sx={{ mb: 2, textAlign: 'center', color: 'rgba(241,245,249,0.85)' }}>
+            Please attach the completed final report before submitting.
+          </Typography>
+          <Button
+            variant="outlined"
+            component="label"
+            startIcon={<UploadFileIcon />}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              width: '100%',
+              py: 1.5,
+              borderColor: 'rgba(226,232,240,0.5)',
+              color: '#e2e8f0',
+              fontWeight: 600,
+              '&:hover': {
+                borderColor: '#cbd5f5',
+                backgroundColor: 'rgba(148,163,184,0.15)'
+              }
+            }}
+          >
+            {finalReportFile ? finalReportFile.name : 'Select File'}
+            <input
+              type="file"
+              hidden
+              accept="application/pdf"
+              onChange={handleFinalReportFileChange}
+            />
+          </Button>
+          {finalReportUploadError && (
+            <Typography color="#fca5a5" variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
+              {finalReportUploadError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions
+          sx={{
+            justifyContent: 'center',
+            px: 4,
+            pb: 3
+          }}
+        >
+          <Button
+            onClick={handleCloseFinalReportDialog}
+            disabled={finalReportUploading}
+            sx={{
+              background: RMSTheme.components.button.primary.background,
+              color: RMSTheme.components.button.primary.text,
+              padding: '10px 28px',
+              borderRadius: RMSTheme.borderRadius.small,
+              border: `1px solid ${RMSTheme.components.button.primary.border}`,
+              boxShadow: RMSTheme.components.button.primary.shadow,
+              textTransform: 'none',
+              mr: 2,
+              '&:hover': { background: RMSTheme.components.button.primary.hover },
+              '&:disabled': { opacity: 0.6 }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleUploadFinalReport}
+            disabled={finalReportUploading}
+            sx={{
+              background: RMSTheme.components.button.primary.background,
+              color: RMSTheme.components.button.primary.text,
+              padding: '10px 28px',
+              borderRadius: RMSTheme.borderRadius.small,
+              border: `1px solid ${RMSTheme.components.button.primary.border}`,
+              boxShadow: RMSTheme.components.button.primary.shadow,
+              textTransform: 'none',
+              '&:hover': { background: RMSTheme.components.button.primary.hover },
+              '&:disabled': { opacity: 0.6 }
+            }}
+          >
+            {finalReportUploading ? 'Uploading...' : 'Upload & Submit'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
+
   );
 };
 

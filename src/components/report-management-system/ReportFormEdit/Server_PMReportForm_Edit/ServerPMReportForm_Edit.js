@@ -13,7 +13,7 @@ import {
 import {
   Computer as ComputerIcon,
   HelpOutline as HelpOutlineIcon,
-  
+
   ArrowBackIosNew as ArrowBackIosNewIcon,
   ArrowForwardIos as ArrowForwardIosIcon,
 } from '@mui/icons-material';
@@ -50,7 +50,7 @@ import SoftwarePatch_Edit from './SoftwarePatch_Edit';
 const ServerPMReportForm_Edit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   // State management
   const [pmReportFormTypes, setPMReportFormTypes] = useState([]);
   const [formStatusOptions, setFormStatusOptions] = useState([]);
@@ -58,7 +58,7 @@ const ServerPMReportForm_Edit = () => {
   const [error, setError] = useState(null);
   const [currentStep, setCurrentStep] = useState('formStatus');
   const [isTransitioning, setIsTransitioning] = useState(false);
-  
+
   // Form data state
   const [formData, setFormData] = useState({
     reportTitle: '',
@@ -105,7 +105,7 @@ const ServerPMReportForm_Edit = () => {
     'formStatus',
     'signOff',
     'serverHealth',
-    'hardDriveHealth', 
+    'hardDriveHealth',
     'diskUsage',
     'cpuAndRamUsage',
     'networkHealth',
@@ -197,7 +197,7 @@ const ServerPMReportForm_Edit = () => {
           navigate(`/report-management-system/report-forms/server-pm-details/${id}`, { replace: true });
           return;
         }
-        
+
         // Set basic form data
         setFormData({
           reportTitle: response.pmReportFormServer.reportTitle || 'Edit Server Preventive Maintenance Report',
@@ -235,14 +235,14 @@ const ServerPMReportForm_Edit = () => {
                 // So we need to match with pmServerHealths to get the actual IDs
                 const serverHealthDetails = response.pmReportFormServer.serverHealthData.details;
                 const pmServerHealthsDetails = (response.pmServerHealths || []).flatMap(item => item.details || []);
-                
+
                 return serverHealthDetails.map(item => {
                   // Try to find matching detail in pmServerHealths to get the ID
-                  const matchingDetail = pmServerHealthsDetails.find(detail => 
-                    detail.serverName === item.serverName && 
+                  const matchingDetail = pmServerHealthsDetails.find(detail =>
+                    detail.serverName === item.serverName &&
                     detail.resultStatusID === item.resultStatusID
                   );
-                  
+
                   return {
                     id: matchingDetail?.id || null, // Use ID from pmServerHealths if found
                     serverName: item.serverName || '',
@@ -254,7 +254,7 @@ const ServerPMReportForm_Edit = () => {
                 });
               }
               // Fallback to pmServerHealths array (this has the IDs)
-              return (response.pmServerHealths || []).flatMap(item => 
+              return (response.pmServerHealths || []).flatMap(item =>
                 (item.details || []).map(detail => ({
                   id: detail.id || null, // This should have the actual ID
                   serverName: detail.serverName || '',
@@ -275,7 +275,7 @@ const ServerPMReportForm_Edit = () => {
             })()
           },
           hardDriveHealthData: {
-            hardDriveHealthData: (response.pmServerHardDriveHealths || []).flatMap(item => 
+            hardDriveHealthData: (response.pmServerHardDriveHealths || []).flatMap(item =>
               (item.details || []).map(detail => ({
                 id: detail.id || null, // Preserve ID for existing records
                 serverName: detail.serverName || '',
@@ -343,7 +343,7 @@ const ServerPMReportForm_Edit = () => {
           monthlyDatabaseCreationData: {
             pmServerMonthlyDatabaseCreations: response.pmServerMonthlyDatabaseCreations || [],
             // Legacy format for backward compatibility
-            monthlyDatabaseData: (response.pmServerMonthlyDatabaseCreations || []).flatMap(item => 
+            monthlyDatabaseData: (response.pmServerMonthlyDatabaseCreations || []).flatMap(item =>
               (item.details || []).map(detail => ({
                 id: detail.id || null,
                 item: detail.serverName || '',
@@ -448,7 +448,7 @@ const ServerPMReportForm_Edit = () => {
     softwarePatch: createDataChangeHandler('softwarePatchData')
   };
 
-    const formStatusIndex = steps.indexOf('formStatus');
+  const formStatusIndex = steps.indexOf('formStatus');
   const hasFormStatus = Boolean(formData.formstatusID);
 
   // Navigation functions
@@ -569,24 +569,24 @@ const ServerPMReportForm_Edit = () => {
 
     // Following reference pattern - use consistent dataKey mapping
     const dataKey = currentStep === 'signOff' ? 'signOffData' :
-                   currentStep === 'serverHealth' ? 'serverHealthData' :
-                   currentStep === 'networkHealth' ? 'networkHealthData' :
-                   currentStep === 'hardDriveHealth' ? 'hardDriveHealthData' :
-                   currentStep === 'diskUsage' ? 'diskUsageData' :
-                   currentStep === 'cpuAndRamUsage' ? 'cpuAndRamUsageData' :
-                   currentStep === 'willowlynxProcessStatus' ? 'willowlynxProcessStatusData' :
-                   currentStep === 'willowlynxNetworkStatus' ? 'willowlynxNetworkStatusData' :
-                   currentStep === 'willowlynxRTUStatus' ? 'willowlynxRTUStatusData' :
-                   currentStep === 'willowlynxHistorialTrend' ? 'willowlynxHistorialTrendData' :
-                   currentStep === 'willowlynxHistoricalReport' ? 'willowlynxHistoricalReportData' :
-                   currentStep === 'willowlynxSumpPitCCTVCamera' ? 'willowlynxSumpPitCCTVCameraData' :
-                   currentStep === 'monthlyDatabaseCreation' ? 'monthlyDatabaseCreationData' :
-                   currentStep === 'databaseBackup' ? 'databaseBackupData' :
-                   currentStep === 'timeSync' ? 'timeSyncData' :
-                   currentStep === 'hotFixes' ? 'hotFixesData' :
-                   currentStep === 'autoFailOver' ? 'autoFailOverData' :
-                   currentStep === 'asaFirewall' ? 'asaFirewallData' :
-                   currentStep === 'softwarePatch' ? 'softwarePatchData' : 'serverHealthData';
+      currentStep === 'serverHealth' ? 'serverHealthData' :
+        currentStep === 'networkHealth' ? 'networkHealthData' :
+          currentStep === 'hardDriveHealth' ? 'hardDriveHealthData' :
+            currentStep === 'diskUsage' ? 'diskUsageData' :
+              currentStep === 'cpuAndRamUsage' ? 'cpuAndRamUsageData' :
+                currentStep === 'willowlynxProcessStatus' ? 'willowlynxProcessStatusData' :
+                  currentStep === 'willowlynxNetworkStatus' ? 'willowlynxNetworkStatusData' :
+                    currentStep === 'willowlynxRTUStatus' ? 'willowlynxRTUStatusData' :
+                      currentStep === 'willowlynxHistorialTrend' ? 'willowlynxHistorialTrendData' :
+                        currentStep === 'willowlynxHistoricalReport' ? 'willowlynxHistoricalReportData' :
+                          currentStep === 'willowlynxSumpPitCCTVCamera' ? 'willowlynxSumpPitCCTVCameraData' :
+                            currentStep === 'monthlyDatabaseCreation' ? 'monthlyDatabaseCreationData' :
+                              currentStep === 'databaseBackup' ? 'databaseBackupData' :
+                                currentStep === 'timeSync' ? 'timeSyncData' :
+                                  currentStep === 'hotFixes' ? 'hotFixesData' :
+                                    currentStep === 'autoFailOver' ? 'autoFailOverData' :
+                                      currentStep === 'asaFirewall' ? 'asaFirewallData' :
+                                        currentStep === 'softwarePatch' ? 'softwarePatchData' : 'serverHealthData';
 
     return (
       <Component
@@ -598,9 +598,9 @@ const ServerPMReportForm_Edit = () => {
 
   const renderProgressDots = () => {
     return (
-      <Box sx={{ 
-        display: 'flex', 
-        gap: 1, 
+      <Box sx={{
+        display: 'flex',
+        gap: 1,
         alignItems: 'center',
         overflow: 'hidden',
         maxWidth: '100%',
@@ -609,9 +609,9 @@ const ServerPMReportForm_Edit = () => {
         {steps.map((step, index) => {
           const isActive = currentStep === step;
           const isLocked = !hasFormStatus && steps.indexOf(step) > formStatusIndex;
-          
+
           return (
-            <Tooltip 
+            <Tooltip
               key={step}
               title={`${index + 1}. ${stepTitles[step] || step}`}
               placement="top"
@@ -689,7 +689,7 @@ const ServerPMReportForm_Edit = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ 
+      <Box sx={{
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
         padding: 3
@@ -702,127 +702,180 @@ const ServerPMReportForm_Edit = () => {
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
         }}>
           {/* Header */}
+          {/* Header */}
           <Box sx={{
             background: 'linear-gradient(135deg, #2C3E50 0%, #34495E 50%, #1A252F 100%)',
             color: 'white',
             padding: 4,
             textAlign: 'center'
           }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, marginBottom: 1 }}>
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 'bold',
+                marginBottom: 1,
+                letterSpacing: '0.5px'
+              }}
+            >
               {formData.reportTitle || 'Edit Server Preventive Maintenance Report'}
             </Typography>
-            <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                opacity: 0.95,
+                fontSize: '16px',
+                fontWeight: 400
+              }}
+            >
               Edit the form below with accurate maintenance information
             </Typography>
+
+            {/* Job No Badge */}
+            <Box sx={{
+              marginTop: 2,
+              display: 'inline-block',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              padding: '8px 20px',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: '#e0e0e0',
+                  fontSize: '14px',
+                  fontWeight: 500
+                }}
+              >
+                Job No:
+                <Typography
+                  component="span"
+                  sx={{
+                    color: '#FFD700',
+                    fontWeight: 'bold',
+                    marginLeft: '8px',
+                    fontSize: '16px'
+                  }}
+                >
+                  {formData.jobNo || 'Not assigned'}
+                </Typography>
+              </Typography>
+            </Box>
           </Box>
 
           <Box sx={{ padding: 4 }}>
             {/* Basic Information Summary */}
-        <Paper sx={{
-          ...sectionContainerStyle,
-          background: '#f8f9fa',
-          border: '2px solid #e9ecef'
-        }}>
+            <Paper sx={{
+              ...sectionContainerStyle,
+              background: '#f8f9fa',
+              border: '2px solid #e9ecef'
+            }}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
                 📋 Basic Information Summary
               </Typography>
-              
-              <Grid container spacing={3} sx={{ marginTop: 1 }}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Job No"
-                    value={formData.jobNo || ''}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Job No"
+                  value={formData.jobNo || ''}
+                  disabled
+                  sx={{
+                    ...fieldStyle,
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: '#f9f9f9',
+                      '& fieldset': {
+                        borderColor: '#e0e0e0'
                       }
-                    }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="System Description"
-                    value={formData.systemDescription || ''}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
+                    },
+                    '& .MuiInputBase-input.Mui-disabled': {
+                      WebkitTextFillColor: '#666 !important',
+                      color: '#666 !important'
+                    }
+                  }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="System Description"
+                  value={formData.systemDescription || ''}
+                  disabled
+                  sx={{
+                    ...fieldStyle,
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: '#f9f9f9',
+                      '& fieldset': {
+                        borderColor: '#e0e0e0'
                       }
-                    }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Station Name"
-                    value={formData.stationName || ''}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
+                    },
+                    '& .MuiInputBase-input.Mui-disabled': {
+                      WebkitTextFillColor: '#666 !important',
+                      color: '#666 !important'
+                    }
+                  }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Station Name"
+                  value={formData.stationName || ''}
+                  disabled
+                  sx={{
+                    ...fieldStyle,
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: '#f9f9f9',
+                      '& fieldset': {
+                        borderColor: '#e0e0e0'
                       }
-                    }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Customer"
-                    value={formData.customer || ''}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
+                    },
+                    '& .MuiInputBase-input.Mui-disabled': {
+                      WebkitTextFillColor: '#666 !important',
+                      color: '#666 !important'
+                    }
+                  }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Customer"
+                  value={formData.customer || ''}
+                  disabled
+                  sx={{
+                    ...fieldStyle,
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: '#f9f9f9',
+                      '& fieldset': {
+                        borderColor: '#e0e0e0'
                       }
-                    }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Project No"
-                    value={formData.projectNo || ''}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
+                    },
+                    '& .MuiInputBase-input.Mui-disabled': {
+                      WebkitTextFillColor: '#666 !important',
+                      color: '#666 !important'
+                    }
+                  }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Project No"
+                  value={formData.projectNo || ''}
+                  disabled
+                  sx={{
+                    ...fieldStyle,
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: '#f9f9f9',
+                      '& fieldset': {
+                        borderColor: '#e0e0e0'
                       }
-                    }}
-                  />
-                </Grid>
-              </Grid>
+                    },
+                    '& .MuiInputBase-input.Mui-disabled': {
+                      WebkitTextFillColor: '#666 !important',
+                      color: '#666 !important'
+                    }
+                  }}
+                />
+              </Box>
             </Paper>
 
             {/* Current Step Content */}
@@ -865,14 +918,14 @@ const ServerPMReportForm_Edit = () => {
                 >
                   Back
                 </Button>
-                
+
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                   <Typography variant="h6" sx={{ color: '#2C3E50', fontWeight: 600 }}>
                     {stepTitles[currentStep]}
                   </Typography>
                   {renderProgressDots()}
                 </Box>
-                
+
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <Button
                     variant="contained"
@@ -894,7 +947,7 @@ const ServerPMReportForm_Edit = () => {
                       }
                     }}
                   >
-                    {currentStep === 'softwarePatch' ? 'Complete →' : 'Next'}
+                    {currentStep === 'softwarePatch' ? 'Complete' : 'Next'}
                   </Button>
                 </Box>
               </Box>

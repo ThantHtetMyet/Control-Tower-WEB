@@ -9,6 +9,7 @@ import {
   IconButton,
   InputAdornment,
   CircularProgress,
+  Tooltip,
 } from '@mui/material';
 import { styled, keyframes } from '@mui/system';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
@@ -929,14 +930,20 @@ function SignIn() {
       </Container>
       
       {/* Toggle UI for switching between Orbit Animation and Apple Clock */}
-      <ToggleContainer onClick={handleToggle}>
-        <ToggleLabel>
-          {isAppleClock ? 'Clock' : 'Orbit'}
-        </ToggleLabel>
-        <ToggleSwitch isActive={isAppleClock}>
-          <ToggleKnob isActive={isAppleClock} />
-        </ToggleSwitch>
-      </ToggleContainer>
+      <Tooltip
+        title="Show animated theme when the mouse is idle for more than 10 seconds."
+        placement="right"
+        arrow
+      >
+        <ToggleContainer onClick={handleToggle}>
+          <ToggleLabel>
+            {isAppleClock ? 'Clock' : 'Orbit'}
+          </ToggleLabel>
+          <ToggleSwitch isActive={isAppleClock}>
+            <ToggleKnob isActive={isAppleClock} />
+          </ToggleSwitch>
+        </ToggleContainer>
+      </Tooltip>
       
       <CustomModal
         open={openErrorModal}
