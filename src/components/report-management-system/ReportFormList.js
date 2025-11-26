@@ -21,21 +21,21 @@ const ReportFormList = () => {
   const [selectedTypeId, setSelectedTypeId] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedDeleteId, setSelectedDeleteId] = useState(null);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  
+
   // Search state
   const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  
+
   // Sorting state
   const [sortField, setSortField] = useState('');
   const [sortDirection, setSortDirection] = useState('asc'); // 'asc' or 'desc'
-  
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,7 +47,7 @@ const ReportFormList = () => {
     try {
       setLoading(true);
       const response = await getReportForms(currentPage, pageSize, searchTerm, selectedTypeId || null, sortField, sortDirection);
-      
+
       setReportForms(response.data || []);
       setTotalCount(response.totalCount || 0);
       setTotalPages(response.totalPages || 0);
@@ -175,14 +175,14 @@ const ReportFormList = () => {
     };
     const style = statusColors[normalizedStatus] || { backgroundColor: RMSTheme.background.default, color: RMSTheme.text.primary };
     return (
-      <Chip 
-        label={status || 'N/A'} 
+      <Chip
+        label={status || 'N/A'}
         sx={{
           fontWeight: 600,
           textTransform: 'capitalize',
           ...style
         }}
-        size="small" 
+        size="small"
       />
     );
   };
@@ -195,10 +195,10 @@ const ReportFormList = () => {
       'Failed': { backgroundColor: RMSTheme.status.error, color: RMSTheme.text.onPrimary }
     };
     return (
-      <Chip 
-        label={status} 
+      <Chip
+        label={status}
         sx={statusColors[status] || { backgroundColor: RMSTheme.background.default }}
-        size="small" 
+        size="small"
       />
     );
   };
@@ -208,8 +208,8 @@ const ReportFormList = () => {
   return (
     <Box sx={{ p: 3, backgroundColor: RMSTheme.background.default, minHeight: '100vh' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography 
-          variant="h4" 
+        <Typography
+          variant="h4"
           component="h1"
           sx={{ color: RMSTheme.text.primary, fontWeight: 'bold' }}
         >
@@ -234,7 +234,7 @@ const ReportFormList = () => {
       </Box>
 
       <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-        <FormControl sx={{ 
+        <FormControl sx={{
           minWidth: 200,
           '& .MuiOutlinedInput-root': {
             backgroundColor: RMSTheme.background.paper,
@@ -350,9 +350,9 @@ const ReportFormList = () => {
         </FormControl>
       </Box>
 
-      <TableContainer 
-        component={Paper} 
-        sx={{ 
+      <TableContainer
+        component={Paper}
+        sx={{
           backgroundColor: RMSTheme.background.paper,
           boxShadow: RMSTheme.shadows.medium,
           borderRadius: RMSTheme.borderRadius.medium,
@@ -362,10 +362,10 @@ const ReportFormList = () => {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: RMSTheme.background.hover }}>
-              <TableCell 
-                sx={{ 
-                  fontWeight: 'bold', 
-                  color: RMSTheme.text.primary, 
+              <TableCell
+                sx={{
+                  fontWeight: 'bold',
+                  color: RMSTheme.text.primary,
                   minWidth: 150,
                   cursor: 'pointer',
                   userSelect: 'none',
@@ -378,10 +378,10 @@ const ReportFormList = () => {
                   {getSortIcon('reportFormTypeName')}
                 </Box>
               </TableCell>
-              <TableCell 
-                sx={{ 
-                  fontWeight: 'bold', 
-                  color: RMSTheme.text.primary, 
+              <TableCell
+                sx={{
+                  fontWeight: 'bold',
+                  color: RMSTheme.text.primary,
                   minWidth: 150,
                   cursor: 'pointer',
                   userSelect: 'none',
@@ -394,10 +394,10 @@ const ReportFormList = () => {
                   {getSortIcon('specificReportTypeName')}
                 </Box>
               </TableCell>
-              <TableCell 
-                sx={{ 
-                  fontWeight: 'bold', 
-                  color: RMSTheme.text.primary, 
+              <TableCell
+                sx={{
+                  fontWeight: 'bold',
+                  color: RMSTheme.text.primary,
                   minWidth: 120,
                   cursor: 'pointer',
                   userSelect: 'none',
@@ -410,10 +410,10 @@ const ReportFormList = () => {
                   {getSortIcon('jobNo')}
                 </Box>
               </TableCell>
-              <TableCell 
-                sx={{ 
-                  fontWeight: 'bold', 
-                  color: RMSTheme.text.primary, 
+              <TableCell
+                sx={{
+                  fontWeight: 'bold',
+                  color: RMSTheme.text.primary,
                   minWidth: 200,
                   cursor: 'pointer',
                   userSelect: 'none',
@@ -426,10 +426,10 @@ const ReportFormList = () => {
                   {getSortIcon('systemName')}
                 </Box>
               </TableCell>
-              <TableCell 
-                sx={{ 
-                  fontWeight: 'bold', 
-                  color: RMSTheme.text.primary, 
+              <TableCell
+                sx={{
+                  fontWeight: 'bold',
+                  color: RMSTheme.text.primary,
                   minWidth: 200,
                   cursor: 'pointer',
                   userSelect: 'none',
@@ -442,10 +442,10 @@ const ReportFormList = () => {
                   {getSortIcon('stationName')}
                 </Box>
               </TableCell>
-              <TableCell 
-                sx={{ 
-                  fontWeight: 'bold', 
-                  color: RMSTheme.text.primary, 
+              <TableCell
+                sx={{
+                  fontWeight: 'bold',
+                  color: RMSTheme.text.primary,
                   minWidth: 120,
                   cursor: 'pointer',
                   userSelect: 'none',
@@ -458,10 +458,10 @@ const ReportFormList = () => {
                   {getSortIcon('formStatus')}
                 </Box>
               </TableCell>
-              <TableCell 
-                sx={{ 
-                  fontWeight: 'bold', 
-                  color: RMSTheme.text.primary, 
+              <TableCell
+                sx={{
+                  fontWeight: 'bold',
+                  color: RMSTheme.text.primary,
                   minWidth: 150,
                   cursor: 'pointer',
                   userSelect: 'none',
@@ -474,10 +474,10 @@ const ReportFormList = () => {
                   {getSortIcon('createdDate')}
                 </Box>
               </TableCell>
-              <TableCell 
-                sx={{ 
-                  fontWeight: 'bold', 
-                  color: RMSTheme.text.primary, 
+              <TableCell
+                sx={{
+                  fontWeight: 'bold',
+                  color: RMSTheme.text.primary,
                   minWidth: 150,
                   cursor: 'pointer',
                   userSelect: 'none',
@@ -490,10 +490,10 @@ const ReportFormList = () => {
                   {getSortIcon('createdBy')}
                 </Box>
               </TableCell>
-              <TableCell 
-                sx={{ 
-                  fontWeight: 'bold', 
-                  color: RMSTheme.text.primary, 
+              <TableCell
+                sx={{
+                  fontWeight: 'bold',
+                  color: RMSTheme.text.primary,
                   minWidth: 150,
                   cursor: 'pointer',
                   userSelect: 'none',
@@ -529,133 +529,135 @@ const ReportFormList = () => {
               </TableRow>
             ) : (
               sortedReportForms.map((form) => (
-              <TableRow 
-                key={form.id}
-                onDoubleClick={() => handleNavigateToDetails(form)}
-                sx={{
-                  '&:hover': {
-                    backgroundColor: RMSTheme.background.hover,
-                    cursor: 'pointer'
-                  }
-                }}
-              >
-                <TableCell sx={{ color: RMSTheme.text.primary }}>
-                  {form.reportFormTypeName || 'N/A'}
-                </TableCell>
-                <TableCell sx={{ color: RMSTheme.text.primary }}>
-                  {form.specificReportTypeName || 'N/A'}
-                </TableCell>
-                <TableCell sx={{ color: RMSTheme.text.primary }}>
-                  {form.jobNo || 'N/A'}
-                </TableCell>
-                <TableCell sx={{ color: RMSTheme.text.primary }}>
-                  <Tooltip title={form.systemNameWarehouseName || 'N/A'}>
-                    <span>
-                      {form.systemNameWarehouseName ? 
-                        (form.systemNameWarehouseName.length > 30 ? 
-                          form.systemNameWarehouseName.substring(0, 30) + '...' : 
-                          form.systemNameWarehouseName
-                        ) : 'N/A'
-                      }
-                    </span>
-                  </Tooltip>
-                </TableCell>
-                <TableCell sx={{ color: RMSTheme.text.primary }}>
-                  <Tooltip title={form.stationNameWarehouseName || 'N/A'}>
-                    <span>
-                      {form.stationNameWarehouseName ? 
-                        (form.stationNameWarehouseName.length > 30 ? 
-                          form.stationNameWarehouseName.substring(0, 30) + '...' : 
-                          form.stationNameWarehouseName
-                        ) : 'N/A'
-                      }
-                    </span>
-                  </Tooltip>
-                </TableCell>
-                <TableCell>{getStatusChip(form.formStatus || 'N/A')}</TableCell>
-                <TableCell sx={{ color: RMSTheme.text.secondary }}>
-                  {form.createdDate ? moment(form.createdDate).format('YYYY-MM-DD HH:mm') : 'N/A'}
-                </TableCell>
-                <TableCell sx={{ color: RMSTheme.text.secondary }}>
-                  {form.createdByUserName || 'N/A'}
-                </TableCell>
-                <TableCell sx={{ color: RMSTheme.text.secondary }}>
-                  {form.updatedByUserName || 'N/A'}
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Tooltip title="View Details">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleNavigateToDetails(form)}
-                        sx={{
-                          color: RMSTheme.status.info,
-                          '&:hover': {
-                            backgroundColor: RMSTheme.background.hover,
-                            color: RMSTheme.primary.main
-                          }
-                        }}
-                      >
-                        <Visibility />
-                      </IconButton>
+                <TableRow
+                  key={form.id}
+                  onDoubleClick={() => handleNavigateToDetails(form)}
+                  sx={{
+                    '&:hover': {
+                      backgroundColor: RMSTheme.background.hover,
+                      cursor: 'pointer'
+                    }
+                  }}
+                >
+                  <TableCell sx={{ color: RMSTheme.text.primary }}>
+                    {form.reportFormTypeName || 'N/A'}
+                  </TableCell>
+                  <TableCell sx={{ color: RMSTheme.text.primary }}>
+                    {form.specificReportTypeName || 'N/A'}
+                  </TableCell>
+                  <TableCell sx={{ color: RMSTheme.text.primary }}>
+                    {form.jobNo || 'N/A'}
+                  </TableCell>
+                  <TableCell sx={{ color: RMSTheme.text.primary }}>
+                    <Tooltip title={form.systemNameWarehouseName || 'N/A'}>
+                      <span>
+                        {form.systemNameWarehouseName ?
+                          (form.systemNameWarehouseName.length > 30 ?
+                            form.systemNameWarehouseName.substring(0, 30) + '...' :
+                            form.systemNameWarehouseName
+                          ) : 'N/A'
+                        }
+                      </span>
                     </Tooltip>
-                    <Tooltip title="Edit">
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          // Navigate to appropriate edit page based on report type
-                          const specificType = (form.specificReportTypeName || '').toLowerCase();
-                          const reportType = (form.reportFormTypeName || '').toLowerCase();
-                          if (specificType === 'rtu') {
-                            navigate(`/report-management-system/rtu-pm-edit/${form.id}`);
-                          } else if (specificType === 'server') {
-                            navigate(`/report-management-system/server-pm-edit/${form.id}`);
-                          } else if (reportType === 'corrective maintenance') {
-                            navigate(`/report-management-system/cm-edit/${form.id}`);
-                          } else {
-                            navigate(`/report-management-system/report-forms/details/${form.id}`);
-                          }
-                        }}
-                        sx={{
-                          color: RMSTheme.status.warning,
-                          '&:hover': {
-                            backgroundColor: RMSTheme.background.hover,
-                            color: RMSTheme.primary.main
-                          }
-                        }}
-                      >
-                        <Edit />
-                      </IconButton>
+                  </TableCell>
+                  <TableCell sx={{ color: RMSTheme.text.primary }}>
+                    <Tooltip title={form.stationNameWarehouseName || 'N/A'}>
+                      <span>
+                        {form.stationNameWarehouseName ?
+                          (form.stationNameWarehouseName.length > 30 ?
+                            form.stationNameWarehouseName.substring(0, 30) + '...' :
+                            form.stationNameWarehouseName
+                          ) : 'N/A'
+                        }
+                      </span>
                     </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDelete(form.id)}
-                        sx={{
-                          color: RMSTheme.status.error,
-                          '&:hover': {
-                            backgroundColor: RMSTheme.background.hover,
-                            color: RMSTheme.status.error
-                          }
-                        }}
-                      >
-                        <Delete />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))
+                  </TableCell>
+                  <TableCell>{getStatusChip(form.formStatus || 'N/A')}</TableCell>
+                  <TableCell sx={{ color: RMSTheme.text.secondary }}>
+                    {form.createdDate ? moment(form.createdDate).format('YYYY-MM-DD HH:mm') : 'N/A'}
+                  </TableCell>
+                  <TableCell sx={{ color: RMSTheme.text.secondary }}>
+                    {form.createdByUserName || 'N/A'}
+                  </TableCell>
+                  <TableCell sx={{ color: RMSTheme.text.secondary }}>
+                    {form.updatedByUserName || 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Tooltip title="View Details">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleNavigateToDetails(form)}
+                          sx={{
+                            color: RMSTheme.status.info,
+                            '&:hover': {
+                              backgroundColor: RMSTheme.background.hover,
+                              color: RMSTheme.primary.main
+                            }
+                          }}
+                        >
+                          <Visibility />
+                        </IconButton>
+                      </Tooltip>
+                      {(form.formStatus || '').trim().toLowerCase() !== 'close' && (
+                        <Tooltip title="Edit">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              // Navigate to appropriate edit page based on report type
+                              const specificType = (form.specificReportTypeName || '').toLowerCase();
+                              const reportType = (form.reportFormTypeName || '').toLowerCase();
+                              if (specificType === 'rtu') {
+                                navigate(`/report-management-system/rtu-pm-edit/${form.id}`);
+                              } else if (specificType === 'server') {
+                                navigate(`/report-management-system/server-pm-edit/${form.id}`);
+                              } else if (reportType === 'corrective maintenance') {
+                                navigate(`/report-management-system/cm-edit/${form.id}`);
+                              } else {
+                                navigate(`/report-management-system/report-forms/details/${form.id}`);
+                              }
+                            }}
+                            sx={{
+                              color: RMSTheme.status.warning,
+                              '&:hover': {
+                                backgroundColor: RMSTheme.background.hover,
+                                color: RMSTheme.primary.main
+                              }
+                            }}
+                          >
+                            <Edit />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      <Tooltip title="Delete">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(form.id)}
+                          sx={{
+                            color: RMSTheme.status.error,
+                            '&:hover': {
+                              backgroundColor: RMSTheme.background.hover,
+                              color: RMSTheme.status.error
+                            }
+                          }}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
       </TableContainer>
 
       {/* Pagination Controls */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         mt: 3,
         flexWrap: 'wrap',
         gap: 2
@@ -664,7 +666,7 @@ const ReportFormList = () => {
           Showing {reportForms.length > 0 ? ((currentPage - 1) * pageSize + 1) : 0} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} entries
           {searchTerm && ` (filtered from total entries)`}
         </Typography>
-        
+
         <Stack direction="row" spacing={2} alignItems="center">
           <Pagination
             count={totalPages}

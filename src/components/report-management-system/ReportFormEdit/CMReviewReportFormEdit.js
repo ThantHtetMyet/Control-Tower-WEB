@@ -23,20 +23,40 @@ import {
   Select,
   Card,
   Modal,
-  IconButton
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Fade
 } from '@mui/material';
 import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   ArrowBack as ArrowBackIcon,
+  CheckCircle as CheckCircleIcon,
   Comment as CommentIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  UploadFile as UploadFileIcon
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import moment from 'moment';
 import RMSTheme from '../../theme-resource/RMSTheme';
-import { getCMReportForm, updateCMReportForm, getCMMaterialUsed, updateCMMaterialUsed, deleteCMMaterialUsed, updateReportForm, createCMMaterialUsed, createReportFormImage, deleteReportFormImage, getReportFormImageTypes } from '../../api-services/reportFormService';
+import {
+  getCMReportForm,
+  updateCMReportForm,
+  getCMMaterialUsed,
+  updateCMMaterialUsed,
+  deleteCMMaterialUsed,
+  updateReportForm,
+  createCMMaterialUsed,
+  createReportFormImage,
+  deleteReportFormImage,
+  getReportFormImageTypes,
+  uploadFinalReportAttachment
+} from '../../api-services/reportFormService';
 import warehouseService from '../../api-services/warehouseService';
 import { API_BASE_URL } from '../../../config/apiConfig';
 
@@ -283,8 +303,9 @@ const CMReviewReportFormEdit = () => {
     customer: '',
     projectNo: '',
     jobNo: '',
+    reportTitle: '',
     reportFormTypeName: '',
-    reportFormTypeID: '', // Add this line
+    reportFormTypeID: '',
     stationName: '',
     stationNameWarehouseID: '',
     stationNameWarehouseName: '',
@@ -302,7 +323,9 @@ const CMReviewReportFormEdit = () => {
     approvedBy: '',
     remark: '',
     furtherActionTakenID: '',
-    formstatusID: ''
+    furtherActionTakenName: '',
+    formstatusID: '',
+    formStatusName: ''
   });
 
   // Image states
@@ -313,6 +336,11 @@ const CMReviewReportFormEdit = () => {
 
   // Material used data state
   const [materialUsedData, setMaterialUsedData] = useState([]);
+
+  const [finalReportDialogOpen, setFinalReportDialogOpen] = useState(false);
+  const [finalReportFile, setFinalReportFile] = useState(null);
+  const [finalReportUploading, setFinalReportUploading] = useState(false);
+  const [finalReportUploadError, setFinalReportUploadError] = useState('');
 
   // Helper function to format date for input
   const formatDateForInput = (date) => {
@@ -344,6 +372,22 @@ const CMReviewReportFormEdit = () => {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
+  const formatDisplayDate = (date) => {
+    if (!date) return '';
+    return moment(date).format('DD/MM/YYYY HH:mm');
+  };
+
+  const formStatusOptions = warehouseData.formStatuses || [];
+  const selectedFormStatus = formStatusOptions.find(
+    (status) => (status.id || status.ID) === (formData.formstatusID || formData.formStatusID)
+  );
+  const formStatusDisplayName =
+    formData.formStatusName ||
+    selectedFormStatus?.name ||
+    selectedFormStatus?.Name ||
+    '';
+  const isStatusClose = (formStatusDisplayName || '').trim().toLowerCase() === 'close';
+
   // Load warehouse data
   useEffect(() => {
     const fetchWarehouseData = async () => {
@@ -374,6 +418,7 @@ const CMReviewReportFormEdit = () => {
             customer: passedData.customer || '',
             projectNo: passedData.projectNo || '',
             jobNo: passedData.jobNo || '',
+            reportTitle: passedData.reportTitle || '',
             reportFormTypeName: passedData.reportFormTypeName || '',
             reportFormTypeID: passedData.reportFormTypeID || '', // Add this line
             stationName: passedData.stationName || '',
@@ -393,7 +438,9 @@ const CMReviewReportFormEdit = () => {
             approvedBy: passedData.approvedBy || '',
             remark: passedData.remark || '',
             furtherActionTakenID: passedData.furtherActionTakenID || '',
-            formstatusID: passedData.formstatusID || ''
+            furtherActionTakenName: passedData.furtherActionTakenName || '',
+            formstatusID: passedData.formstatusID || '',
+            formStatusName: passedData.formStatusName || passedData.formstatusName || ''
           });
 
           // Set image data from passed data
@@ -439,7 +486,9 @@ const CMReviewReportFormEdit = () => {
             customer: cmData.customer || '',
             projectNo: cmData.projectNo || '',
             jobNo: cmData.jobNo || '',
+            reportTitle: cmData.reportTitle || response.reportTitle || '',
             reportFormTypeName: cmData.reportFormTypeName || '',
+            reportFormTypeID: response.reportFormTypeID || cmData.reportFormTypeID || '',
             stationName: cmData.stationName || '',
             stationNameWarehouseID: cmData.stationNameWarehouseID || '',
             stationNameWarehouseName: cmData.stationNameWarehouseName || '',
@@ -457,7 +506,9 @@ const CMReviewReportFormEdit = () => {
             approvedBy: cmData.approvedBy || '',
             remark: cmData.remark || '',
             furtherActionTakenID: cmData.furtherActionTakenID || '',
-            formstatusID: cmData.formstatusID || ''
+            furtherActionTakenName: cmData.furtherActionTakenName || '',
+            formstatusID: cmData.formstatusID || '',
+            formStatusName: cmData.formStatusName || cmData.formstatusName || response.formStatus || ''
           });
 
           // Load images from API response
@@ -529,6 +580,66 @@ const CMReviewReportFormEdit = () => {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleFinalReportFileChange = (event) => {
+    setFinalReportUploadError('');
+    const file = event.target.files?.[0] || null;
+    setFinalReportFile(file);
+  };
+
+  const handleCloseFinalReportDialog = () => {
+    if (finalReportUploading) return;
+    setFinalReportDialogOpen(false);
+    setFinalReportFile(null);
+    setFinalReportUploadError('');
+  };
+
+  const handleUploadFinalReport = async () => {
+    if (!finalReportFile) {
+      setFinalReportUploadError('Please select a file to upload.');
+      return;
+    }
+
+    setFinalReportUploading(true);
+    try {
+      await handleSave({ skipNavigation: true, suppressSuccessToast: true });
+      const reportFormId = id;
+      if (!reportFormId) {
+        throw new Error('Report Form ID not found in URL parameters');
+      }
+
+      await uploadFinalReportAttachment(reportFormId, finalReportFile);
+
+      setFinalReportDialogOpen(false);
+      setFinalReportFile(null);
+      setFinalReportUploadError('');
+
+      setNotification({
+        open: true,
+        message: 'CM Report and Final Report saved successfully!',
+        severity: 'success'
+      });
+
+      setTimeout(() => {
+        navigate('/report-management-system');
+      }, 1000);
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.message || 'Failed to submit report.';
+      setFinalReportUploadError(message);
+    } finally {
+      setFinalReportUploading(false);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (isStatusClose) {
+      setFinalReportUploadError('');
+      setFinalReportDialogOpen(true);
+      return;
+    }
+
+    handleSave();
   };
 
   // Process image changes - Following RTU PM pattern
@@ -613,7 +724,7 @@ const CMReviewReportFormEdit = () => {
   };
 
   // Handle save - Following RTU PM pattern
-  const handleSave = async () => {
+  const handleSave = async ({ skipNavigation = false, suppressSuccessToast = false } = {}) => {
     try {
       setSaving(true);
       setError(null);
@@ -714,16 +825,19 @@ const CMReviewReportFormEdit = () => {
 
       setSaveProgress('Save completed successfully!');
       
-      setNotification({
-        open: true,
-        message: 'CM Report Form updated successfully!',
-        severity: 'success'
-      });
+      if (!suppressSuccessToast) {
+        setNotification({
+          open: true,
+          message: 'CM Report Form updated successfully!',
+          severity: 'success'
+        });
+      }
 
-      // Navigate back after a short delay
-      setTimeout(() => {
-        navigate('/report-management-system');
-      }, 2000);
+      if (!skipNavigation) {
+        setTimeout(() => {
+          navigate('/report-management-system');
+        }, 2000);
+      }
 
     } catch (error) {
       console.error('Error updating CM report form:', error);
@@ -814,98 +928,88 @@ const CMReviewReportFormEdit = () => {
     '& .MuiOutlinedInput-input': {
       color: '#2C3E50',
     },
+    '& .MuiInputBase-input.Mui-disabled': {
+      color: '#333',
+      WebkitTextFillColor: '#333'
+    }
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ padding: 3, maxWidth: '1400px', margin: '0 auto' }}>
-        <Paper sx={{
-          maxWidth: '1400px',
-          margin: '0 auto',
-          borderRadius: '16px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
-        }}>
-          <Box sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            padding: 4,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, marginBottom: 1 }}>
-                Review Corrective Maintenance Report
-              </Typography>
-            </Box>
-            
-            {/* JobNo and Report Form Type display in top right corner */}
-            <Box sx={{ textAlign: 'right' }}>
-              <Box sx={{
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                marginBottom: 1,
-                backdropFilter: 'blur(10px)'
+      <Box sx={{
+              background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+              minHeight: '100vh',
+              padding: 3
+            }}>
+              <Paper sx={{
+                maxWidth: '1200px',
+                margin: '0 auto',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
               }}>
-                <Typography 
-                  variant="body1" 
-                  sx={{ 
-                    color: 'white',
-                    fontWeight: 'normal',
-                    fontSize: '14px',
-                    display: 'inline'
-                  }}
-                >
-                  Job No: 
-                </Typography>
-                <Typography 
-                  variant="body1" 
-                  sx={{ 
-                    color: '#FFD700',
-                    fontWeight: 'bold',
-                    fontSize: '16px',
-                    display: 'inline',
-                    marginLeft: '4px'
-                  }}
-                >
-                  {formData.jobNo || 'Not assigned'}
-                </Typography>
-              </Box>
-              
-              <Box sx={{
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                backdropFilter: 'blur(10px)'
-              }}>
-                <Typography 
-                  variant="body1" 
-                  sx={{ 
-                    color: 'white',
-                    fontWeight: 'normal',
-                    fontSize: '14px',
-                    display: 'inline'
-                  }}
-                >
-                  Type: 
-                </Typography>
-                <Typography 
-                  variant="body1" 
-                  sx={{ 
-                    color: '#FFD700',
-                    fontWeight: 'bold',
-                    fontSize: '16px',
-                    display: 'inline',
-                    marginLeft: '4px'
-                  }}
-                >
-                  {formData.reportFormTypeName || 'Not specified'}
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
-          
+                {/* Gradient Header */}
+                <Box sx={{
+                  background: 'linear-gradient(135deg, #2C3E50 0%, #34495E 50%, #1A252F 100%)',
+                  color: 'white',
+                  padding: 4,
+                  textAlign: 'center'
+                }}>
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      fontWeight: 'bold',
+                      marginBottom: 1,
+                      letterSpacing: '0.5px'
+                    }}
+                  >
+                    {formData.reportTitle || ''}
+                  </Typography>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      opacity: 0.95,
+                      fontSize: '16px',
+                      fontWeight: 400
+                    }}
+                  >
+                    Review Changes
+                  </Typography>
+      
+                  {/* Job No Badge */}
+                  <Box sx={{
+                    marginTop: 2,
+                    display: 'inline-block',
+                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    padding: '8px 20px',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    backdropFilter: 'blur(10px)'
+                  }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: '#e0e0e0',
+                        fontSize: '14px',
+                        fontWeight: 500
+                      }}
+                    >
+                      Job No:
+                      <Typography
+                        component="span"
+                        sx={{
+                          color: '#FFD700',
+                          fontWeight: 'bold',
+                          marginLeft: '8px',
+                          fontSize: '16px'
+                        }}
+                      >
+                        {formData.jobNo || 'Not assigned'}
+                      </Typography>
+                    </Typography>
+                  </Box>
+                </Box>
+                
           <Box sx={{ padding: 4 }}>
             
             {/* Basic Information Summary Section */}
@@ -915,30 +1019,18 @@ const CMReviewReportFormEdit = () => {
               border: '2px solid #e9ecef'
             }}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
-                📋 Basic Information Summary
+                📋 Basic Information
               </Typography>
               
-              <Grid container spacing={3} sx={{ marginTop: 1 }}>
-                <Grid item xs={12} md={6}>
+               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <TextField
                     fullWidth
                     label="Station Name"
                     value={formData.stationName || ''}
                     disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
+                    sx={fieldStyle}
                   />
-                </Grid>
                 
-                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="System Description"
@@ -955,9 +1047,7 @@ const CMReviewReportFormEdit = () => {
                       }
                     }}
                   />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
+
                   <TextField
                     fullWidth
                     label="Project No"
@@ -974,9 +1064,7 @@ const CMReviewReportFormEdit = () => {
                       }
                     }}
                   />
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
+
                   <TextField
                     fullWidth
                     label="Customer"
@@ -993,10 +1081,23 @@ const CMReviewReportFormEdit = () => {
                       }
                     }}
                   />
-                </Grid>
-              </Grid>
+                  </Box>
+            </Paper>            {/* Form Status */}
+            <Paper sx={sectionContainerStyle}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                Form Status
+              </Typography>
+              <Box sx={{ marginTop: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Form Status"
+                  value={formStatusDisplayName || 'N/A'}
+                  InputProps={{ readOnly: true }}
+                  sx={fieldStyle}
+                />
+              </Box>
             </Paper>
-
+          
             {/* Date & Time Information */}
             <Paper sx={sectionContainerStyle}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
@@ -1081,36 +1182,17 @@ const CMReviewReportFormEdit = () => {
               
               {/* Issue Reported Description */} 
               <Paper sx={{ padding: 2, marginBottom: 3, border: '1px solid #e0e0e0' }}> 
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    color: '#2C3E50', 
-                    fontWeight: 'bold', 
-                    marginBottom: 2, 
-                    fontSize: '14px', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.5px' 
-                  }} 
-                > 
-                  Issue Reported Description 
-                </Typography> 
-                
-                <TextField 
-                  fullWidth 
-                  value={formData.issueReportedDescription || ''} 
-                  multiline 
-                  rows={4} 
-                  variant="outlined" 
-                  InputProps={{ readOnly: true }}
-                  sx={{ 
-                    backgroundColor: 'white', 
-                    '& .MuiOutlinedInput-root': { 
-                      borderRadius: '8px',
-                      backgroundColor: '#f5f5f5'
-                    } 
-                  }} 
-                /> 
-                
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  label="Issue Reported Description"
+                  value={formData.issueReportedDescription || ''}
+                  onChange={(e) => handleInputChange('issueReportedDescription', e.target.value)}
+                  placeholder="Describe the issue as reported by the user or system..."
+                  sx={fieldStyle}
+                />
+
                 {/* Before Issue Images */} 
                 <Box sx={{ marginTop: 2 }}> 
                   <ImagePreviewSection
@@ -1122,35 +1204,17 @@ const CMReviewReportFormEdit = () => {
               
               {/* Issue Found Description */} 
               <Paper sx={{ padding: 2, marginBottom: 3, border: '1px solid #e0e0e0' }}> 
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    color: '#2C3E50', 
-                    fontWeight: 'bold', 
-                    marginBottom: 2, 
-                    fontSize: '14px', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.5px' 
-                  }} 
-                > 
-                  Issue Found Description 
-                </Typography> 
                 
-                <TextField 
-                  fullWidth 
-                  value={formData.issueFoundDescription || ''} 
-                  multiline 
-                  rows={4} 
-                  variant="outlined" 
-                  InputProps={{ readOnly: true }}
-                  sx={{ 
-                    backgroundColor: 'white', 
-                    '& .MuiOutlinedInput-root': { 
-                      borderRadius: '8px',
-                      backgroundColor: '#f5f5f5'
-                    } 
-                  }} 
-                /> 
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  label="Issue Found Description"
+                  value={formData.issueFoundDescription || ''}
+                  onChange={(e) => handleInputChange('issueFoundDescription', e.target.value)}
+                  placeholder="Describe the actual issue found during investigation and diagnosis..."
+                  sx={fieldStyle}
+                />
               </Paper> 
               
               {/* Action Taken Description */} 
@@ -1168,23 +1232,16 @@ const CMReviewReportFormEdit = () => {
                 > 
                   🔧 Action Taken 
                 </Typography> 
-                
-                <TextField 
-                  fullWidth 
-                  value={formData.actionTakenDescription || ''} 
-                  multiline 
-                  rows={4} 
-                  variant="outlined" 
-                  InputProps={{ readOnly: true }}
-                  sx={{ 
-                    backgroundColor: 'white', 
-                    '& .MuiOutlinedInput-root': { 
-                      borderRadius: '8px',
-                      backgroundColor: '#f5f5f5'
-                    } 
-                  }} 
-                /> 
-                
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  label="Action Taken Description"
+                  value={formData.actionTakenDescription || ''}
+                  onChange={(e) => handleInputChange('actionTakenDescription', e.target.value)}
+                  placeholder="Describe the corrective actions taken to resolve the issue..."
+                  sx={fieldStyle}
+                />
                 {/* After Action Images */} 
                 <Box sx={{ marginTop: 2 }}> 
                   <ImagePreviewSection
@@ -1252,6 +1309,26 @@ const CMReviewReportFormEdit = () => {
                 </Grid>
               </Grid>
             </Paper>
+                    
+            
+            {/* Remark */}
+            <Paper sx={{ padding: 3, marginBottom: 3 }}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                📝 Remark
+              </Typography>
+              
+              <TextField 
+                fullWidth 
+                label="Remark" 
+                value={formData.remark || ''} 
+                onChange={(e) => handleInputChange('remark', e.target.value)} 
+                multiline 
+                rows={4} 
+                variant="outlined" 
+                disabled
+                sx={fieldStyle}
+              /> 
+            </Paper>
 
             {/* Approval Information */}
             <Paper sx={{ padding: 3, marginBottom: 3 }}>
@@ -1273,12 +1350,7 @@ const CMReviewReportFormEdit = () => {
                 value={formData.attendedBy || ''} 
                 onChange={(e) => handleInputChange('attendedBy', e.target.value)} 
                 variant="outlined" 
-                sx={{ 
-                  backgroundColor: 'white', 
-                  '& .MuiOutlinedInput-root': { 
-                    borderRadius: '8px' 
-                  } 
-                }} 
+                sx={fieldStyle} 
               /> 
               <Box sx={{ marginTop: 2 }}> 
                 <TextField 
@@ -1289,12 +1361,7 @@ const CMReviewReportFormEdit = () => {
                   value={formData.approvedBy || ''} 
                   onChange={(e) => handleInputChange('approvedBy', e.target.value)} 
                   variant="outlined" 
-                  sx={{ 
-                    backgroundColor: 'white', 
-                    '& .MuiOutlinedInput-root': { 
-                      borderRadius: '8px' 
-                    } 
-                  }} 
+                  sx={fieldStyle}
                 /> 
               </Box> 
             </Paper>
@@ -1309,10 +1376,10 @@ const CMReviewReportFormEdit = () => {
                   marginBottom: 3 
                 }} 
               > 
-                📊 Status Information
+                🔗 Further Action Taken
               </Typography> 
               
-              <FormControl fullWidth> 
+              <FormControl fullWidth sx={fieldStyle}> 
                 <InputLabel>Further Action Taken</InputLabel> 
                 <Select 
                   value={formData.furtherActionTakenID || ''} 
@@ -1332,60 +1399,7 @@ const CMReviewReportFormEdit = () => {
                 </Select> 
               </FormControl> 
             
-            <Box sx={{ marginTop: 2 }}> 
-              <FormControl fullWidth> 
-                <InputLabel>Form Status</InputLabel> 
-                <Select 
-                  value={formData.formstatusID || ''} 
-                  onChange={(e) => handleInputChange('formstatusID', e.target.value)} 
-                  label="Form Status" 
-                  disabled
-                  sx={{ 
-                    backgroundColor: 'white', 
-                    borderRadius: '8px' 
-                  }} 
-                > 
-                  {warehouseData.formStatuses?.map((status) => ( 
-                    <MenuItem key={status.id} value={status.id}> 
-                      {status.name} 
-                    </MenuItem> 
-                  ))} 
-                </Select> 
-              </FormControl> 
-            </Box> 
             </Paper>
-
-            {/* Remark */}
-            <Paper sx={{ padding: 3, marginBottom: 3 }}>
-              <Typography 
-                variant="h5" 
-                sx={{ 
-                  color: '#2C3E50', 
-                  fontWeight: 'bold', 
-                  marginBottom: 3 
-                }} 
-              > 
-                Remark 
-              </Typography> 
-              
-              <TextField 
-                fullWidth 
-                label="Remark" 
-                value={formData.remark || ''} 
-                onChange={(e) => handleInputChange('remark', e.target.value)} 
-                multiline 
-                rows={4} 
-                variant="outlined" 
-                disabled
-                sx={{ 
-                  backgroundColor: 'white', 
-                  '& .MuiOutlinedInput-root': { 
-                    borderRadius: '8px' 
-                  } 
-                }} 
-              /> 
-            </Paper>
-
 
         {/* Navigation Buttons Section - Moved outside main container */}
         <Paper sx={{ 
@@ -1432,8 +1446,8 @@ const CMReviewReportFormEdit = () => {
             {/* Save Changes Button */}
             <Button 
               variant="contained" 
-              startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />} 
-              onClick={handleSave} 
+              endIcon={<CheckCircleIcon />} 
+              onClick={handleSubmit} 
               disabled={saving} 
               sx={{ 
                 background: RMSTheme.components.button.primary.background, 
@@ -1451,13 +1465,131 @@ const CMReviewReportFormEdit = () => {
                 } 
               }} 
             > 
-              {saving ? 'Saving...' : 'Save Changes'} 
+              {saving ? 'Saving...' : (isStatusClose ? 'Submit & Upload' : 'Submit Report')} 
             </Button> 
           </Box> 
         </Paper>
 
           </Box>
         </Paper>
+
+        <Dialog
+          open={finalReportDialogOpen}
+          onClose={handleCloseFinalReportDialog}
+          fullWidth
+          maxWidth="xs"
+          TransitionComponent={Fade}
+          transitionDuration={{ enter: 400, exit: 250 }}
+          PaperProps={{
+            sx: {
+              minWidth: 320,
+              borderRadius: 4,
+              border: '1px solid rgba(255,255,255,0.15)',
+              background: 'linear-gradient(180deg, rgba(28,35,57,0.95) 0%, rgba(9,14,28,0.95) 80%)',
+              boxShadow: '0 25px 70px rgba(8,15,31,0.55)',
+              overflow: 'hidden'
+            }
+          }}
+          sx={{
+            '& .MuiBackdrop-root': {
+              backgroundColor: 'rgba(15, 23, 42, 0.65)',
+              backdropFilter: 'blur(4px)'
+            }
+          }}
+        >
+          <DialogTitle
+            sx={{
+              textAlign: 'center',
+              fontWeight: 600,
+              color: '#f8fafc',
+              pb: 1
+            }}
+          >
+            Upload Final Report
+          </DialogTitle>
+          <DialogContent
+            sx={{
+              py: 2,
+              px: 4
+            }}
+          >
+            <Typography variant="body2" sx={{ mb: 2, textAlign: 'center', color: 'rgba(241,245,249,0.85)' }}>
+              Please attach the completed final report before submitting.
+            </Typography>
+            <Button
+              variant="outlined"
+              component="label"
+              startIcon={<UploadFileIcon />}
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                width: '100%',
+                py: 1.5,
+                borderColor: 'rgba(226,232,240,0.5)',
+                color: '#e2e8f0',
+                fontWeight: 600,
+                '&:hover': {
+                  borderColor: '#cbd5f5',
+                  backgroundColor: 'rgba(148,163,184,0.15)'
+                }
+              }}
+            >
+              <input type="file" hidden accept="application/pdf" onChange={handleFinalReportFileChange} />
+              {finalReportFile ? finalReportFile.name : 'Select File'}
+            </Button>
+            {finalReportUploadError && (
+              <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1, textAlign: 'center' }}>
+                {finalReportUploadError}
+              </Typography>
+            )}
+          </DialogContent>
+          <DialogActions
+            sx={{
+              justifyContent: 'center',
+              px: 4,
+              pb: 3
+            }}
+          >
+            <Button
+              onClick={handleCloseFinalReportDialog}
+              disabled={finalReportUploading}
+              sx={{
+                background: 'transparent',
+                color: '#e2e8f0',
+                padding: '10px 28px',
+                borderRadius: RMSTheme.borderRadius?.small || '8px',
+                border: '1px solid rgba(226,232,240,0.3)',
+                textTransform: 'none',
+                mr: 2,
+                '&:hover': {
+                  background: 'rgba(148,163,184,0.15)',
+                  borderColor: 'rgba(226,232,240,0.6)'
+                },
+                '&:disabled': { opacity: 0.6 }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleUploadFinalReport}
+              disabled={finalReportUploading}
+              sx={{
+                background: 'linear-gradient(135deg, #1D4ED8 0%, #312E81 100%)',
+                color: '#f8fafc',
+                padding: '10px 28px',
+                borderRadius: RMSTheme.borderRadius?.small || '8px',
+                textTransform: 'none',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #1E40AF 0%, #1E1B4B 100%)'
+                },
+                '&:disabled': { opacity: 0.6 }
+              }}
+            >
+              {finalReportUploading ? 'Uploading...' : 'Upload & Submit'}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Toast Notification */}
         <Snackbar

@@ -205,6 +205,21 @@ const ReportFormForm = () => {
         );
         // console.log('CM Report Form submitted successfully:', result);
 
+        // After saving, upload final report if provided
+        if (finalReportFile) {
+          const newReportFormId = result?.reportForm?.id || result?.reportForm?.ID;
+          if (!newReportFormId) {
+            setError('Report saved, but failed to retrieve the ReportForm ID for final report upload.');
+            return false;
+          }
+          try {
+            await uploadFinalReportAttachment(newReportFormId, finalReportFile);
+          } catch (uploadError) {
+            setError(uploadError?.response?.data?.message || 'Failed to upload final report.');
+            return false;
+          }
+        }
+
         // Show success toast for CM reports
         setNotification({
           open: true,

@@ -19,7 +19,8 @@ import {
   Alert,
   Modal,
   IconButton,
-  Snackbar
+  Snackbar,
+  TextField
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -35,8 +36,9 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import RMSTheme from '../../theme-resource/RMSTheme';
-import { getCMReportForm, generateCMReportPdf } from '../../api-services/reportFormService';
+import { getCMReportForm, generateCMReportPdf, getFinalReportsByReportForm, downloadFinalReportAttachment } from '../../api-services/reportFormService';
 import { API_BASE_URL } from '../../../config/apiConfig';
+import warehouseService from '../../api-services/warehouseService';
 
 // Styling constants
 const sectionContainer = {
@@ -63,6 +65,38 @@ const fieldContainer = {
   border: '1px solid #e0e0e0'
 };
 
+const fieldStyle = {
+  '& .MuiOutlinedInput-root': {
+    backgroundColor: '#fafafa',
+    borderRadius: '8px',
+    transition: 'all 0.3s ease',
+    '& fieldset': {
+      borderColor: '#d0d0d0',
+      borderWidth: '1px'
+    },
+    '&:hover fieldset': {
+      borderColor: '#2C3E50',
+      borderWidth: '2px'
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#3498DB',
+      borderWidth: '2px',
+      boxShadow: '0 0 0 3px rgba(52, 152, 219, 0.1)'
+    },
+  },
+  '& .MuiInputLabel-root': {
+    color: '#2C3E50',
+    fontWeight: 500
+  },
+  '& .MuiOutlinedInput-input': {
+    color: '#2C3E50',
+  },
+  '& .MuiInputBase-input.Mui-disabled': {
+    color: '#333',
+    WebkitTextFillColor: '#333'
+  }
+};
+
 // Helper functions
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
@@ -84,9 +118,9 @@ const getStatusChip = (status) => {
       />
     );
   }
-  
+
   const statusStr = status.toString();
-  
+
   if (statusStr === 'Acceptable' || statusStr === 'DONE' || statusStr === 'Completed') {
     return (
       <Chip
@@ -154,7 +188,7 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon, r
         {images.map((image, index) => {
           // Handle different image data structures - following News system pattern
           let imageUrl;
-          
+
           if (image instanceof File) {
             // For File objects (during upload)
             imageUrl = URL.createObjectURL(image);
@@ -181,11 +215,11 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon, r
             console.warn('Unable to determine image URL for:', image);
             return null;
           }
-          
+
           return (
             <Grid item xs={6} sm={4} md={3} key={index}>
-              <Card 
-                sx={{ 
+              <Card
+                sx={{
                   position: 'relative',
                   cursor: 'pointer',
                   transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
@@ -211,8 +245,8 @@ const ImagePreviewSection = ({ images, title, icon: IconComponent = BuildIcon, r
                     e.target.style.display = 'none';
                   }}
                 />
-                <Typography 
-                  variant="caption" 
+                <Typography
+                  variant="caption"
                   sx={{
                     position: 'absolute',
                     bottom: 4,
@@ -296,15 +330,29 @@ const CMReportFormDetails = () => {
     message: '',
     severity: 'info'
   });
+  const [formStatusOptions, setFormStatusOptions] = useState([]);
+  const [formStatusId, setFormStatusId] = useState('');
+  const [formStatusName, setFormStatusName] = useState('');
+  const [finalReports, setFinalReports] = useState([]);
+  const [finalReportsLoading, setFinalReportsLoading] = useState(false);
+
+  const formStatusDisplay =
+    formStatusName ||
+    formData?.formStatusName ||
+    formData?.formstatusID ||
+    formData?.formStatus ||
+    'Not specified';
+  const normalizedFormStatus = (formStatusDisplay || '').trim().toLowerCase();
+  const isFormStatusClosed = normalizedFormStatus === 'close';
 
   useEffect(() => {
     const fetchReportDetails = async () => {
       try {
         setLoading(true);
-        
+
         // Use the new CM specific API from ReportFormController
         const response = await getCMReportForm(id);
-        
+
         // Structure the data from the new API response
         const structuredData = {
           // Basic Report Form information
@@ -371,7 +419,14 @@ const CMReportFormDetails = () => {
         };
 
         setFormData(structuredData);
-        
+        setFormStatusId(
+          structuredData.formstatusID ||
+          structuredData.formStatus ||
+          response.formStatus ||
+          ''
+        );
+        setFormStatusName(structuredData.formStatusName || '');
+
       } catch (err) {
         setError('Failed to load CM report details');
         console.error('Error fetching CM report details:', err);
@@ -384,6 +439,53 @@ const CMReportFormDetails = () => {
       fetchReportDetails();
     }
   }, [id]);
+
+  useEffect(() => {
+    const loadStatuses = async () => {
+      try {
+        const statuses = await warehouseService.getFormStatus();
+        setFormStatusOptions(statuses || []);
+      } catch (err) {
+        console.error('Failed to fetch form statuses:', err);
+      }
+    };
+
+    loadStatuses();
+  }, []);
+
+  useEffect(() => {
+    if (!formStatusId) return;
+    const match = (formStatusOptions || []).find((status) => (status.id || status.ID) === formStatusId);
+    if (match) {
+      setFormStatusName(match.name || match.Name || formStatusId);
+    }
+  }, [formStatusId, formStatusOptions]);
+
+  useEffect(() => {
+    if (!id || !isFormStatusClosed) {
+      setFinalReports([]);
+      return;
+    }
+
+    const fetchFinalReports = async () => {
+      try {
+        setFinalReportsLoading(true);
+        const response = await getFinalReportsByReportForm(id);
+        setFinalReports(response || []);
+      } catch (err) {
+        console.error('Error fetching final reports:', err);
+        setNotification({
+          open: true,
+          message: err.response?.data?.message || err.message || 'Failed to load final reports.',
+          severity: 'error'
+        });
+      } finally {
+        setFinalReportsLoading(false);
+      }
+    };
+
+    fetchFinalReports();
+  }, [id, isFormStatusClosed]);
 
   const handleBack = () => {
     navigate('/report-management-system/report-forms');
@@ -454,6 +556,33 @@ const CMReportFormDetails = () => {
     }
   };
 
+  const handleDownloadFinalReport = async (report) => {
+    if (!report?.id) {
+      return;
+    }
+
+    try {
+      const response = await downloadFinalReportAttachment(report.id);
+      const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const fileName = report.attachmentName || `FinalReport_${formData?.jobNo || 'report'}.pdf`;
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Error downloading final report:', error);
+      setNotification({
+        open: true,
+        message: error.response?.data?.message || error.message || 'Failed to download final report.',
+        severity: 'error'
+      });
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -491,22 +620,22 @@ const CMReportFormDetails = () => {
   return (
     <Box sx={{ padding: 3 }}>
       {/* Header with JobNo in top right corner */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 3
       }}>
-        <Typography 
-          variant="h4" 
-          sx={{ 
-            color: '#1976d2', 
-            fontWeight: 'bold' 
+        <Typography
+          variant="h4"
+          sx={{
+            color: '#1976d2',
+            fontWeight: 'bold'
           }}
         >
           {formData.reportTitle ? `${formData.reportTitle}` : 'Corrective Maintenance Report - Details'}
         </Typography>
-        
+
         {/* JobNo display in top right corner */}
         <Box sx={{
           backgroundColor: '#f5f5f5',
@@ -514,20 +643,20 @@ const CMReportFormDetails = () => {
           borderRadius: '8px',
           border: '1px solid #ddd'
         }}>
-          <Typography 
-            variant="body1" 
-            sx={{ 
+          <Typography
+            variant="body1"
+            sx={{
               color: '#2C3E50',
               fontWeight: 'normal',
               fontSize: '14px',
               display: 'inline'
             }}
           >
-            Job No: 
+            Job No:
           </Typography>
-          <Typography 
-            variant="body1" 
-            sx={{ 
+          <Typography
+            variant="body1"
+            sx={{
               color: '#FF0000',
               fontWeight: 'bold',
               fontSize: '16px',
@@ -577,125 +706,243 @@ const CMReportFormDetails = () => {
           >
             ← Back
           </Button>
-          
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="contained"
-              onClick={() => navigate(`/report-management-system/cm-edit/${id}`)}
-              sx={{
-                background: RMSTheme.components.button.primary.background,
-                color: RMSTheme.components.button.primary.text,
-                padding: '12px 32px',
-                borderRadius: RMSTheme.borderRadius.small,
-                border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                boxShadow: RMSTheme.components.button.primary.shadow,
-                '&:hover': {
-                  background: RMSTheme.components.button.primary.hover
-                }
-              }}
-            >
-              Edit Report
-            </Button>
-            
-            <Button
-              variant="contained"
-              onClick={handlePrintReport}
-              startIcon={<PrintIcon />}
-              disabled={isGeneratingPDF}
-              sx={{
-                background: RMSTheme.components.button.primary.background,
-                color: RMSTheme.components.button.primary.text,
-                padding: '12px 32px',
-                borderRadius: RMSTheme.borderRadius.small,
-                border: `1px solid ${RMSTheme.components.button.primary.border}`,
-                boxShadow: RMSTheme.components.button.primary.shadow,
-                '&:hover': {
-                  background: RMSTheme.components.button.primary.hover
-                }
-              }}
-            >
-              {isGeneratingPDF ? 'Generating PDF...' : 'Print Report'}
-            </Button>
-          </Box>
+
+          {!isFormStatusClosed && (
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                onClick={() => navigate(`/report-management-system/cm-edit/${id}`)}
+                sx={{
+                  background: RMSTheme.components.button.primary.background,
+                  color: RMSTheme.components.button.primary.text,
+                  padding: '12px 32px',
+                  borderRadius: RMSTheme.borderRadius.small,
+                  border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                  boxShadow: RMSTheme.components.button.primary.shadow,
+                  '&:hover': {
+                    background: RMSTheme.components.button.primary.hover
+                  }
+                }}
+              >
+                Edit Report
+              </Button>
+
+              <Button
+                variant="contained"
+                onClick={handlePrintReport}
+                startIcon={<PrintIcon />}
+                disabled={isGeneratingPDF}
+                sx={{
+                  background: RMSTheme.components.button.primary.background,
+                  color: RMSTheme.components.button.primary.text,
+                  padding: '12px 32px',
+                  borderRadius: RMSTheme.borderRadius.small,
+                  border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                  boxShadow: RMSTheme.components.button.primary.shadow,
+                  '&:hover': {
+                    background: RMSTheme.components.button.primary.hover
+                  }
+                }}
+              >
+                {isGeneratingPDF ? 'Generating PDF...' : 'Print Report'}
+              </Button>
+            </Box>
+          )}
         </Box>
       </Paper>
 
-      {/* Basic Information Section */}
-      <Paper sx={sectionContainer}>
+      {/* Basic Information Summary Section */}
+      <Paper sx={{
+        ...sectionContainer,
+        background: '#f8f9fa',
+        border: '2px solid #e9ecef'
+      }}>
         <Typography variant="h5" sx={sectionHeader}>
-          📋 Basic Information
+          📋 Basic Information Summary
         </Typography>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Customer</Typography>
-              <Typography variant="body1">{formData.customer || 'Not specified'}</Typography>
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 1 }}>
+          <TextField
+            fullWidth
+            label="Job No"
+            value={formData.jobNo || ''}
+            disabled
+            sx={fieldStyle}
+          />
+
+          <TextField
+            fullWidth
+            label="System Description"
+            value={formData.systemNameWarehouseName || ''}
+            disabled
+            sx={fieldStyle}
+          />
+
+          <TextField
+            fullWidth
+            label="Customer"
+            value={formData.customer || ''}
+            disabled
+            sx={fieldStyle}
+          />
+
+          <TextField
+            fullWidth
+            label="Project No"
+            value={formData.projectNo || ''}
+            disabled
+            sx={fieldStyle}
+          />
+
+          <TextField
+            fullWidth
+            label="Station Name"
+            value={formData.stationNameWarehouseName || ''}
+          disabled
+          sx={fieldStyle}
+        />
+      </Box>
+    </Paper>
+
+      {isFormStatusClosed && (
+        <Paper sx={{
+          padding: 3,
+          marginBottom: 3,
+          backgroundColor: '#ffffff',
+          borderRadius: 2,
+          border: '1px solid #e0e0e0',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        }}>
+          <Typography variant="h5" sx={{
+            color: '#1976d2',
+            fontWeight: 'bold',
+            marginBottom: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}>
+            Final Report
+          </Typography>
+
+          {finalReportsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <CircularProgress size={24} />
             </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Project No</Typography>
-              <Typography variant="body1">{formData.projectNo || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Station Name</Typography>
-              <Typography variant="body1">{formData.stationNameWarehouseName || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>System Description</Typography>
-              <Typography variant="body1">{formData.systemNameWarehouseName || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Report Form Type</Typography>
-              <Typography variant="body1">{formData.reportFormTypeName || 'Corrective Maintenance'}</Typography>
-            </Box>
-          </Grid>
-        </Grid>
+          ) : finalReports.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No final report has been uploaded for this record.
+            </Typography>
+          ) : (
+            finalReports.map((report) => (
+              <Box
+                key={report.id}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 2,
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 1,
+                  mb: 2,
+                  backgroundColor: '#f9f9f9'
+                }}
+              >
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    {report.attachmentName || 'Final Report'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Uploaded on {report.uploadedDate ? new Date(report.uploadedDate).toLocaleString() : 'N/A'}
+                  </Typography>
+                </Box>
+                <Button
+                  variant="contained"
+                  onClick={() => handleDownloadFinalReport(report)}
+                  sx={{
+                    background: RMSTheme.components.button.primary.background,
+                    color: RMSTheme.components.button.primary.text,
+                    padding: '8px 20px',
+                    borderRadius: RMSTheme.borderRadius.small,
+                    border: `1px solid ${RMSTheme.components.button.primary.border}`,
+                    '&:hover': {
+                      background: RMSTheme.components.button.primary.hover
+                    }
+                  }}
+                >
+                  Download
+                </Button>
+              </Box>
+            ))
+          )}
+        </Paper>
+      )}
+
+      {/* Form Status Section */}
+      <Paper sx={{
+        ...sectionContainer,
+        background: '#f8f9fa',
+        border: '2px solid #e9ecef'
+      }}>
+        <Typography variant="h5" sx={sectionHeader}>
+          ✅ Form Status
+        </Typography>
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 1 }}>
+          <TextField
+            fullWidth
+            label="Form Status"
+            value={formStatusDisplay || ''}
+            disabled
+            sx={fieldStyle}
+          />
+        </Box>
       </Paper>
 
-      {/* Timeline Information Section */}
+      {/* Date & Time Information Section */}
       <Paper sx={sectionContainer}>
         <Typography variant="h5" sx={sectionHeader}>
-          ⏰ Timeline Information
+          📅 Date & Time Information
         </Typography>
-        <Grid container spacing={3}>
+
+        <Grid container spacing={3} sx={{ marginTop: 1 }}>
           <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Failure Detected Date</Typography>
-              <Typography variant="body1" sx={{ fontSize: '1.1rem', color: '#1976d2', fontWeight: 'medium' }}>
-                {formatDate(formData.failureDetectedDate)}
-              </Typography>
-            </Box>
+            <TextField
+              fullWidth
+              label="Failure Detected"
+              value={formatDate(formData.failureDetectedDate)}
+              disabled
+              sx={fieldStyle}
+            />
           </Grid>
+
           <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Response Date</Typography>
-              <Typography variant="body1" sx={{ fontSize: '1.1rem', color: '#1976d2', fontWeight: 'medium' }}>
-                {formatDate(formData.responseDate)}
-              </Typography>
-            </Box>
+            <TextField
+              fullWidth
+              label="Response"
+              value={formatDate(formData.responseDate)}
+              disabled
+              sx={fieldStyle}
+            />
           </Grid>
+
           <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Arrival Date</Typography>
-              <Typography variant="body1" sx={{ fontSize: '1.1rem', color: '#1976d2', fontWeight: 'medium' }}>
-                {formatDate(formData.arrivalDate)}
-              </Typography>
-            </Box>
+            <TextField
+              fullWidth
+              label="Arrival"
+              value={formatDate(formData.arrivalDate)}
+              disabled
+              sx={fieldStyle}
+            />
           </Grid>
+
           <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Completion Date</Typography>
-              <Typography variant="body1" sx={{ fontSize: '1.1rem', color: '#1976d2', fontWeight: 'medium' }}>
-                {formatDate(formData.completionDate)}
-              </Typography>
-            </Box>
+            <TextField
+              fullWidth
+              label="Completion"
+              value={formatDate(formData.completionDate)}
+              disabled
+              sx={fieldStyle}
+            />
           </Grid>
         </Grid>
       </Paper>
@@ -705,27 +952,33 @@ const CMReportFormDetails = () => {
         <Typography variant="h5" sx={sectionHeader}>
           📝 Issue Details
         </Typography>
-        
+
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-          <ImagePreviewSection 
-            images={formData.beforeIssueImages || []} 
-            title="Before Issue Images" 
+          <ImagePreviewSection
+            images={formData.beforeIssueImages || []}
+            title="Before Issue Images"
             icon={PhotoCameraIcon}
             reportFormId={id}
           />
-          
+
           <Box sx={fieldContainer}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Issue Reported Description</Typography>
-            <Typography variant="body1">
-              {formData.issueReportedDescription || 'Not specified'}
-            </Typography>
+            <TextField
+              fullWidth
+              label="Issue Reported Description"
+              value={formData.issueReportedDescription || ''}
+              disabled
+              sx={fieldStyle}
+            />
           </Box>
-          
+
           <Box sx={fieldContainer}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Issue Found Description</Typography>
-            <Typography variant="body1">
-              {formData.issueFoundDescription || 'Not specified'}
-            </Typography>
+            <TextField
+              fullWidth
+              label="Issue Found Description"
+              value={formData.issueFoundDescription || ''}
+              disabled
+              sx={fieldStyle}
+            />
           </Box>
         </Box>
       </Paper>
@@ -735,18 +988,21 @@ const CMReportFormDetails = () => {
         <Typography variant="h5" sx={sectionHeader}>
           🔧 Action Taken
         </Typography>
-        
+
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
           <Box sx={fieldContainer}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Action Taken Description</Typography>
-            <Typography variant="body1">
-              {formData.actionTakenDescription || 'Not specified'}
-            </Typography>
+            <TextField
+              fullWidth
+              label="Action Taken Description"
+              value={formData.actionTakenDescription || ''}
+              disabled
+              sx={fieldStyle}
+            />
           </Box>
-          
-          <ImagePreviewSection 
-            images={formData.afterActionImages || []} 
-            title="After Action Images" 
+
+          <ImagePreviewSection
+            images={formData.afterActionImages || []}
+            title="After Action Images"
             icon={BuildIcon}
             reportFormId={id}
           />
@@ -759,7 +1015,7 @@ const CMReportFormDetails = () => {
           <InventoryIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
           Material Used Information
         </Typography>
-        
+
         <Box sx={{ marginTop: 2 }}>
           {/* Material Used Table */}
           {formData.materialUsed && formData.materialUsed.length > 0 ? (
@@ -797,17 +1053,17 @@ const CMReportFormDetails = () => {
           {/* Material Used Images */}
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
-              <ImagePreviewSection 
-                images={formData.materialUsedOldSerialImages || []} 
-                title="Old Serial No Images" 
+              <ImagePreviewSection
+                images={formData.materialUsedOldSerialImages || []}
+                title="Old Serial No Images"
                 icon={RemoveCircleIcon}
                 reportFormId={id}
               />
             </Grid>
             <Grid item xs={12} md={6}>
-              <ImagePreviewSection 
-                images={formData.materialUsedNewSerialImages || []} 
-                title="New Serial No Images" 
+              <ImagePreviewSection
+                images={formData.materialUsedNewSerialImages || []}
+                title="New Serial No Images"
                 icon={CheckCircleIcon}
                 reportFormId={id}
               />
@@ -816,61 +1072,69 @@ const CMReportFormDetails = () => {
         </Box>
       </Paper>
 
-      {/* Approval Information Section */}
+      {/* Remark Section */}
       <Paper sx={sectionContainer}>
+        <Typography variant="h5" sx={sectionHeader}>
+          📝 Remark
+        </Typography>
+
+        <Box sx={{ marginTop: 2 }}>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label="Additional Remarks"
+            value={formData.remark || ''}
+            disabled
+            sx={fieldStyle}
+          />
+        </Box>
+      </Paper>
+
+      {/* Approval Information Section */}
+      <Paper sx={{
+        ...sectionContainer,
+        background: '#f8f9fa',
+        border: '2px solid #e9ecef'
+      }}>
         <Typography variant="h5" sx={sectionHeader}>
           ✅ Approval Information
         </Typography>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Attended By</Typography>
-              <Typography variant="body1">{formData.attendedBy || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Approved By</Typography>
-              <Typography variant="body1">{formData.approvedBy || 'Not specified'}</Typography>
-            </Box>
-          </Grid>
-          {formData.remark && (
-            <Grid item xs={12}>
-              <Box sx={fieldContainer}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Remarks</Typography>
-                <Typography variant="body1">{formData.remark}</Typography>
-              </Box>
-            </Grid>
-          )}
-        </Grid>
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+          <TextField
+            fullWidth
+            label="Attended By"
+            value={formData.attendedBy || ''}
+            disabled
+            sx={fieldStyle}
+          />
+
+          <TextField
+            fullWidth
+            label="Approved By"
+            value={formData.approvedBy || ''}
+            disabled
+            sx={fieldStyle}
+          />
+        </Box>
       </Paper>
 
-      {/* Status Information Section */}
+      {/* Reference Information Section */}
       <Paper sx={sectionContainer}>
         <Typography variant="h5" sx={sectionHeader}>
-          📊 Status Information
+          🔗 Reference Information
         </Typography>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Further Action Taken</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                <SettingsIcon sx={{ mr: 1, color: '#1976d2' }} />
-                <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                  {formData.furtherActionTakenName || 'Not specified'}
-                </Typography>
-              </Box>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={fieldContainer}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>Form Status</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                {getStatusChip(formData.formStatusName)}
-              </Box>
-            </Box>
-          </Grid>
-        </Grid>
+
+        <Box sx={{ marginTop: 2 }}>
+          <TextField
+            fullWidth
+            label="Further Action Taken"
+            value={formData.furtherActionTakenName || ''}
+            disabled
+            sx={fieldStyle}
+          />
+        </Box>
       </Paper>
 
       <Snackbar

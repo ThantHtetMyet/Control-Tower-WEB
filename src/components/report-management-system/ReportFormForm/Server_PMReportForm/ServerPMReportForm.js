@@ -427,6 +427,10 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
       '& fieldset': {
         borderColor: '#d0d0d0'
       }
+    },
+    '& .MuiInputBase-input.Mui-disabled': {
+      color: '#333',
+      WebkitTextFillColor: '#333'
     }
   };
 

@@ -25,6 +25,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Fade,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -34,12 +35,15 @@ import {
   Build,
   Add as AddIcon,
   Settings,
+  ArrowBackIosNew as ArrowBackIosNewIcon,
+  ArrowForwardIos as ArrowForwardIosIcon,
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import RMSTheme from '../../theme-resource/RMSTheme';
 import warehouseService from '../../api-services/warehouseService';
+import WarningModal from '../../common/WarningModal';
 
 // Multiple Images Upload Field Component
 const MultipleImageUploadField = ({ field, label, images, previews, onUpload, onRemove, icon: IconComponent = ImageIcon }) => {
@@ -161,7 +165,6 @@ const MultipleImageUploadField = ({ field, label, images, previews, onUpload, on
     </Card>
   );
 };
-
 const CMReportForm = ({
   formData,
   reportFormTypes,
@@ -176,6 +179,8 @@ const CMReportForm = ({
   initialMaterialUsedOldSerialImages = [],
   initialMaterialUsedNewSerialImages = []
 }) => {
+
+  const [showFormStatusWarning, setShowFormStatusWarning] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [warehouseData, setWarehouseData] = useState({
     furtherActions: [],
@@ -551,20 +556,13 @@ const CMReportForm = ({
 
   // Update the handleNext function to pass image data
   const handleNext = () => {
-    // Validate required fields
+    // Validate required fields - only formStatus is required
     const errors = {};
 
-    if (!formData.failureDetectedDate) {
-      errors.failureDetectedDate = 'Failure detected date is required';
-    }
-    if (!formData.responseDate) {
-      errors.responseDate = 'Response date is required';
-    }
-    if (!formData.arrivalDate) {
-      errors.arrivalDate = 'Arrival date is required';
-    }
-    if (!formData.completionDate) {
-      errors.completionDate = 'Completion date is required';
+    if (!formData.formstatusID) {
+      errors.formstatusID = 'Form Status is required';
+      setShowFormStatusWarning(true); // Show the modal
+      return; // Don't proceed
     }
 
     setFieldErrors(errors);
@@ -668,7 +666,6 @@ const CMReportForm = ({
       fontWeight: 500
     },
   };
-
   const fieldStyle = {
     '& .MuiOutlinedInput-root': {
       backgroundColor: '#fafafa',
@@ -695,6 +692,11 @@ const CMReportForm = ({
     '& .MuiOutlinedInput-input': {
       color: '#2C3E50',
     },
+    // ADD THESE TWO LINES:
+    '& .MuiInputBase-input.Mui-disabled': {
+      color: '#333',
+      WebkitTextFillColor: '#333'
+    }
   };
 
   return (
@@ -784,102 +786,85 @@ const CMReportForm = ({
                 📋 Basic Information Summary
               </Typography>
 
-              <Grid container spacing={3} sx={{ marginTop: 1 }}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Station Name"
-                    value={formData.stationName || ''}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
-                  />
-                </Grid>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Job No"
+                  value={formData.jobNo || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
 
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="System Description"
-                    value={formData.systemDescription || ''}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
-                  />
-                </Grid>
+                <TextField
+                  fullWidth
+                  label="System Description"
+                  value={formData.systemDescription || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
 
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Project No"
-                    value={formData.projectNo || ''}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
-                  />
-                </Grid>
+                <TextField
+                  fullWidth
+                  label="Customer"
+                  value={formData.customer || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
 
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Customer"
-                    value={formData.customer || ''}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
-                  />
-                </Grid>
+                <TextField
+                  fullWidth
+                  label="Project No"
+                  value={formData.projectNo || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
 
-                <Grid item xs={12} sx={{ display: 'none' }}>
-                  <TextField
-                    fullWidth
-                    label="Type of Services"
-                    value={getServiceTypeName()}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
+                <TextField
+                  fullWidth
+                  label="Station Name"
+                  value={formData.stationName || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+              </Box>
+            </Paper>
+
+
+            {/* Form Status Section */}
+            <Paper sx={{
+              ...sectionContainerStyle,
+              background: '#ffffff'
+            }}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                ✅ Form Status
+              </Typography>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                <FormControl fullWidth sx={fieldStyle}>
+                  <InputLabel id="form-status-label">Form Status</InputLabel>
+                  <Select
+                    labelId="form-status-label"
+                    value={formData.formstatusID || ''}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      const selectedOption = warehouseData.formStatuses.find(option => option.id === selectedId);
+                      handleInputChange('formstatusID', selectedId);
+                      handleInputChange('formStatusName', selectedOption ? (selectedOption.status || selectedOption.name || `Status ${selectedOption.id}`) : '');
                     }}
-                  />
-                </Grid>
-              </Grid>
+                    label="Form Status"
+                    disabled={loading}
+                  >
+                    <MenuItem value="">
+                      <em>Select Form Status</em>
+                    </MenuItem>
+                    {warehouseData.formStatuses.map((option) => (
+                      <MenuItem key={option.id} value={option.id}>
+                        {option.status || option.name || `Status ${option.id}`}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
             </Paper>
 
             {/* Date & Time Information Section */}
@@ -901,9 +886,7 @@ const CMReportForm = ({
                       <TextField
                         {...params}
                         fullWidth
-                        error={!!fieldErrors.failureDetectedDate}
-                        helperText={fieldErrors.failureDetectedDate}
-                        sx={fieldErrors.failureDetectedDate ? errorDateTimePickerStyle : dateTimePickerStyle}
+                        sx={dateTimePickerStyle}
                       />
                     )}
                     componentsProps={{
@@ -926,9 +909,7 @@ const CMReportForm = ({
                       <TextField
                         {...params}
                         fullWidth
-                        error={!!fieldErrors.responseDate}
-                        helperText={fieldErrors.responseDate}
-                        sx={fieldErrors.responseDate ? errorDateTimePickerStyle : dateTimePickerStyle}
+                        sx={dateTimePickerStyle}
                       />
                     )}
                     componentsProps={{
@@ -951,9 +932,7 @@ const CMReportForm = ({
                       <TextField
                         {...params}
                         fullWidth
-                        error={!!fieldErrors.arrivalDate}
-                        helperText={fieldErrors.arrivalDate}
-                        sx={fieldErrors.arrivalDate ? errorDateTimePickerStyle : dateTimePickerStyle}
+                        sx={dateTimePickerStyle}
                       />
                     )}
                     componentsProps={{
@@ -976,9 +955,7 @@ const CMReportForm = ({
                       <TextField
                         {...params}
                         fullWidth
-                        error={!!fieldErrors.completionDate}
-                        helperText={fieldErrors.completionDate}
-                        sx={fieldErrors.completionDate ? errorDateTimePickerStyle : dateTimePickerStyle}
+                        sx={dateTimePickerStyle}
                       />
                     )}
                     componentsProps={{
@@ -1372,35 +1349,7 @@ const CMReportForm = ({
                     ))}
                   </Select>
                   <FormHelperText>
-                    {loading ? 'Loading options...' : 'Select from FurtherActionTakenWarehouse'}
-                  </FormHelperText>
-                </FormControl>
-
-                <FormControl fullWidth sx={fieldStyle}>
-                  <InputLabel id="form-status-label">Form Status</InputLabel>
-                  <Select
-                    labelId="form-status-label"
-                    value={formData.formstatusID || ''}
-                    onChange={(e) => {
-                      const selectedId = e.target.value;
-                      const selectedOption = warehouseData.formStatuses.find(option => option.id === selectedId);
-                      handleInputChange('formstatusID', selectedId);
-                      handleInputChange('formStatusName', selectedOption ? (selectedOption.status || selectedOption.name || `Status ${selectedOption.id}`) : '');
-                    }}
-                    label="Form Status"
-                    disabled={loading}
-                  >
-                    <MenuItem value="">
-                      <em>Select Form Status</em>
-                    </MenuItem>
-                    {warehouseData.formStatuses.map((option) => (
-                      <MenuItem key={option.id} value={option.id}>
-                        {option.status || option.name || `Status ${option.id}`}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  <FormHelperText>
-                    {loading ? 'Loading options...' : 'Select from FormStatusWarehouse'}
+                    {loading ? 'Loading options...' : ''}
                   </FormHelperText>
                 </FormControl>
               </Box>
@@ -1416,6 +1365,7 @@ const CMReportForm = ({
                 <Button
                   variant="contained"
                   onClick={onBack}
+                  startIcon={<ArrowBackIosNewIcon fontSize="small" />}
                   sx={{
                     background: RMSTheme.components.button.primary.background,
                     color: RMSTheme.components.button.primary.text,
@@ -1428,12 +1378,13 @@ const CMReportForm = ({
                     }
                   }}
                 >
-                  ← Back
+                  Back
                 </Button>
 
                 <Button
                   variant="contained"
                   onClick={handleNext}
+                  endIcon={<ArrowForwardIosIcon fontSize="small" />}
                   sx={{
                     background: RMSTheme.components.button.primary.background,
                     color: RMSTheme.components.button.primary.text,
@@ -1446,7 +1397,7 @@ const CMReportForm = ({
                     }
                   }}
                 >
-                  Next: Review →
+                  Review
                 </Button>
               </Box>
             </Paper>
@@ -1485,6 +1436,15 @@ const CMReportForm = ({
           </Box>
         </Paper>
       </Box >
+
+      {/* Form Status Warning Modal */}
+      <WarningModal
+        open={showFormStatusWarning}
+        onClose={() => setShowFormStatusWarning(false)}
+        title="Form Status Required"
+        content="Please select a Form Status before proceeding to the review page."
+        buttonText="OK"
+      />
     </LocalizationProvider >
   );
 };
