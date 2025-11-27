@@ -49,6 +49,7 @@ import RMSTheme from '../../theme-resource/RMSTheme';
 import { getCMReportForm, getCMMaterialUsed } from '../../api-services/reportFormService';
 import warehouseService from '../../api-services/warehouseService';
 import { API_BASE_URL } from '../../../config/apiConfig';
+import WarningModal from '../../common/WarningModal';
 
 // MultipleImageUploadField Component
 const MultipleImageUploadField = ({
@@ -208,6 +209,7 @@ const CMReportFormEdit = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [showFormStatusWarning, setShowFormStatusWarning] = useState(false);
 
   // Add CM Report Form ID state
   const [cmReportFormId, setCmReportFormId] = useState(null);
@@ -513,6 +515,12 @@ const CMReportFormEdit = () => {
 
   // Handle submit
   const handleSubmit = () => {
+    // Validate FormStatus
+    if (!formData.formstatusID) {
+      setShowFormStatusWarning(true);
+      return;
+    }
+
     const reviewData = {
       cmReportFormId: cmReportFormId,
       ...formData,
@@ -671,7 +679,7 @@ const CMReportFormEdit = () => {
                 fontWeight: 400
               }}
             >
-              Update Maintenance Information 
+              Update Maintenance Information
             </Typography>
 
             {/* Job No Badge */}
@@ -1217,6 +1225,15 @@ const CMReportFormEdit = () => {
           </Box>
         </Paper>
       </Box>
+
+      {/* Form Status Warning Modal */}
+      <WarningModal
+        open={showFormStatusWarning}
+        onClose={() => setShowFormStatusWarning(false)}
+        title="Form Status Required"
+        content="Please select a Form Status before proceeding to the review page."
+        buttonText="OK"
+      />
     </LocalizationProvider>
   );
 };
