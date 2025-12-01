@@ -44,6 +44,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import moment from 'moment';
 import RMSTheme from '../../theme-resource/RMSTheme';
+import DownloadConfirmationModal from '../../common/DownloadConfirmationModal';
 import {
   getCMReportForm,
   updateCMReportForm,
@@ -55,7 +56,8 @@ import {
   createReportFormImage,
   deleteReportFormImage,
   getReportFormImageTypes,
-  uploadFinalReportAttachment
+  uploadFinalReportAttachment,
+  generateCMReportPdf
 } from '../../api-services/reportFormService';
 import warehouseService from '../../api-services/warehouseService';
 import { API_BASE_URL } from '../../../config/apiConfig';
@@ -339,6 +341,8 @@ const CMReviewReportFormEdit = () => {
 
   const [finalReportDialogOpen, setFinalReportDialogOpen] = useState(false);
   const [finalReportFile, setFinalReportFile] = useState(null);
+  const [downloadConfirmModalOpen, setDownloadConfirmModalOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [finalReportUploading, setFinalReportUploading] = useState(false);
   const [finalReportUploadError, setFinalReportUploadError] = useState('');
 
@@ -639,7 +643,107 @@ const CMReviewReportFormEdit = () => {
       return;
     }
 
-    handleSave();
+    // Show download confirmation modal instead of directly saving
+    setDownloadConfirmModalOpen(true);
+  };
+
+  // Handle when user clicks "Cancel" in download modal - just close and stay on review page
+  const handleModalCancel = () => {
+    setDownloadConfirmModalOpen(false);
+  };
+
+  // Handle when user clicks "Create Report Only" - save without downloading
+  const handleCreateOnly = async () => {
+    try {
+      setIsDownloading(true);
+      setDownloadConfirmModalOpen(false);
+      await handleSave();
+    } catch (error) {
+      console.error('Error during report creation:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Handle when user clicks "Download Report" - save and download
+  const handleDownloadConfirm = async () => {
+    try {
+      setIsDownloading(true);
+      setDownloadConfirmModalOpen(false);
+
+      console.log('=== Starting save and download process ===');
+      
+      // Save the report first (skip navigation and success toast)
+      await handleSave({ skipNavigation: true, suppressSuccessToast: true });
+      
+      // Wait a moment to ensure backend has processed the save
+      console.log('Waiting 2 seconds before downloading...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Download the report
+      await handleDownloadReport(id);
+      
+      // Show success notification
+      setNotification({
+        open: true,
+        message: 'Report saved and downloaded successfully!',
+        severity: 'success'
+      });
+      
+      // Navigate after download
+      setTimeout(() => {
+        navigate('/report-management-system');
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Error during save and download:', error);
+      setNotification({
+        open: true,
+        message: 'Report saved but download failed. You can download it from the report details page.',
+        severity: 'warning'
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Download report function using the same approach as CMReportFormDetails
+  const handleDownloadReport = async (reportFormId) => {
+    try {
+      console.log(`Generating CM report PDF for ReportForm ID: ${reportFormId}`);
+
+      const response = await generateCMReportPdf(reportFormId);
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      // Extract filename from response headers or use default
+      const disposition = response.headers['content-disposition'];
+      let fileName = `CMReport_${formData?.jobNo || reportFormId}.pdf`;
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/i);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
+
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      console.log('CM Report PDF downloaded successfully');
+    } catch (error) {
+      console.error('Error generating CM report PDF:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        (typeof error.response?.data === 'string' ? error.response.data : error.message) ||
+        'Failed to generate PDF report.';
+      console.error('Error details:', errorMessage);
+      throw error; // Re-throw to be caught by handleDownloadConfirm
+    }
   };
 
   // Process image changes - Following RTU PM pattern
@@ -1613,6 +1717,16 @@ const CMReviewReportFormEdit = () => {
             {notification.message}
           </Alert>
         </Snackbar>
+
+        {/* Download Confirmation Modal */}
+        <DownloadConfirmationModal
+          open={downloadConfirmModalOpen}
+          onCancel={handleModalCancel}
+          onCreateOnly={handleCreateOnly}
+          onDownload={handleDownloadConfirm}
+          loading={isDownloading}
+          createOnlyLabel="Update Report Only"
+        />
       </Box>
     </LocalizationProvider>
   );

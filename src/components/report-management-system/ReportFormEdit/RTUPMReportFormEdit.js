@@ -44,6 +44,7 @@ import { getRTUPMReportForm, updateRTUPMReportForm, getReportFormTypes } from '.
 import warehouseService from '../../api-services/warehouseService';
 import { getPMReportFormTypes } from '../../api-services/reportFormService';
 import { API_BASE_URL } from '../../../config/apiConfig';
+import WarningModal from '../../common/WarningModal';
 
 // MultipleImageUploadField Component
 const MultipleImageUploadField = ({
@@ -290,6 +291,9 @@ const RTUPMReportFormEdit = () => {
   const [selectedChamberRowIndex, setSelectedChamberRowIndex] = useState(null);
   const [selectedCoolingRowIndex, setSelectedCoolingRowIndex] = useState(null);
   const [selectedDVRRowIndex, setSelectedDVRRowIndex] = useState(null);
+
+  // Add state for Form Status warning modal
+  const [showFormStatusWarning, setShowFormStatusWarning] = useState(false);
 
   // Helper function to format date without timezone conversion
   const formatDateForInput = (date) => {
@@ -844,6 +848,12 @@ const RTUPMReportFormEdit = () => {
 
   // Form submission - Navigate to review with form data
   const handleSubmit = () => {
+    // Validate FormStatus
+    if (!formData.formstatusID) {
+      setShowFormStatusWarning(true);
+      return;
+    }
+
     // Prepare the complete form data to pass to review
     const reviewData = {
       // Basic form data
@@ -2456,19 +2466,23 @@ const RTUPMReportFormEdit = () => {
                 boxShadow: RMSTheme.components.button.primary.shadow,
                 '&:hover': {
                   background: RMSTheme.components.button.primary.hover
-                },
-                '&:disabled': {
-                  opacity: 0.6,
-                  cursor: 'not-allowed'
                 }
               }}
-              disabled={!formData.formstatusID || saving}
             >
               {saving ? <CircularProgress size={20} color="inherit" /> : 'Review'}
             </Button>
           </Box>
         </Paper>
       </Box>
+
+      {/* Form Status Warning Modal */}
+      <WarningModal
+        open={showFormStatusWarning}
+        onClose={() => setShowFormStatusWarning(false)}
+        title="Form Status Required"
+        content="Please select a Form Status before proceeding to the review page."
+        buttonText="OK"
+      />
     </LocalizationProvider>
   );
 };

@@ -43,6 +43,7 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import RMSTheme from '../../theme-resource/RMSTheme';
+import DownloadConfirmationModal from '../../common/DownloadConfirmationModal';
 import {
   getRTUPMReportForm,
   updateReportForm,
@@ -57,7 +58,8 @@ import {
   deletePMDVREquipment,
   createReportFormImage,
   deleteReportFormImage,
-  getReportFormImageTypes
+  getReportFormImageTypes,
+  generateRTUPMReportPdf
 } from '../../api-services/reportFormService';
 import { uploadFinalReportAttachment } from '../../api-services/reportFormService';
 import warehouseService from '../../api-services/warehouseService';
@@ -408,6 +410,8 @@ const RTUPMReviewReportFormEdit = () => {
   const [finalReportFile, setFinalReportFile] = useState(null);
   const [finalReportUploadError, setFinalReportUploadError] = useState('');
   const [finalReportUploading, setFinalReportUploading] = useState(false);
+  const [downloadConfirmModalOpen, setDownloadConfirmModalOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Toast notification state
   const [notification, setNotification] = useState({
@@ -521,7 +525,107 @@ const RTUPMReviewReportFormEdit = () => {
       setFinalReportDialogOpen(true);
       return;
     }
-    handleSave();
+    // Show download confirmation modal instead of directly saving
+    setDownloadConfirmModalOpen(true);
+  };
+
+  // Handle when user clicks "Cancel" in download modal - just close and stay on review page
+  const handleModalCancel = () => {
+    setDownloadConfirmModalOpen(false);
+  };
+
+  // Handle when user clicks "Update Report Only" - save without downloading
+  const handleUpdateOnly = async () => {
+    try {
+      setIsDownloading(true);
+      setDownloadConfirmModalOpen(false);
+      await handleSave();
+    } catch (error) {
+      console.error('Error during report update:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Handle when user clicks "Download Report" - save and download
+  const handleDownloadConfirm = async () => {
+    try {
+      setIsDownloading(true);
+      setDownloadConfirmModalOpen(false);
+
+      console.log('=== Starting RTU PM report save and download ===');
+      
+      // Save the report first (we'll modify handleSave to accept options)
+      await handleSave({ skipNavigation: true, suppressSuccessToast: true });
+      
+      // Wait a moment to ensure backend has processed the save
+      console.log('Waiting 2 seconds before downloading...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Download the report
+      await handleDownloadReport(id);
+      
+      // Show success notification
+      setNotification({
+        open: true,
+        message: 'Report saved and downloaded successfully!',
+        severity: 'success'
+      });
+      
+      // Navigate after download
+      setTimeout(() => {
+        navigate('/report-management-system');
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Error during save and download:', error);
+      setNotification({
+        open: true,
+        message: 'Report saved but download failed. You can download it from the report details page.',
+        severity: 'warning'
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Download report function using direct HTTP API
+  const handleDownloadReport = async (reportFormId) => {
+    try {
+      console.log(`Generating RTU PM report PDF for ReportForm ID: ${reportFormId}`);
+
+      const response = await generateRTUPMReportPdf(reportFormId);
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      // Extract filename from response headers or use default
+      const disposition = response.headers['content-disposition'];
+      let fileName = `RTUPMReport_${rtuPMData?.jobNo || reportFormId}.pdf`;
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/i);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
+
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      console.log('RTU PM Report PDF downloaded successfully');
+    } catch (error) {
+      console.error('Error generating RTU PM report PDF:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        (typeof error.response?.data === 'string' ? error.response.data : error.message) ||
+        'Failed to generate PDF report.';
+      console.error('Error details:', errorMessage);
+      throw error; // Re-throw to be caught by handleDownloadConfirm
+    }
   };
 
   // Helper function to process image changes
@@ -601,7 +705,7 @@ const RTUPMReviewReportFormEdit = () => {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async ({ skipNavigation = false, suppressSuccessToast = false } = {}) => {
     try {
       setSaving(true);
       setError(null);
@@ -656,11 +760,18 @@ const RTUPMReviewReportFormEdit = () => {
 
       // Step 2: Update PM Report Form RTU basic data
       setSaveProgress('Updating RTU PM basic data...');
+
+      // Helper function to convert empty string to null for date fields
+      const formatDateForAPI = (dateValue) => {
+        if (!dateValue || dateValue === '') return null;
+        return dateValue;
+      };
+
       const pmReportFormRTUData = {
         formstatusID: rtuPMData.formstatusID || rtuPMData.pmReportFormRTU?.formstatusID,
         projectNo: rtuPMData.pmReportFormRTU?.projectNo || rtuPMData.projectNo,
         customer: rtuPMData.pmReportFormRTU?.customer || rtuPMData.customer,
-        dateOfService: rtuPMData.pmReportFormRTU?.dateOfService || rtuPMData.dateOfService,
+        dateOfService: formatDateForAPI(rtuPMData.pmReportFormRTU?.dateOfService || rtuPMData.dateOfService),
         cleaningOfCabinet: rtuPMData.pmReportFormRTU?.cleaningOfCabinet || rtuPMData.cleaningOfCabinet || rtuPMData.cleaningStatus,
         remarks: rtuPMData.pmReportFormRTU?.remarks || rtuPMData.remarks,
         attendedBy: rtuPMData.pmReportFormRTU?.attendedBy || rtuPMData.attendedBy,
@@ -761,16 +872,21 @@ const RTUPMReviewReportFormEdit = () => {
 
       setSaveProgress('Save completed successfully!');
 
-      // Show success toast
-      setNotification({
-        open: true,
-        message: 'RTU PM Report saved successfully!',
-        severity: 'success'
-      });
+      // Show success toast (unless suppressed)
+      if (!suppressSuccessToast) {
+        setNotification({
+          open: true,
+          message: 'RTU PM Report saved successfully!',
+          severity: 'success'
+        });
+      }
 
-      setTimeout(() => {
-        navigate(`/report-management-system`);
-      }, 1000);
+      // Navigate (unless skipped)
+      if (!skipNavigation) {
+        setTimeout(() => {
+          navigate(`/report-management-system`);
+        }, 1000);
+      }
 
     } catch (error) {
       console.error('Error saving RTU PM report:', error);
@@ -1728,6 +1844,16 @@ const RTUPMReviewReportFormEdit = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Download Confirmation Modal */}
+      <DownloadConfirmationModal
+        open={downloadConfirmModalOpen}
+        onCancel={handleModalCancel}
+        onCreateOnly={handleUpdateOnly}
+        onDownload={handleDownloadConfirm}
+        loading={isDownloading}
+        createOnlyLabel="Update Report Only"
+      />
     </Box>
 
   );

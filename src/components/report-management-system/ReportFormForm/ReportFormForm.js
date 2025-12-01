@@ -232,7 +232,8 @@ const ReportFormForm = () => {
           navigate('/report-management-system/report-forms');
         }, 2000);
 
-        return true;
+        // Return the result object so ReportForm ID can be extracted
+        return result;
       } else if (isServerPreventativeMaintenance) {
         // console.log("Server Preventative Maintenance is working");
         // Handle Server PM report submission
@@ -260,7 +261,8 @@ const ReportFormForm = () => {
           navigate('/report-management-system/report-forms');
         }, 2000);
 
-        return true;
+        // Return the result object so ReportForm ID can be extracted
+        return result;
       } else if (isRTUPreventativeMaintenance) {
         // Handle RTU PM report submission
         result = await submitRTUPMReportForm(formData, rtuPMData, user);
@@ -287,7 +289,8 @@ const ReportFormForm = () => {
           navigate('/report-management-system/report-forms');
         }, 2000);
 
-        return true;
+        // Return the result object so ReportForm ID can be extracted
+        return result;
       } else if (isPreventativeMaintenance) {
         // console.log("Other PM type (not RTU) - not implemented yet");
         throw new Error('This PM report type is not yet implemented');
@@ -483,6 +486,7 @@ const ReportFormForm = () => {
               materialUsedData={materialUsedData}
               materialUsedOldSerialImages={materialUsedOldSerialImages}
               materialUsedNewSerialImages={materialUsedNewSerialImages}
+              user={user}
             />
           );
         }
@@ -563,47 +567,7 @@ const ReportFormForm = () => {
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
         }}
       >
-        {/* Header with JobNo in top right corner */}
-        <Box sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 3
-        }}>
-          {/* JobNo display in top right corner */}
-          <Box sx={{
-            backgroundColor: '#f5f5f5',
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: '1px solid #ddd',
-            alignItems: 'center'
-          }}>
-            <Typography
-              variant="body1"
-              sx={{
-                color: '#2C3E50',
-                fontWeight: 'normal',
-                fontSize: '14px',
-                display: 'inline'
-              }}
-            >
-              Job No:
-            </Typography>
-            <Typography
-              variant="h4"
-              sx={{
-                color: '#FF0000',
-                fontWeight: 'bold',
-                fontSize: '24px',
-                display: 'inline',
-                marginLeft: '8px'
-              }}
-            >
-              {formData.jobNo || 'Loading...'}
-            </Typography>
-          </Box>
-        </Box>
-
+        
         <Stepper activeStep={activeStep} sx={{
           marginBottom: 4,
           '& .MuiStepLabel-root .Mui-completed': {

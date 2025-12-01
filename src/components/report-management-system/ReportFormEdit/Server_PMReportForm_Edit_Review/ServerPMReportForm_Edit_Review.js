@@ -50,7 +50,8 @@ import {
   UploadFile as UploadFileIcon
 } from '@mui/icons-material';
 import RMSTheme from '../../../theme-resource/RMSTheme';
-import { getPMReportFormTypes, getServerPMReportFormWithDetails, uploadFinalReportAttachment } from '../../../api-services/reportFormService';
+import DownloadConfirmationModal from '../../../common/DownloadConfirmationModal';
+import { getPMReportFormTypes, getServerPMReportFormWithDetails, uploadFinalReportAttachment, generateServerPMReportPdf } from '../../../api-services/reportFormService';
 import { updateServerPMReportForm } from '../../../api-services/reportFormService_Update';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -96,6 +97,8 @@ const ServerPMReportForm_Edit_Review = () => {
   const [finalReportFile, setFinalReportFile] = useState(null);
   const [finalReportUploading, setFinalReportUploading] = useState(false);
   const [finalReportUploadError, setFinalReportUploadError] = useState('');
+  const [downloadConfirmModalOpen, setDownloadConfirmModalOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const isDataLoaded = useRef(false);
   const isStatusClosed = (status) => (status || '').trim().toLowerCase() === 'close';
   const redirectIfClosed = (message) => {
@@ -369,7 +372,7 @@ const ServerPMReportForm_Edit_Review = () => {
   }, [id]); // Remove location.state from dependencies
 
 
-  const performUpdate = async (finalReportFileParam = null) => {
+  const performUpdate = async (finalReportFileParam = null, { skipNavigation = false, suppressSuccessToast = false } = {}) => {
     try {
       setSubmitting(true);
       setError(null);
@@ -391,15 +394,21 @@ const ServerPMReportForm_Edit_Review = () => {
         await uploadFinalReportAttachment(reportFormId, finalReportFileParam);
       }
 
-      setNotification({
-        open: true,
-        message: '🎉 Server PM report updated successfully! Redirecting to report list...',
-        severity: 'success'
-      });
+      // Show success notification (unless suppressed)
+      if (!suppressSuccessToast) {
+        setNotification({
+          open: true,
+          message: 'Server PM report updated successfully! Redirecting to report list...',
+          severity: 'success'
+        });
+      }
 
-      setTimeout(() => {
-        navigate('/report-management-system');
-      }, 2000);
+      // Navigate (unless skipped)
+      if (!skipNavigation) {
+        setTimeout(() => {
+          navigate('/report-management-system');
+        }, 2000);
+      }
 
       return { success: true };
     } catch (error) {
@@ -408,7 +417,7 @@ const ServerPMReportForm_Edit_Review = () => {
       setError('Failed to update report: ' + message);
       setNotification({
         open: true,
-        message: '??O Failed to update report. Please try again.',
+        message: 'Failed to update report. Please try again.',
         severity: 'error'
       });
       return { success: false, message };
@@ -423,7 +432,113 @@ const ServerPMReportForm_Edit_Review = () => {
       setFinalReportDialogOpen(true);
       return;
     }
-    await performUpdate();
+    // Show download confirmation modal instead of directly updating
+    setDownloadConfirmModalOpen(true);
+  };
+
+  // Handle when user clicks "Cancel" in download modal - just close and stay on review page
+  const handleModalCancel = () => {
+    setDownloadConfirmModalOpen(false);
+  };
+
+  // Handle when user clicks "Update Report Only" - update without downloading
+  const handleUpdateOnly = async () => {
+    try {
+      setIsDownloading(true);
+      setDownloadConfirmModalOpen(false);
+      await performUpdate();
+    } catch (error) {
+      console.error('Error during report update:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Handle when user clicks "Download Report" - update and download
+  const handleDownloadConfirm = async () => {
+    try {
+      setIsDownloading(true);
+      setDownloadConfirmModalOpen(false);
+
+      console.log('=== Starting Server PM report update and download ===');
+      
+      // Update the report first - pass null for finalReportFileParam, then options object
+      const updateResult = await performUpdate(null, { skipNavigation: true, suppressSuccessToast: true });
+      
+      if (!updateResult.success) {
+        console.error('Update failed');
+        setIsDownloading(false);
+        return;
+      }
+      
+      // Wait a moment to ensure backend has processed the update
+      console.log('Waiting 2 seconds before downloading...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Download the report
+      await handleDownloadReport(id);
+      
+      // Show success notification
+      setNotification({
+        open: true,
+        message: 'Report updated and downloaded successfully!',
+        severity: 'success'
+      });
+      
+      // Navigate after download
+      setTimeout(() => {
+        navigate('/report-management-system');
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Error during update and download:', error);
+      setNotification({
+        open: true,
+        message: 'Report updated but download failed. You can download it from the report details page.',
+        severity: 'warning'
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Download report function using direct HTTP API
+  const handleDownloadReport = async (reportFormId) => {
+    try {
+      console.log(`Generating Server PM report PDF for ReportForm ID: ${reportFormId}`);
+
+      const response = await generateServerPMReportPdf(reportFormId);
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      // Extract filename from response headers or use default
+      const disposition = response.headers['content-disposition'];
+      let fileName = `ServerPMReport_${formData?.jobNo || reportFormId}.pdf`;
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/i);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
+
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      console.log('Server PM Report PDF downloaded successfully');
+    } catch (error) {
+      console.error('Error generating Server PM report PDF:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        (typeof error.response?.data === 'string' ? error.response.data : error.message) ||
+        'Failed to generate PDF report.';
+      console.error('Error details:', errorMessage);
+      throw error; // Re-throw to be caught by handleDownloadConfirm
+    }
   };
 
   const handleFinalReportFileChange = (event) => {
@@ -970,6 +1085,16 @@ const ServerPMReportForm_Edit_Review = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Download Confirmation Modal */}
+      <DownloadConfirmationModal
+        open={downloadConfirmModalOpen}
+        onCancel={handleModalCancel}
+        onCreateOnly={handleUpdateOnly}
+        onDownload={handleDownloadConfirm}
+        loading={isDownloading}
+        createOnlyLabel="Update Report Only"
+      />
     </LocalizationProvider>
   );
 };

@@ -262,7 +262,8 @@ const CMReportFormEdit = () => {
     approvedBy: '',
     remark: '',
     furtherActionTakenID: '',
-    formstatusID: ''
+    formstatusID: '',
+    formStatusName: ''
   });
 
   // Image states
@@ -474,6 +475,19 @@ const CMReportFormEdit = () => {
     setFormData(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  // Handle Form Status change - update both ID and Name
+  const handleFormStatusChange = (selectedStatusId) => {
+    const selectedStatus = warehouseData.formStatuses.find(
+      status => status.id === selectedStatusId
+    );
+    
+    setFormData(prev => ({
+      ...prev,
+      formstatusID: selectedStatusId,
+      formStatusName: selectedStatus?.name || selectedStatus?.status || ''
     }));
   };
 
@@ -832,7 +846,7 @@ const CMReportFormEdit = () => {
                   <Select
                     labelId="form-status-label"
                     value={formData.formstatusID || ''}
-                    onChange={(e) => handleInputChange('formstatusID', e.target.value)}
+                    onChange={(e) => handleFormStatusChange(e.target.value)}
                     label="Form Status"
                   >
                     <MenuItem value="">
@@ -1160,7 +1174,7 @@ const CMReportFormEdit = () => {
                 <Button
                   variant="contained"
                   startIcon={<ArrowBackIosNewIcon fontSize="small" />}
-                  onClick={() => navigate('/report-management')}
+                  onClick={() => navigate('/report-management-system/report-forms')}
                   sx={{
                     background: RMSTheme.components.button.primary.background,
                     color: RMSTheme.components.button.primary.text,

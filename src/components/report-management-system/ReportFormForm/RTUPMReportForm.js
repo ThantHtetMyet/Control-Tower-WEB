@@ -39,6 +39,7 @@ import {
 } from '@mui/icons-material';
 import RMSTheme from '../../theme-resource/RMSTheme';
 import { getPMReportFormTypes } from '../../api-services/reportFormService';
+import WarningModal from '../../common/WarningModal';
 
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -248,6 +249,9 @@ const RTUPMReportForm = ({
 
   // Add state for PM DVR Equipment delete confirmation modal
   const [showDVRDeleteConfirm, setShowDVRDeleteConfirm] = useState(false);
+
+  // Add state for Form Status warning modal
+  const [showFormStatusWarning, setShowFormStatusWarning] = useState(false);
 
   // Dropdown options for MainRTUCabinet
   const dropdownOptions = ['', 'NA', 'Acceptable', 'NonAcceptable'];
@@ -839,8 +843,6 @@ const RTUPMReportForm = ({
   const currentReportFormId = formData?.reportFormID || formData?.ReportFormID || formData?.reportFormId;
 
   // Handle input changes
-  const hasFormStatus = Boolean(formData?.formstatusID);
-
   const handleInputChange = (field, value) => {
 
     if (fieldErrors[field]) {
@@ -855,6 +857,12 @@ const RTUPMReportForm = ({
 
   // Handle next button
   const handleNext = () => {
+    // Validate FormStatus
+    if (!formData.formstatusID) {
+      setShowFormStatusWarning(true);
+      return;
+    }
+
     // Collect all RTU PM data
     const rtuPMDataToPass = {
       pmMainRtuCabinetImages,
@@ -926,6 +934,11 @@ const RTUPMReportForm = ({
     '& .MuiOutlinedInput-input': {
       color: '#2C3E50',
     },
+    // ADD THESE TWO LINES:
+    '& .MuiInputBase-input.Mui-disabled': {
+      color: '#333',
+      WebkitTextFillColor: '#333'
+    }
   };
 
   const dateTimePickerStyle = {
@@ -1060,126 +1073,75 @@ const RTUPMReportForm = ({
                 📋 Basic Information Summary
               </Typography>
 
-              <Grid container spacing={3} sx={{ marginTop: 1 }}>
-                <Grid item xs={12} md={6} sx={{ display: 'none' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {/* Job No - Read Only */}
+                <TextField
+                  fullWidth
+                  label="Job No"
+                  value={formData.jobNo || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+
+                {/* System Description */}
+                <TextField
+                  fullWidth
+                  label="System Description"
+                  value={formData.systemDescription || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+
+                {/* Station Name */}
+                <Tooltip
+                  title={formData.stationName || 'Not specified'}
+                  placement="top"
+                  enterDelay={200}
+                  sx={{
+                    '& .MuiTooltip-tooltip': {
+                      backgroundColor: '#1976d2',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                      maxWidth: '400px',
+                      whiteSpace: 'normal',
+                    },
+                    '& .MuiTooltip-arrow': {
+                      color: '#1976d2',
+                    }
+                  }}
+                  arrow
+                >
                   <TextField
                     fullWidth
-                    label="Job No"
-                    value={formData.jobNo || ''}
+                    label="Station Name"
+                    value={formData.stationName || ''}
                     disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
+                    sx={fieldStyle}
                   />
-                </Grid>
+                </Tooltip>
 
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="System Description"
-                    value={formData.systemDescription || ''}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
-                  />
-                </Grid>
+                {/* Customer */}
+                <TextField
+                  fullWidth
+                  label="Customer"
+                  value={formData.customer || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
 
-                <Grid item xs={12} md={6}>
-                  <Tooltip
-                    title={formData.stationName || 'Not specified'}
-                    placement="top"
-                    enterDelay={200}
-                    sx={{
-                      '& .MuiTooltip-tooltip': {
-                        backgroundColor: '#1976d2',
-                        color: 'white',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        padding: '12px 16px',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                        maxWidth: '400px',
-                        whiteSpace: 'normal',
-                      },
-                      '& .MuiTooltip-arrow': {
-                        color: '#1976d2',
-                      }
-                    }}
-                    arrow
-                  >
-                    <TextField
-                      fullWidth
-                      label="Station Name"
-                      value={formData.stationName || ''}
-                      disabled
-                      sx={{
-                        ...fieldStyle,
-                        '& .MuiOutlinedInput-root': {
-                          ...fieldStyle['& .MuiOutlinedInput-root'],
-                          backgroundColor: '#f5f5f5',
-                          cursor: 'help',
-                          '& fieldset': {
-                            borderColor: '#d0d0d0'
-                          }
-                        }
-                      }}
-                    />
-                  </Tooltip>
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Customer"
-                    value={formData.customer || ''}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Project No"
-                    value={formData.projectNo || ''}
-                    disabled
-                    sx={{
-                      ...fieldStyle,
-                      '& .MuiOutlinedInput-root': {
-                        ...fieldStyle['& .MuiOutlinedInput-root'],
-                        backgroundColor: '#f5f5f5',
-                        '& fieldset': {
-                          borderColor: '#d0d0d0'
-                        }
-                      }
-                    }}
-                  />
-                </Grid>
-              </Grid>
+                {/* Project No */}
+                <TextField
+                  fullWidth
+                  label="Project No"
+                  value={formData.projectNo || ''}
+                  disabled
+                  sx={fieldStyle}
+                />
+              </Box>
             </Paper>
 
             <Paper sx={sectionContainerStyle}>
@@ -2576,7 +2538,6 @@ const RTUPMReportForm = ({
                 <Button
                   variant="contained"
                   onClick={handleNext}
-                  disabled={!hasFormStatus}
                   endIcon={<ArrowForwardIosIcon fontSize="small" />}
                   sx={{
                     background: RMSTheme.components.button.primary.background,
@@ -2587,10 +2548,6 @@ const RTUPMReportForm = ({
                     boxShadow: RMSTheme.components.button.primary.shadow,
                     '&:hover': {
                       background: RMSTheme.components.button.primary.hover
-                    },
-                    '&:disabled': {
-                      opacity: 0.5,
-                      cursor: 'not-allowed'
                     }
                   }}
                 >
@@ -2972,6 +2929,15 @@ const RTUPMReportForm = ({
           </DialogActions>
         </Dialog>
       </Box>
+
+      {/* Form Status Warning Modal */}
+      <WarningModal
+        open={showFormStatusWarning}
+        onClose={() => setShowFormStatusWarning(false)}
+        title="Form Status Required"
+        content="Please select a Form Status before proceeding to the next step."
+        buttonText="OK"
+      />
     </LocalizationProvider>
   );
 };

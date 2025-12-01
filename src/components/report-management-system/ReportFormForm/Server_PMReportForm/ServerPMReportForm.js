@@ -16,6 +16,7 @@ import {
 } from '@mui/icons-material';
 import RMSTheme from '../../../theme-resource/RMSTheme';
 import { getPMReportFormTypes } from '../../../api-services/reportFormService';
+import WarningModal from '../../../common/WarningModal';
 
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -52,6 +53,9 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState('formStatus');
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Add state for Form Status warning modal
+  const [showFormStatusWarning, setShowFormStatusWarning] = useState(false);
 
   // Step configuration
   const steps = [
@@ -163,7 +167,9 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
   };
 
   const handleNext = () => {
+    // Validate FormStatus on formStatus step
     if (currentStep === 'formStatus' && !hasFormStatus) {
+      setShowFormStatusWarning(true);
       return;
     }
 
@@ -667,6 +673,15 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
           </Box>
         </Paper>
       </Box>
+
+      {/* Form Status Warning Modal */}
+      <WarningModal
+        open={showFormStatusWarning}
+        onClose={() => setShowFormStatusWarning(false)}
+        title="Form Status Required"
+        content="Please select a Form Status before proceeding to the next step."
+        buttonText="OK"
+      />
     </LocalizationProvider>
   );
 };

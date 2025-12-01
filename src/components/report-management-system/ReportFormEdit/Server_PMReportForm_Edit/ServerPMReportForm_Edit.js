@@ -20,6 +20,7 @@ import {
 import RMSTheme from '../../../theme-resource/RMSTheme';
 import { getPMReportFormTypes, getServerPMReportFormWithDetails } from '../../../api-services/reportFormService';
 import warehouseService from '../../../api-services/warehouseService';
+import WarningModal from '../../../common/WarningModal';
 
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -58,6 +59,9 @@ const ServerPMReportForm_Edit = () => {
   const [error, setError] = useState(null);
   const [currentStep, setCurrentStep] = useState('formStatus');
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Add state for Form Status warning modal
+  const [showFormStatusWarning, setShowFormStatusWarning] = useState(false);
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -468,7 +472,9 @@ const ServerPMReportForm_Edit = () => {
   };
 
   const handleNext = () => {
+    // Validate FormStatus on formStatus step
     if (currentStep === 'formStatus' && !hasFormStatus) {
+      setShowFormStatusWarning(true);
       return;
     }
 
@@ -930,7 +936,7 @@ const ServerPMReportForm_Edit = () => {
                   <Button
                     variant="contained"
                     onClick={handleNext}
-                    disabled={isTransitioning || (!hasFormStatus && currentStep === 'formStatus')}
+                    disabled={isTransitioning}
                     endIcon={<ArrowForwardIosIcon fontSize="small" />}
                     sx={{
                       background: RMSTheme.components.button.primary.background,
@@ -955,6 +961,15 @@ const ServerPMReportForm_Edit = () => {
           </Box>
         </Paper>
       </Box>
+
+      {/* Form Status Warning Modal */}
+      <WarningModal
+        open={showFormStatusWarning}
+        onClose={() => setShowFormStatusWarning(false)}
+        title="Form Status Required"
+        content="Please select a Form Status before proceeding to the next step."
+        buttonText="OK"
+      />
     </LocalizationProvider>
   );
 };

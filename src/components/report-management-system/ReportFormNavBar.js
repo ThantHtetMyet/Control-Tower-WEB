@@ -45,8 +45,8 @@ const ReportFormNavBar = () => {
       zIndex: -1
     },
     '&:hover': {
-      backgroundColor: location.pathname === path 
-        ? 'rgba(255, 255, 255, 0.25)' 
+      backgroundColor: location.pathname === path
+        ? 'rgba(255, 255, 255, 0.25)'
         : RMSDarkTheme.components.navbar.hoverBackground,
       '&::before': {
         transform: 'scaleX(1)'
@@ -57,26 +57,83 @@ const ReportFormNavBar = () => {
   return (
     <AppBar position="static" sx={{
       background: RMSDarkTheme.components.navbar.background,
-      boxShadow: RMSDarkTheme.shadows.medium
+      boxShadow: RMSDarkTheme.shadows.medium,
+      position: 'relative',
+      overflow: 'hidden',
+      '&::after': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: '-100%',
+        width: '50%',
+        height: '100%',
+        background: 'linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 100%)',
+        transform: 'skewX(-25deg)',
+        animation: 'shine 6s infinite',
+        pointerEvents: 'none',
+      },
+      '@keyframes shine': {
+        '0%': {
+          left: '-100%',
+          opacity: 0
+        },
+        '20%': {
+          opacity: 1
+        },
+        '50%': {
+          opacity: 1
+        },
+        '100%': {
+          left: '200%',
+          opacity: 0
+        }
+      }
     }}>
       <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="h6" component="div" sx={{ color: RMSDarkTheme.components.navbar.text }}>
-            Report Management System
-          </Typography>
-          <Button 
+          <Box sx={{
+            display: 'flex',
+            mr: 2,
+            '@keyframes jump': {
+              '0%': { transform: 'translateY(0)' },
+              '6.66%': { transform: 'translateY(-8px)' }, // Peak at 1s (Gentle rise)
+              '13.33%': { transform: 'translateY(0)' },   // End at 2s (Gentle fall)
+              '100%': { transform: 'translateY(0)' }
+            }
+          }}>
+            {['Report', '.', 'Management', '.', 'System'].map((word, index) => (
+              <Typography
+                key={index}
+                variant="h6"
+                component="span"
+                sx={{
+                  color: RMSDarkTheme.components.navbar.text,
+                  display: 'inline-block',
+                  animation: 'jump 25s ease-in-out infinite', // (2s jump + 3s wait) * 3 words = 15s
+                  animationDelay: `${index * 5}s`, // Stagger by (2s + 3s) = 5s
+                  '&:hover': {
+                    animationDuration: '2s', // Gentle jump on hover too
+                    animationDelay: '0s'
+                  }
+                }}
+              >
+                {word}
+              </Typography>
+            ))}
+          </Box>
+          <Button
             onClick={() => navigate('/modules')}
             sx={getButtonStyle('/modules')}
           >
             Home
           </Button>
-          <Button 
+          <Button
             onClick={() => navigate('/report-management-system')}
             sx={getButtonStyle('/report-management-system')}
           >
             Dashboard
           </Button>
-          <Button 
+          <Button
             onClick={() => navigate('/report-management-system/report-forms')}
             sx={getButtonStyle('/report-management-system/report-forms')}
           >

@@ -39,6 +39,8 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import RMSTheme from '../../theme-resource/RMSTheme';
+import DownloadConfirmationModal from '../../common/DownloadConfirmationModal';
+import { generateRTUPMReportPdf } from '../../api-services/reportFormService';
 
 // Styling constants
 const sectionContainer = {
@@ -256,6 +258,8 @@ const RTUPMReviewReportForm = ({
   const [finalReportFile, setFinalReportFile] = useState(null);
   const [finalReportUploadError, setFinalReportUploadError] = useState('');
   const [finalReportUploading, setFinalReportUploading] = useState(false);
+  const [downloadConfirmModalOpen, setDownloadConfirmModalOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const resolvedStatusName = (() => {
     const match = (formStatusOptions || []).find((s) => (s.id || s.ID) === formData.formstatusID);
@@ -308,7 +312,107 @@ const RTUPMReviewReportForm = ({
       setFinalReportUploadError('');
       setFinalReportDialogOpen(true);
     } else {
-      onNext();
+      // Show download confirmation modal instead of directly submitting
+      setDownloadConfirmModalOpen(true);
+    }
+  };
+
+  // Handle when user clicks "Cancel" in download modal - just close and stay on review page
+  const handleModalCancel = () => {
+    setDownloadConfirmModalOpen(false);
+  };
+
+  // Handle when user clicks "Create Report Only" - submit without downloading
+  const handleCreateOnly = async () => {
+    try {
+      setIsDownloading(true);
+      setDownloadConfirmModalOpen(false);
+      await onNext();
+    } catch (error) {
+      console.error('Error during report creation:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Handle when user clicks "Download Report" - submit and download
+  const handleDownloadConfirm = async () => {
+    try {
+      setIsDownloading(true);
+      setDownloadConfirmModalOpen(false);
+
+      console.log('=== Starting RTU PM report submission ===');
+      
+      // Submit the report to create it
+      const submitResult = await onNext();
+
+      console.log('=== Report submission completed ===');
+      console.log('Submit result:', submitResult);
+
+      // Check if submission failed
+      if (submitResult === false) {
+        console.error('Submission failed - submitResult is false');
+        setIsDownloading(false);
+        return;
+      }
+
+      // Extract ReportForm ID from the submit result
+      const reportFormId = submitResult?.reportForm?.id || submitResult?.reportForm?.ID;
+      
+      console.log('Extracted reportFormId:', reportFormId);
+
+      // Wait a moment to ensure the report is fully created in the backend
+      if (reportFormId) {
+        console.log('Waiting 2 seconds before downloading...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await handleDownloadReport(reportFormId);
+      } else {
+        console.error('No ReportForm ID available for download');
+        console.error('submitResult:', submitResult);
+      }
+    } catch (error) {
+      console.error('Error during submit and download:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Download report function using direct HTTP API
+  const handleDownloadReport = async (reportFormId) => {
+    try {
+      console.log(`Generating RTU PM report PDF for ReportForm ID: ${reportFormId}`);
+
+      const response = await generateRTUPMReportPdf(reportFormId);
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      // Extract filename from response headers or use default
+      const disposition = response.headers['content-disposition'];
+      let fileName = `RTUPMReport_${formData?.jobNo || reportFormId}.pdf`;
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/i);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
+
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      console.log('RTU PM Report PDF downloaded successfully');
+    } catch (error) {
+      console.error('Error generating RTU PM report PDF:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        (typeof error.response?.data === 'string' ? error.response.data : error.message) ||
+        'Failed to generate PDF report.';
+      console.error('Error details:', errorMessage);
+      alert(`Failed to download report: ${errorMessage}`);
     }
   };
 
@@ -939,6 +1043,15 @@ const RTUPMReviewReportForm = ({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Download Confirmation Modal */}
+      <DownloadConfirmationModal
+        open={downloadConfirmModalOpen}
+        onCancel={handleModalCancel}
+        onCreateOnly={handleCreateOnly}
+        onDownload={handleDownloadConfirm}
+        loading={isDownloading}
+      />
     </>
   );
 };

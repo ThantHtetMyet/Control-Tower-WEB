@@ -32,7 +32,8 @@ import {
   AccessTime,
   Close as CloseIcon,
   Print as PrintIcon,
-  Inventory as InventoryIcon
+  Inventory as InventoryIcon,
+  ArrowBackIosNew as ArrowBackIosNewIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import RMSTheme from '../../theme-resource/RMSTheme';
@@ -692,6 +693,7 @@ const CMReportFormDetails = () => {
           <Button
             variant="contained"
             onClick={handleBack}
+            startIcon={<ArrowBackIosNewIcon fontSize="small" />}
             sx={{
               background: RMSTheme.components.button.primary.background,
               color: RMSTheme.components.button.primary.text,
@@ -704,7 +706,7 @@ const CMReportFormDetails = () => {
               }
             }}
           >
-            ← Back
+            Back
           </Button>
 
           {!isFormStatusClosed && (
@@ -798,11 +800,11 @@ const CMReportFormDetails = () => {
             fullWidth
             label="Station Name"
             value={formData.stationNameWarehouseName || ''}
-          disabled
-          sx={fieldStyle}
-        />
-      </Box>
-    </Paper>
+            disabled
+            sx={fieldStyle}
+          />
+        </Box>
+      </Paper>
 
       {isFormStatusClosed && (
         <Paper sx={{

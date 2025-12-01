@@ -35,6 +35,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import moment from 'moment';
 import RMSTheme from '../../theme-resource/RMSTheme';
+import DownloadConfirmationModal from '../../common/DownloadConfirmationModal';
+import { generateCMReportPdf } from '../../api-services/reportFormService';
 
 const CMReviewReportForm = ({
   formData,
@@ -45,8 +47,12 @@ const CMReviewReportForm = ({
   error,
   materialUsedData = [],
   materialUsedOldSerialImages = [],
-  materialUsedNewSerialImages = []
+  materialUsedNewSerialImages = [],
+  user
 }) => {
+  const [downloadConfirmModalOpen, setDownloadConfirmModalOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const [finalReportDialogOpen, setFinalReportDialogOpen] = useState(false);
   const [finalReportFile, setFinalReportFile] = useState(null);
   const [finalReportUploadError, setFinalReportUploadError] = useState('');
@@ -99,7 +105,116 @@ const CMReviewReportForm = ({
       setFinalReportUploadError('');
       setFinalReportDialogOpen(true);
     } else {
-      onNext();
+      // Show download confirmation modal before submitting
+      setDownloadConfirmModalOpen(true);
+    }
+  };
+
+  // Handle when user clicks "Cancel" - just close modal and go back to review
+  const handleModalCancel = () => {
+    setDownloadConfirmModalOpen(false);
+    // Don't submit, just close the modal
+  };
+
+  // Handle when user clicks "Create Report Only" - submit without downloading
+  const handleCreateOnly = async () => {
+    try {
+      setIsDownloading(true);
+      setDownloadConfirmModalOpen(false);
+      await onNext();
+    } catch (error) {
+      console.error('Error during report creation:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Handle when user clicks "Download Report" - submit and download
+  const handleDownloadConfirm = async () => {
+    try {
+      setIsDownloading(true);
+      setDownloadConfirmModalOpen(false);
+
+      // First, submit the report to create the CM report
+      const submitResult = await onNext();
+
+      console.log('=== Report submission completed ===');
+      console.log('Submit result:', submitResult);
+      console.log('Submit result type:', typeof submitResult);
+      console.log('Submit result structure:', JSON.stringify(submitResult, null, 2));
+
+      // Check if submission failed
+      if (submitResult === false) {
+        console.error('Submission failed - submitResult is false');
+        setIsDownloading(false);
+        return;
+      }
+
+      // Extract ReportForm ID from the submit result (following CMReportFormDetails approach)
+      const reportFormId = submitResult?.reportForm?.id || submitResult?.reportForm?.ID;
+      
+      console.log('Extracted reportFormId:', reportFormId);
+      console.log('reportForm object:', submitResult?.reportForm);
+
+      // Wait a moment to ensure the report is fully created in the backend
+      if (reportFormId) {
+        console.log('Waiting 2 seconds before downloading...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await handleDownloadReport(reportFormId);
+      } else {
+        console.error('No ReportForm ID available for download');
+        console.error('submitResult:', submitResult);
+        // Fallback to jobNo if reportFormId is not available
+        const jobNo = formData?.jobNo;
+        if (jobNo) {
+          console.log('Falling back to jobNo:', jobNo);
+          await handleDownloadReport(jobNo);
+        }
+      }
+    } catch (error) {
+      console.error('Error during submit and download:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadReport = async (reportFormId) => {
+    try {
+      console.log(`Generating CM report PDF for ReportForm ID: ${reportFormId}`);
+
+      // Use the same direct HTTP API approach as CMReportFormDetails Print Report feature
+      const response = await generateCMReportPdf(reportFormId);
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      // Extract filename from response headers or use default
+      const disposition = response.headers['content-disposition'];
+      let fileName = `CMReport_${formData?.jobNo || reportFormId}.pdf`;
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/i);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
+
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      console.log('CM Report PDF downloaded successfully');
+    } catch (error) {
+      console.error('Error generating CM report PDF:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        (typeof error.response?.data === 'string' ? error.response.data : error.message) ||
+        'Failed to generate PDF report.';
+      console.error('Error details:', errorMessage);
+      // You might want to show this error to the user
+      alert(`Failed to download report: ${errorMessage}`);
     }
   };
 
@@ -838,6 +953,16 @@ const CMReviewReportForm = ({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Download Confirmation Modal */}
+      <DownloadConfirmationModal
+        open={downloadConfirmModalOpen}
+        onCancel={handleModalCancel}
+        onCreateOnly={handleCreateOnly}
+        onDownload={handleDownloadConfirm}
+        loading={isDownloading}
+        createOnlyLabel="Create Report Only"
+      />
     </LocalizationProvider>
   );
 };
