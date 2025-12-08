@@ -35,6 +35,11 @@ export const generateCMReportPdf = async (id) => {
   });
 };
 
+// Generate CM Final Report PDF (with signatures)
+export const generateCMFinalReportPdf = async (id) => {
+  return api.post(`/CMReportForm/${id}/generate-final-report-pdf`, null);
+};
+
 export const generateRTUPMReportPdf = async (id) => {
   return api.post(`/PMReportFormRTU/${id}/generate-pdf`, null, {
     responseType: 'blob'

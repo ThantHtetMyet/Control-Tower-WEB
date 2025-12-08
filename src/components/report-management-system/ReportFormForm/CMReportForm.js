@@ -727,7 +727,7 @@ const CMReportForm = ({
                 letterSpacing: '0.5px'
               }}
             >
-              {formData.reportTitle || 'Corrective Maintenance Report'}
+              {formData.reportTitle || ''}
             </Typography>
             <Typography
               variant="subtitle1"
@@ -826,44 +826,6 @@ const CMReportForm = ({
                   disabled
                   sx={fieldStyle}
                 />
-              </Box>
-            </Paper>
-
-
-            {/* Form Status Section */}
-            <Paper sx={{
-              ...sectionContainerStyle,
-              background: '#ffffff'
-            }}>
-              <Typography variant="h5" sx={sectionHeaderStyle}>
-                ✅ Form Status
-              </Typography>
-
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-                <FormControl fullWidth sx={fieldStyle}>
-                  <InputLabel id="form-status-label">Form Status</InputLabel>
-                  <Select
-                    labelId="form-status-label"
-                    value={formData.formstatusID || ''}
-                    onChange={(e) => {
-                      const selectedId = e.target.value;
-                      const selectedOption = warehouseData.formStatuses.find(option => option.id === selectedId);
-                      handleInputChange('formstatusID', selectedId);
-                      handleInputChange('formStatusName', selectedOption ? (selectedOption.status || selectedOption.name || `Status ${selectedOption.id}`) : '');
-                    }}
-                    label="Form Status"
-                    disabled={loading}
-                  >
-                    <MenuItem value="">
-                      <em>Select Form Status</em>
-                    </MenuItem>
-                    {warehouseData.formStatuses.map((option) => (
-                      <MenuItem key={option.id} value={option.id}>
-                        {option.status || option.name || `Status ${option.id}`}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
               </Box>
             </Paper>
 
@@ -1351,6 +1313,43 @@ const CMReportForm = ({
                   <FormHelperText>
                     {loading ? 'Loading options...' : ''}
                   </FormHelperText>
+                </FormControl>
+              </Box>
+            </Paper>
+            
+            {/* Form Status Section */}
+            <Paper sx={{
+              ...sectionContainerStyle,
+              background: '#ffffff'
+            }}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                ✅ Form Status
+              </Typography>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                <FormControl fullWidth sx={fieldStyle}>
+                  <InputLabel id="form-status-label">Form Status</InputLabel>
+                  <Select
+                    labelId="form-status-label"
+                    value={formData.formstatusID || ''}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      const selectedOption = warehouseData.formStatuses.find(option => option.id === selectedId);
+                      handleInputChange('formstatusID', selectedId);
+                      handleInputChange('formStatusName', selectedOption ? (selectedOption.status || selectedOption.name || `Status ${selectedOption.id}`) : '');
+                    }}
+                    label="Form Status"
+                    disabled={loading}
+                  >
+                    <MenuItem value="">
+                      <em>Select Form Status</em>
+                    </MenuItem>
+                    {warehouseData.formStatuses.map((option) => (
+                      <MenuItem key={option.id} value={option.id}>
+                        {option.status || option.name || `Status ${option.id}`}
+                      </MenuItem>
+                    ))}
+                  </Select>
                 </FormControl>
               </Box>
             </Paper>

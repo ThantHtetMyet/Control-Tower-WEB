@@ -100,6 +100,17 @@ const FirstContainer = ({ formData, reportFormTypes, onInputChange, onNext }) =>
     fetchCMReportFormTypes();
   }, []);
 
+  // Auto-select first CM Report Form Type when Corrective Maintenance is selected
+  useEffect(() => {
+    if (showCMTypeDropdown && cmReportFormTypes.length > 0 && !formData.cmReportFormTypeID) {
+      // Automatically select the first CM Report Form Type
+      const firstCMType = cmReportFormTypes[0];
+      onInputChange('cmReportFormTypeID', firstCMType.id);
+      onInputChange('cmReportFormTypeName', firstCMType.name || '');
+      console.log('Auto-selected CM Report Form Type:', firstCMType);
+    }
+  }, [showCMTypeDropdown, cmReportFormTypes]);
+
   // Check if Preventative Maintenance or Corrective Maintenance is selected
   useEffect(() => {
     if (formData.reportFormTypeID && reportFormTypes) {
@@ -165,10 +176,7 @@ const FirstContainer = ({ formData, reportFormTypes, onInputChange, onNext }) =>
     if (showPMTypeDropdown && !formData.pmReportFormTypeID) {
       errors.pmReportFormTypeID = 'PM Report Form Type is required';
     }
-    // Validate CM Report Form Type if Corrective Maintenance is selected
-    if (showCMTypeDropdown && !formData.cmReportFormTypeID) {
-      errors.cmReportFormTypeID = 'CM Report Form Type is required';
-    }
+    // No validation for CM Report Form Type - it's auto-selected
 
     setFieldErrors(errors);
     
@@ -181,10 +189,12 @@ const FirstContainer = ({ formData, reportFormTypes, onInputChange, onNext }) =>
       if (selectedServiceType) {
         if (showPMTypeDropdown && formData.pmReportFormTypeID) {
           const selectedPMType = pmReportFormTypes?.find(type => type.id === formData.pmReportFormTypeID);
-          reportTitle = `${selectedServiceType.name} (${selectedPMType?.name || ''})`;
+          const pmTypeName = selectedPMType?.name || '';
+          reportTitle = pmTypeName ? `${selectedServiceType.name} (${pmTypeName})` : selectedServiceType.name;
         } else if (showCMTypeDropdown && formData.cmReportFormTypeID) {
           const selectedCMType = cmReportFormTypes?.find(type => type.id === formData.cmReportFormTypeID);
-          reportTitle = `${selectedServiceType.name} (${selectedCMType?.name || ''})`;
+          const cmTypeName = selectedCMType?.name || '';
+          reportTitle = cmTypeName ? `${selectedServiceType.name} (${cmTypeName})` : selectedServiceType.name;
         } else {
           reportTitle = selectedServiceType.name;
         }
@@ -568,62 +578,8 @@ const FirstContainer = ({ formData, reportFormTypes, onInputChange, onNext }) =>
           </TextField>
         )}
 
-        {/* Conditional CM Report Form Type Dropdown */}
-        {showCMTypeDropdown && (
-          <TextField
-            fullWidth
-            select
-            label="CM Report Form Type"
-            value={formData.cmReportFormTypeID || ''}
-            onChange={(e) => handleCMReportFormTypeChange(e.target.value)}
-            required
-            variant="outlined"
-            error={!!fieldErrors.cmReportFormTypeID}
-            helperText={fieldErrors.cmReportFormTypeID}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: 'white',
-                '& fieldset': {
-                  borderColor: fieldErrors.cmReportFormTypeID ? '#E74C3C' : '#d0d0d0',
-                },
-                '&:hover fieldset': {
-                  borderColor: fieldErrors.cmReportFormTypeID ? '#E74C3C' : '#2C3E50',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: fieldErrors.cmReportFormTypeID ? '#E74C3C' : '#2C3E50',
-                },
-              },
-              '& .MuiInputLabel-root': {
-                color: '#666666',
-              },
-              '& .MuiInputLabel-root.Mui-focused': {
-                color: '#2C3E50',
-              },
-              '& .MuiSelect-select': {
-                color: '#2C3E50',
-              },
-              '& .MuiFormHelperText-root': {
-                color: '#E74C3C',
-              },
-            }}
-          >
-            {cmReportFormTypes.map((cmType) => (
-              <MenuItem 
-                key={cmType.id} 
-                value={cmType.id}
-                sx={{
-                  color: '#2C3E50',
-                  backgroundColor: 'white',
-                  '&:hover': {
-                    backgroundColor: '#f5f5f5'
-                  }
-                }}
-              >
-                {cmType.name}
-              </MenuItem>
-            ))}
-          </TextField>
-        )}
+        {/* CM Report Form Type is now auto-selected - no dropdown shown */}
+        {/* The first CM Report Form Type is automatically selected when Corrective Maintenance is chosen */}
       </Box>
       
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>

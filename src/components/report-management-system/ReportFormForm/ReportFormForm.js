@@ -17,7 +17,7 @@ import FirstContainer from './FirstContainer';
 import CMReportForm from './CMReportForm';
 import RTUPMReportForm from './RTUPMReportForm'; // Updated import
 import ServerPMReportForm from './Server_PMReportForm/ServerPMReportForm'; // Add Server PM import
-import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, submitServerPMReportForm, getNextJobNumber, uploadFinalReportAttachment } from '../../api-services/reportFormService';
+import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, submitServerPMReportForm, getNextJobNumber, uploadFinalReportAttachment, createReportFormImage, getReportFormImageTypes, generateCMFinalReportPdf } from '../../api-services/reportFormService';
 import warehouseService from '../../api-services/warehouseService';
 import CMReviewReportForm from './CMReviewReportForm';
 import RTUPMReviewReportForm from './RTUPMReviewReportForm';
@@ -40,6 +40,7 @@ const ReportFormForm = () => {
   const [beforeIssueImages, setBeforeIssueImages] = useState([]);
   const [afterActionImages, setAfterActionImages] = useState([]);
   const [formStatusOptions, setFormStatusOptions] = useState([]);
+  const [imageTypes, setImageTypes] = useState([]);
 
   // Add toast notification state
   const [showSuccessToast, setShowSuccessToast] = useState(false);
@@ -104,6 +105,15 @@ const ReportFormForm = () => {
       }
     };
 
+    const fetchImageTypes = async () => {
+      try {
+        const types = await getReportFormImageTypes();
+        setImageTypes(types || []);
+      } catch (error) {
+        console.error('Error fetching image types:', error);
+      }
+    };
+
     // Updated fetchNextJobNumber function using the service
     const fetchNextJobNumber = async () => {
       try {
@@ -121,6 +131,7 @@ const ReportFormForm = () => {
 
     fetchReportFormTypes();
     fetchFormStatuses();
+    fetchImageTypes();
     fetchNextJobNumber();
   }, []);
 
@@ -156,7 +167,7 @@ const ReportFormForm = () => {
     }));
   };
 
-  const handleSubmit = async (finalReportFile = null) => {
+  const handleSubmit = async (uploadData = null) => {
     // Prevent double submission immediately
     if (loading) return;
 
@@ -165,6 +176,32 @@ const ReportFormForm = () => {
     setSuccessMessage('');
 
     try {
+      // Extract upload data (handle both old finalReportFile param and new uploadData object)
+      let finalReportFile = null;
+      let attendedBySignature = null;
+      let approvedBySignature = null;
+      
+      if (uploadData && typeof uploadData === 'object' && uploadData.constructor === Object) {
+        // uploadData is an object with properties
+        finalReportFile = uploadData.finalReportFile || null;
+        attendedBySignature = uploadData.attendedBySignature || null;
+        approvedBySignature = uploadData.approvedBySignature || null;
+      } else if (uploadData instanceof File) {
+        // uploadData is a direct File (backward compatibility)
+        finalReportFile = uploadData;
+      }
+
+      // Get signature image type IDs dynamically from API
+      const attendedByImageType = imageTypes.find(type => type.imageTypeName === 'AttendedBySignature');
+      const approvedByImageType = imageTypes.find(type => type.imageTypeName === 'ApprovedBySignature');
+      
+      if ((attendedBySignature || approvedBySignature) && (!attendedByImageType || !approvedByImageType)) {
+        console.error('Signature image types not found:', { attendedByImageType, approvedByImageType });
+        setError('Failed to find signature image types. Please refresh and try again.');
+        setLoading(false);
+        return false;
+      }
+
       // Check if this is a CM report form
       const isCorrectiveMaintenance = reportFormTypes.find(type => type.id === formData.reportFormTypeID)?.name?.toLowerCase().includes('corrective');
 
@@ -205,25 +242,59 @@ const ReportFormForm = () => {
         );
         // console.log('CM Report Form submitted successfully:', result);
 
-        // After saving, upload final report if provided
-        if (finalReportFile) {
-          const newReportFormId = result?.reportForm?.id || result?.reportForm?.ID;
-          if (!newReportFormId) {
-            setError('Report saved, but failed to retrieve the ReportForm ID for final report upload.');
-            return false;
-          }
-          try {
+        // After saving, upload final report or signatures if provided
+        const newReportFormId = result?.reportForm?.id || result?.reportForm?.ID;
+        if (!newReportFormId) {
+          setError('Report saved, but failed to retrieve the ReportForm ID.');
+          return false;
+        }
+
+        // Check if signatures were uploaded (declare outside try block for later use)
+        const signaturesUploaded = !!(attendedBySignature && approvedBySignature);
+
+        try {
+          // Upload final report PDF if provided
+          if (finalReportFile) {
             await uploadFinalReportAttachment(newReportFormId, finalReportFile);
-          } catch (uploadError) {
-            setError(uploadError?.response?.data?.message || 'Failed to upload final report.');
-            return false;
           }
+
+          // Upload signatures if provided and generate final report PDF
+          
+          if (attendedBySignature && attendedByImageType) {
+            await createReportFormImage(newReportFormId, attendedBySignature, attendedByImageType.id, 'Signatures');
+          }
+
+          if (approvedBySignature && approvedByImageType) {
+            await createReportFormImage(newReportFormId, approvedBySignature, approvedByImageType.id, 'Signatures');
+          }
+
+          // If signatures were uploaded (instead of PDF), trigger final report PDF generation
+          if (signaturesUploaded && !finalReportFile) {
+            try {
+              console.log(`Generating final report PDF for ReportForm ID: ${newReportFormId}`);
+              await generateCMFinalReportPdf(newReportFormId);
+              console.log('Final report PDF generated successfully');
+            } catch (pdfError) {
+              console.error('Error generating final report PDF:', pdfError);
+              // Don't fail the whole submission - PDF can be generated later
+              setNotification({
+                open: true,
+                message: 'Report created successfully, but final report PDF generation is in progress.',
+                severity: 'warning'
+              });
+            }
+          }
+        } catch (uploadError) {
+          setError(uploadError?.response?.data?.message || 'Failed to upload attachments.');
+          return false;
         }
 
         // Show success toast for CM reports
         setNotification({
           open: true,
-          message: 'CM Report Form created successfully!',
+          message: signaturesUploaded && !finalReportFile 
+            ? 'CM Report created successfully! Final report PDF is being generated...' 
+            : 'CM Report Form created successfully!',
           severity: 'success'
         });
 
@@ -238,19 +309,30 @@ const ReportFormForm = () => {
         // console.log("Server Preventative Maintenance is working");
         // Handle Server PM report submission
         result = await submitServerPMReportForm(formData, user);
-        // After saving, upload final report if provided
-        if (finalReportFile) {
-          const newReportFormId = result?.reportForm?.id || result?.reportForm?.ID;
-          if (!newReportFormId) {
-            setError('Report saved, but failed to retrieve the ReportForm ID for final report upload.');
-            return false;
-          }
-          try {
+        // After saving, upload final report or signatures if provided
+        const newReportFormId = result?.reportForm?.id || result?.reportForm?.ID;
+        if (!newReportFormId) {
+          setError('Report saved, but failed to retrieve the ReportForm ID.');
+          return false;
+        }
+
+        try {
+          // Upload final report PDF if provided
+          if (finalReportFile) {
             await uploadFinalReportAttachment(newReportFormId, finalReportFile);
-          } catch (uploadError) {
-            setError(uploadError?.response?.data?.message || 'Failed to upload final report.');
-            return false;
           }
+
+          // Upload signatures if provided
+          if (attendedBySignature && attendedByImageType) {
+            await createReportFormImage(newReportFormId, attendedBySignature, attendedByImageType.id, 'Signatures');
+          }
+
+          if (approvedBySignature && approvedByImageType) {
+            await createReportFormImage(newReportFormId, approvedBySignature, approvedByImageType.id, 'Signatures');
+          }
+        } catch (uploadError) {
+          setError(uploadError?.response?.data?.message || 'Failed to upload attachments.');
+          return false;
         }
 
         // Show success toast for Server PM reports
@@ -267,18 +349,30 @@ const ReportFormForm = () => {
         // Handle RTU PM report submission
         result = await submitRTUPMReportForm(formData, rtuPMData, user);
 
-        if (finalReportFile) {
-          const newReportFormId = result?.reportForm?.id || result?.reportForm?.ID;
-          if (!newReportFormId) {
-            setError('Report saved, but failed to retrieve the ReportForm ID for final report upload.');
-            return false;
-          }
-          try {
+        // After saving, upload final report or signatures if provided
+        const newReportFormId = result?.reportForm?.id || result?.reportForm?.ID;
+        if (!newReportFormId) {
+          setError('Report saved, but failed to retrieve the ReportForm ID.');
+          return false;
+        }
+
+        try {
+          // Upload final report PDF if provided
+          if (finalReportFile) {
             await uploadFinalReportAttachment(newReportFormId, finalReportFile);
-          } catch (uploadError) {
-            setError(uploadError?.response?.data?.message || 'Failed to upload final report.');
-            return false;
           }
+
+          // Upload signatures if provided
+          if (attendedBySignature && attendedByImageType) {
+            await createReportFormImage(newReportFormId, attendedBySignature, attendedByImageType.id, 'Signatures');
+          }
+
+          if (approvedBySignature && approvedByImageType) {
+            await createReportFormImage(newReportFormId, approvedBySignature, approvedByImageType.id, 'Signatures');
+          }
+        } catch (uploadError) {
+          setError(uploadError?.response?.data?.message || 'Failed to upload attachments.');
+          return false;
         }
 
         // Show success toast for RTU PM reports
