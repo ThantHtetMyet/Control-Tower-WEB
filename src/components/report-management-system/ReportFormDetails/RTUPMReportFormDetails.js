@@ -984,21 +984,6 @@ const RTUPMReportFormDetails = () => {
         </Paper>
       )}
 
-      {/* Form Status Section */}
-      <Paper sx={sectionContainer}>
-        <Typography variant="h5" sx={sectionHeader}>
-          <AssignmentTurnedInIcon sx={{ marginRight: 1, verticalAlign: 'middle' }} />
-          Form Status
-        </Typography>
-        <TextField
-          fullWidth
-          label="Form Status"
-          value={formStatusDisplay || 'Not specified'}
-          disabled
-          sx={fieldStyle}
-        />
-      </Paper>
-
       {/* Date of Service Section */}
       <Paper sx={sectionContainer}>
         <Typography variant="h5" sx={sectionHeader}>
@@ -1216,7 +1201,7 @@ const RTUPMReportFormDetails = () => {
       {/* Cleaning of Cabinet / Equipment Section */}
       <Paper sx={sectionContainer}>
         <Typography variant="h5" sx={sectionHeader}>
-          Cleaning of Cabinet / Equipment
+          🧹 Cleaning of Cabinet / Equipment
         </Typography>
         <TextField
           fullWidth
@@ -1230,7 +1215,7 @@ const RTUPMReportFormDetails = () => {
       {/* Remarks Section */}
       <Paper sx={sectionContainer}>
         <Typography variant="h5" sx={sectionHeader}>
-          Remarks
+          📝 Remarks
         </Typography>
         <TextField
           fullWidth
@@ -1246,7 +1231,7 @@ const RTUPMReportFormDetails = () => {
       {/* Approval Information Section */}
       <Paper sx={sectionContainer}>
         <Typography variant="h5" sx={sectionHeader}>
-          Approval Information
+          📝 Approval Information
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <TextField
@@ -1264,6 +1249,20 @@ const RTUPMReportFormDetails = () => {
             sx={fieldStyle}
           />
         </Box>
+      </Paper>
+
+      {/* Form Status Section */}
+      <Paper sx={sectionContainer}>
+        <Typography variant="h5" sx={sectionHeader}> 
+          ✅ Form Status
+        </Typography>
+        <TextField
+          fullWidth
+          label="Form Status"
+          value={formStatusDisplay || 'Not specified'}
+          disabled
+          sx={fieldStyle}
+        />
       </Paper>
 
       <Snackbar

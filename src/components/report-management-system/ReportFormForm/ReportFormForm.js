@@ -17,7 +17,7 @@ import FirstContainer from './FirstContainer';
 import CMReportForm from './CMReportForm';
 import RTUPMReportForm from './RTUPMReportForm'; // Updated import
 import ServerPMReportForm from './Server_PMReportForm/ServerPMReportForm'; // Add Server PM import
-import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, submitServerPMReportForm, getNextJobNumber, uploadFinalReportAttachment, createReportFormImage, getReportFormImageTypes, generateCMFinalReportPdf } from '../../api-services/reportFormService';
+import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, submitServerPMReportForm, getNextJobNumber, uploadFinalReportAttachment, createReportFormImage, getReportFormImageTypes, generateCMFinalReportPdf, generateRTUPMFinalReportPdf, getFinalReportsByReportForm, downloadFinalReportAttachment } from '../../api-services/reportFormService';
 import warehouseService from '../../api-services/warehouseService';
 import CMReviewReportForm from './CMReviewReportForm';
 import RTUPMReviewReportForm from './RTUPMReviewReportForm';
@@ -167,6 +167,42 @@ const ReportFormForm = () => {
     }));
   };
 
+  // Helper function to download the final report after saving
+  const downloadSavedFinalReport = async (reportFormId, jobNo) => {
+    try {
+      // Wait a bit for the final report to be created in the database
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Fetch the final reports for this report form
+      const finalReports = await getFinalReportsByReportForm(reportFormId);
+      
+      if (finalReports && finalReports.length > 0) {
+        // Get the most recent final report (first one)
+        const latestReport = finalReports[0];
+        
+        // Download the final report
+        const response = await downloadFinalReportAttachment(latestReport.id);
+        const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const fileName = latestReport.attachmentName || `FinalReport_${jobNo || 'report'}.pdf`;
+        link.href = downloadUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+        
+        console.log('Final report downloaded successfully:', fileName);
+      } else {
+        console.log('No final reports found for download');
+      }
+    } catch (downloadError) {
+      console.error('Error downloading final report:', downloadError);
+      // Don't show error to user - the report was still saved successfully
+    }
+  };
+
   const handleSubmit = async (uploadData = null) => {
     // Prevent double submission immediately
     if (loading) return;
@@ -284,6 +320,15 @@ const ReportFormForm = () => {
               });
             }
           }
+
+          // Download the final report after it's saved (for both upload and signature options)
+          if (finalReportFile || signaturesUploaded) {
+            // Use longer delay for signature-based PDFs since they need to be generated
+            const downloadDelay = signaturesUploaded && !finalReportFile ? 3000 : 1000;
+            setTimeout(() => {
+              downloadSavedFinalReport(newReportFormId, formData.jobNo);
+            }, downloadDelay);
+          }
         } catch (uploadError) {
           setError(uploadError?.response?.data?.message || 'Failed to upload attachments.');
           return false;
@@ -293,15 +338,15 @@ const ReportFormForm = () => {
         setNotification({
           open: true,
           message: signaturesUploaded && !finalReportFile 
-            ? 'CM Report created successfully! Final report PDF is being generated...' 
-            : 'CM Report Form created successfully!',
+            ? 'CM Report created successfully! Final report PDF is being generated and will download shortly...' 
+            : 'CM Report Form created successfully! Downloading final report...',
           severity: 'success'
         });
 
         // Navigate after a short delay to show the toast
         setTimeout(() => {
           navigate('/report-management-system/report-forms');
-        }, 2000);
+        }, 4000);
 
         // Return the result object so ReportForm ID can be extracted
         return result;
@@ -330,6 +375,13 @@ const ReportFormForm = () => {
           if (approvedBySignature && approvedByImageType) {
             await createReportFormImage(newReportFormId, approvedBySignature, approvedByImageType.id, 'Signatures');
           }
+
+          // Download the final report after it's saved (for upload option)
+          if (finalReportFile) {
+            setTimeout(() => {
+              downloadSavedFinalReport(newReportFormId, formData.jobNo);
+            }, 1000);
+          }
         } catch (uploadError) {
           setError(uploadError?.response?.data?.message || 'Failed to upload attachments.');
           return false;
@@ -341,7 +393,7 @@ const ReportFormForm = () => {
         // Navigate after a short delay to show the toast
         setTimeout(() => {
           navigate('/report-management-system/report-forms');
-        }, 2000);
+        }, finalReportFile ? 4000 : 2000);
 
         // Return the result object so ReportForm ID can be extracted
         return result;
@@ -355,6 +407,9 @@ const ReportFormForm = () => {
           setError('Report saved, but failed to retrieve the ReportForm ID.');
           return false;
         }
+
+        // Check if signatures were uploaded (declare outside try block for later use)
+        const signaturesUploaded = !!(attendedBySignature && approvedBySignature);
 
         try {
           // Upload final report PDF if provided
@@ -370,6 +425,25 @@ const ReportFormForm = () => {
           if (approvedBySignature && approvedByImageType) {
             await createReportFormImage(newReportFormId, approvedBySignature, approvedByImageType.id, 'Signatures');
           }
+
+          // If signatures were uploaded (instead of PDF), trigger final report PDF generation
+          if (signaturesUploaded && !finalReportFile) {
+            try {
+              console.log(`Generating RTU PM final report PDF for ReportForm ID: ${newReportFormId}`);
+              await generateRTUPMFinalReportPdf(newReportFormId);
+              console.log('RTU PM final report PDF generated successfully');
+            } catch (pdfError) {
+              console.error('Error generating RTU PM final report PDF:', pdfError);
+              // Don't fail the entire submission if PDF generation fails
+            }
+          }
+
+          // Download the final report after it's saved (for both upload and signature options)
+          if (finalReportFile || signaturesUploaded) {
+            setTimeout(() => {
+              downloadSavedFinalReport(newReportFormId, formData.jobNo);
+            }, finalReportFile ? 1000 : 2000); // Wait longer for signature-generated PDFs
+          }
         } catch (uploadError) {
           setError(uploadError?.response?.data?.message || 'Failed to upload attachments.');
           return false;
@@ -378,10 +452,10 @@ const ReportFormForm = () => {
         // Show success toast for RTU PM reports
         setShowSuccessToast(true);
 
-        // Navigate after a short delay to show the toast
+        // Navigate after a short delay to show the toast (longer if downloading final report)
         setTimeout(() => {
           navigate('/report-management-system/report-forms');
-        }, 2000);
+        }, (finalReportFile || signaturesUploaded) ? 4000 : 2000);
 
         // Return the result object so ReportForm ID can be extracted
         return result;
@@ -716,11 +790,28 @@ const ReportFormForm = () => {
       {/* Success Toast Notification */}
       <Snackbar
         open={showSuccessToast}
-        autoHideDuration={3000}
+        autoHideDuration={6000}
         onClose={() => setShowSuccessToast(false)}
-        message="RTU Report Form created successfully!"
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      />
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setShowSuccessToast(false)}
+          severity="success"
+          sx={{
+            width: '100%',
+            backgroundColor: '#4caf50',
+            color: 'white',
+            '& .MuiAlert-icon': {
+              color: 'white'
+            },
+            '& .MuiAlert-action': {
+              color: 'white'
+            }
+          }}
+        >
+          RTU Report Form created successfully!
+        </Alert>
+      </Snackbar>
 
       {/* CM Report Success Toast Notification */}
       <Snackbar
@@ -734,10 +825,13 @@ const ReportFormForm = () => {
           severity={notification.severity}
           sx={{
             width: '100%',
-            backgroundColor: notification.severity === 'success' ? '#d4edda' : '#f8d7da',
-            color: notification.severity === 'success' ? '#155724' : '#721c24',
+            backgroundColor: notification.severity === 'success' ? '#4caf50' : '#f44336',
+            color: 'white',
             '& .MuiAlert-icon': {
-              color: notification.severity === 'success' ? '#28a745' : '#dc3545'
+              color: 'white'
+            },
+            '& .MuiAlert-action': {
+              color: 'white'
             }
           }}
         >

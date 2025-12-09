@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -26,7 +26,11 @@ import {
   DialogActions,
   Fade,
   TextField,
-  Tooltip
+  Tooltip,
+  Tabs,
+  Tab,
+  ToggleButton,
+  ToggleButtonGroup
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -39,7 +43,10 @@ import {
   ArrowBack,
   Save as SaveIcon,
   Close as CloseIcon,
-  UploadFile as UploadFileIcon
+  UploadFile as UploadFileIcon,
+  Brush as BrushIcon,
+  Clear as ClearIcon,
+  PhotoCamera
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import RMSTheme from '../../theme-resource/RMSTheme';
@@ -59,9 +66,12 @@ import {
   createReportFormImage,
   deleteReportFormImage,
   getReportFormImageTypes,
-  generateRTUPMReportPdf
+  generateRTUPMReportPdf,
+  generateRTUPMFinalReportPdf,
+  uploadFinalReportAttachment,
+  getFinalReportsByReportForm,
+  downloadFinalReportAttachment
 } from '../../api-services/reportFormService';
-import { uploadFinalReportAttachment } from '../../api-services/reportFormService';
 import warehouseService from '../../api-services/warehouseService';
 import { API_BASE_URL } from '../../../config/apiConfig';
 
@@ -412,6 +422,23 @@ const RTUPMReviewReportFormEdit = () => {
   const [finalReportUploading, setFinalReportUploading] = useState(false);
   const [downloadConfirmModalOpen, setDownloadConfirmModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [activeTab, setActiveTab] = useState(0); // 0 = PDF, 1 = Signatures
+  
+  // Signature states
+  const [attendedBySignature, setAttendedBySignature] = useState(null);
+  const [approvedBySignature, setApprovedBySignature] = useState(null);
+  const [attendedBySignaturePreview, setAttendedBySignaturePreview] = useState('');
+  const [approvedBySignaturePreview, setApprovedBySignaturePreview] = useState('');
+  
+  // Signature mode states ('draw' or 'upload')
+  const [attendedByMode, setAttendedByMode] = useState('draw');
+  const [approvedByMode, setApprovedByMode] = useState('draw');
+  
+  // Canvas refs for signature drawing
+  const attendedByCanvasRef = useRef(null);
+  const approvedByCanvasRef = useRef(null);
+  const [isDrawingAttended, setIsDrawingAttended] = useState(false);
+  const [isDrawingApproved, setIsDrawingApproved] = useState(false);
 
   // Toast notification state
   const [notification, setNotification] = useState({
@@ -469,53 +496,256 @@ const RTUPMReviewReportFormEdit = () => {
 
   const handleFinalReportFileChange = (event) => {
     setFinalReportUploadError('');
-    const file = event.target.files?.[0] || null;
+    const file = event.target.files && event.target.files[0] ? event.target.files[0] : null;
     setFinalReportFile(file);
   };
 
-  const handleCloseFinalReportDialog = () => {
-    if (!finalReportUploading) {
-      setFinalReportDialogOpen(false);
-      setFinalReportFile(null);
-      setFinalReportUploadError('');
+  const handleAttendedBySignatureChange = (event) => {
+    setFinalReportUploadError('');
+    const file = event.target.files && event.target.files[0] ? event.target.files[0] : null;
+    if (file) {
+      setAttendedBySignature(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAttendedBySignaturePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleUploadFinalReport = async () => {
-    if (!finalReportFile) {
-      setFinalReportUploadError('Please select a file to upload.');
-      return;
+  const handleApprovedBySignatureChange = (event) => {
+    setFinalReportUploadError('');
+    const file = event.target.files && event.target.files[0] ? event.target.files[0] : null;
+    if (file) {
+      setApprovedBySignature(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setApprovedBySignaturePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
+  };
+
+  // Canvas drawing handlers
+  const startDrawing = (canvasRef, setIsDrawing) => (e) => {
+    if (!canvasRef.current) return;
+    setIsDrawing(true);
+    const ctx = canvasRef.current.getContext('2d');
+    const rect = canvasRef.current.getBoundingClientRect();
+    ctx.beginPath();
+    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+  };
+
+  const draw = (canvasRef, isDrawing) => (e) => {
+    if (!isDrawing || !canvasRef.current) return;
+    const ctx = canvasRef.current.getContext('2d');
+    const rect = canvasRef.current.getBoundingClientRect();
+    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  };
+
+  const stopDrawing = (setIsDrawing) => () => {
+    setIsDrawing(false);
+  };
+
+  const clearCanvas = (canvasRef) => {
+    if (!canvasRef.current) return;
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+  };
+
+  const canvasToBlob = (canvas) => {
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, 'image/png');
+    });
+  };
+
+  const handleCloseFinalReportDialog = () => {
+    if (finalReportUploading) return;
+    setFinalReportDialogOpen(false);
+    setFinalReportFile(null);
+    setFinalReportUploadError('');
+    setAttendedBySignature(null);
+    setApprovedBySignature(null);
+    setAttendedBySignaturePreview('');
+    setApprovedBySignaturePreview('');
+    setAttendedByMode('draw');
+    setApprovedByMode('draw');
+    setActiveTab(0); // Reset to PDF tab
+    
+    // Clear canvases
+    clearCanvas(attendedByCanvasRef);
+    clearCanvas(approvedByCanvasRef);
+  };
+
+  const handleUploadFinalReport = async () => {
+    // Check for drawn signatures and convert to blob
+    let attendedBySignatureToUpload = attendedBySignature;
+    let approvedBySignatureToUpload = approvedBySignature;
+    
+    // If mode is 'draw', get signature from canvas
+    if (attendedByMode === 'draw' && attendedByCanvasRef.current) {
+      const canvas = attendedByCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const hasDrawing = imageData.data.some(channel => channel !== 0);
+      
+      if (hasDrawing) {
+        const blob = await canvasToBlob(canvas);
+        attendedBySignatureToUpload = new File([blob], 'attended-by-signature.png', { type: 'image/png' });
+      }
+    }
+    
+    if (approvedByMode === 'draw' && approvedByCanvasRef.current) {
+      const canvas = approvedByCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const hasDrawing = imageData.data.some(channel => channel !== 0);
+      
+      if (hasDrawing) {
+        const blob = await canvasToBlob(canvas);
+        approvedBySignatureToUpload = new File([blob], 'approved-by-signature.png', { type: 'image/png' });
+      }
+    }
+
+    // Validate based on active tab
+    if (activeTab === 0) {
+      // PDF tab - validate final report file
+      if (!finalReportFile) {
+        setFinalReportUploadError('Please select a PDF file to upload.');
+        return;
+      }
+    } else {
+      // Signatures tab - validate both signatures
+      const hasBothSignatures = !!attendedBySignatureToUpload && !!approvedBySignatureToUpload;
+      
+      if (!hasBothSignatures) {
+        if (!attendedBySignatureToUpload && !approvedBySignatureToUpload) {
+          setFinalReportUploadError('Please provide both Attended By and Approved By signatures.');
+        } else if (attendedBySignatureToUpload && !approvedBySignatureToUpload) {
+          setFinalReportUploadError('Please provide Approved By signature.');
+        } else if (!attendedBySignatureToUpload && approvedBySignatureToUpload) {
+          setFinalReportUploadError('Please provide Attended By signature.');
+        }
+        return;
+      }
+    }
+
     setFinalReportUploading(true);
+    setFinalReportUploadError('');
 
     try {
-      // First save the report
-      await handleSave();
-
-      // Then upload the final report
+      // First save the report data
+      await handleSave({ skipNavigation: true, suppressSuccessToast: true });
+      
       const reportFormId = id;
-      await uploadFinalReportAttachment(reportFormId, finalReportFile);
+      if (!reportFormId) {
+        throw new Error('Report Form ID not found in URL parameters');
+      }
 
+      // Handle PDF upload or signature-based generation
+      if (activeTab === 0 && finalReportFile) {
+        // Upload final report PDF
+        await uploadFinalReportAttachment(reportFormId, finalReportFile);
+      } else if (activeTab === 1 && attendedBySignatureToUpload && approvedBySignatureToUpload) {
+        // Upload signatures
+        const imageTypes = await getReportFormImageTypes();
+        const attendedByImageType = imageTypes.find(type => type.imageTypeName === 'AttendedBySignature');
+        const approvedByImageType = imageTypes.find(type => type.imageTypeName === 'ApprovedBySignature');
+        
+        if (attendedByImageType) {
+          await createReportFormImage(reportFormId, attendedBySignatureToUpload, attendedByImageType.id, 'Signatures');
+        }
+        
+        if (approvedByImageType) {
+          await createReportFormImage(reportFormId, approvedBySignatureToUpload, approvedByImageType.id, 'Signatures');
+        }
+        
+        // Generate final report PDF from signatures
+        try {
+          console.log(`Generating RTU PM final report PDF for ReportForm ID: ${reportFormId}`);
+          await generateRTUPMFinalReportPdf(reportFormId);
+          console.log('RTU PM final report PDF generated successfully');
+        } catch (pdfError) {
+          console.error('Error generating RTU PM final report PDF:', pdfError);
+        }
+      }
+
+      // Reset dialog state
       setFinalReportDialogOpen(false);
       setFinalReportFile(null);
-      setFinalReportUploadError('');
+      setAttendedBySignature(null);
+      setApprovedBySignature(null);
+      setAttendedBySignaturePreview('');
+      setApprovedBySignaturePreview('');
+      setAttendedByMode('draw');
+      setApprovedByMode('draw');
+      clearCanvas(attendedByCanvasRef);
+      clearCanvas(approvedByCanvasRef);
 
-      // Show success notification
       setNotification({
         open: true,
-        message: 'RTU PM Report and Final Report saved successfully!',
+        message: activeTab === 0 
+          ? 'RTU PM Report and Final Report saved successfully!' 
+          : 'RTU PM Report saved! Final report PDF is being generated...',
         severity: 'success'
       });
 
-      setTimeout(() => {
-        navigate(`/report-management-system`);
-      }, 1000);
-
+      // Auto-download the final report after a delay
+      setTimeout(async () => {
+        try {
+          await downloadSavedFinalReport(reportFormId, rtuPMData?.reportForm?.jobNo || rtuPMData?.jobNo);
+        } catch (downloadError) {
+          console.error('Error downloading final report:', downloadError);
+        }
+        navigate('/report-management-system');
+      }, activeTab === 1 ? 4000 : 2000);
+      
     } catch (error) {
       const message = error?.response?.data?.message || error?.message || 'Failed to submit report.';
       setFinalReportUploadError(message);
     } finally {
       setFinalReportUploading(false);
+    }
+  };
+
+  // Helper function to download the final report after saving
+  const downloadSavedFinalReport = async (reportFormId, jobNo) => {
+    try {
+      // Wait a bit for the final report to be created in the database
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Fetch the final reports for this report form
+      const finalReports = await getFinalReportsByReportForm(reportFormId);
+      
+      if (finalReports && finalReports.length > 0) {
+        // Get the most recent final report (first one)
+        const latestReport = finalReports[0];
+        
+        // Download the final report
+        const response = await downloadFinalReportAttachment(latestReport.id);
+        const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const fileName = latestReport.attachmentName || `FinalReport_${jobNo || 'report'}.pdf`;
+        link.href = downloadUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+        
+        console.log('Final report downloaded successfully:', fileName);
+      } else {
+        console.log('No final reports found for download');
+      }
+    } catch (downloadError) {
+      console.error('Error downloading final report:', downloadError);
     }
   };
 
@@ -876,7 +1106,7 @@ const RTUPMReviewReportFormEdit = () => {
       if (!suppressSuccessToast) {
         setNotification({
           open: true,
-          message: 'RTU PM Report saved successfully!',
+          message: 'RTU PM Report Form updated successfully!',
           severity: 'success'
         });
       }
@@ -889,22 +1119,10 @@ const RTUPMReviewReportFormEdit = () => {
       }
 
     } catch (error) {
-      console.error('Error saving RTU PM report:', error);
-
-      // Extract error message from response if available
-      let errorMessage = 'Failed to save report. Please try again.';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      setError(`${errorMessage} (Failed at: ${saveProgress})`);
-
-      // Show error toast
+      console.error('Error updating RTU PM report form:', error);
       setNotification({
         open: true,
-        message: errorMessage,
+        message: `Failed to update RTU PM Report Form: ${error.message || 'Unknown error'}`,
         severity: 'error'
       });
     } finally {
@@ -1723,7 +1941,7 @@ const RTUPMReviewReportFormEdit = () => {
           {notification.message}
         </Alert>
       </Snackbar>
-      {/* Final Report Upload Dialog */}
+      {/* Final Report Upload Dialog with Tabs */}
       <Dialog
         open={finalReportDialogOpen}
         onClose={handleCloseFinalReportDialog}
@@ -1753,50 +1971,352 @@ const RTUPMReviewReportFormEdit = () => {
             textAlign: 'center',
             fontWeight: 600,
             color: '#f8fafc',
-            pb: 1
+            pb: 0
           }}
         >
-          Upload Final Report
+          Close Report
         </DialogTitle>
+        
+        {/* Tabs */}
+        <Tabs
+          value={activeTab}
+          onChange={(e, newValue) => {
+            setActiveTab(newValue);
+            setFinalReportUploadError(''); // Clear errors when switching tabs
+          }}
+          centered
+          sx={{
+            borderBottom: '1px solid rgba(226,232,240,0.2)',
+            '& .MuiTab-root': {
+              color: 'rgba(226,232,240,0.6)',
+              fontWeight: 600,
+              textTransform: 'none',
+              fontSize: '14px',
+              minHeight: '48px',
+              '&.Mui-selected': {
+                color: '#4ade80',
+              }
+            },
+            '& .MuiTabs-indicator': {
+              backgroundColor: '#4ade80',
+              height: '3px'
+            }
+          }}
+        >
+          <Tab 
+            icon={<UploadFileIcon sx={{ fontSize: 20 }} />} 
+            iconPosition="start"
+            label="Upload PDF Report" 
+          />
+          <Tab 
+            icon={<BrushIcon sx={{ fontSize: 20 }} />} 
+            iconPosition="start"
+            label="Provide Signatures" 
+          />
+        </Tabs>
+
         <DialogContent
           sx={{
-            py: 2,
+            py: 3,
             px: 4
           }}
         >
-          <Typography variant="body2" sx={{ mb: 2, textAlign: 'center', color: 'rgba(241,245,249,0.85)' }}>
-            Please attach the completed final report before submitting.
-          </Typography>
-          <Button
-            variant="outlined"
-            component="label"
-            startIcon={<UploadFileIcon />}
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              width: '100%',
-              py: 1.5,
-              borderColor: 'rgba(226,232,240,0.5)',
-              color: '#e2e8f0',
-              fontWeight: 600,
-              '&:hover': {
-                borderColor: '#cbd5f5',
-                backgroundColor: 'rgba(148,163,184,0.15)'
-              }
-            }}
-          >
-            {finalReportFile ? finalReportFile.name : 'Select File'}
-            <input
-              type="file"
-              hidden
-              accept="application/pdf"
-              onChange={handleFinalReportFileChange}
-            />
-          </Button>
+          {/* Tab Panel 0: Final Report PDF Upload */}
+          {activeTab === 0 && (
+            <Box>
+              <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: 'rgba(241,245,249,0.85)' }}>
+                Upload the completed Final Report PDF to close this report.
+              </Typography>
+              <Button
+                variant="outlined"
+                component="label"
+                startIcon={<UploadFileIcon />}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  width: '100%',
+                  py: 2,
+                  borderColor: finalReportFile ? '#4ade80' : 'rgba(226,232,240,0.5)',
+                  color: finalReportFile ? '#4ade80' : '#e2e8f0',
+                  fontWeight: 600,
+                  '&:hover': {
+                    borderColor: '#cbd5f5',
+                    backgroundColor: 'rgba(148,163,184,0.15)'
+                  }
+                }}
+              >
+                {finalReportFile ? finalReportFile.name : 'Select PDF File'}
+                <input
+                  type="file"
+                  hidden
+                  accept="application/pdf"
+                  onChange={handleFinalReportFileChange}
+                />
+              </Button>
+              {finalReportFile && (
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    display: 'block', 
+                    mt: 1, 
+                    textAlign: 'center', 
+                    color: '#4ade80' 
+                  }}
+                >
+                  ✓ File selected: {finalReportFile.name}
+                </Typography>
+              )}
+            </Box>
+          )}
+
+          {/* Tab Panel 1: Signature Uploads or Drawing */}
+          {activeTab === 1 && (
+            <Box>
+            {/* Attended By Signature */}
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" sx={{ color: 'rgba(241,245,249,0.85)', fontWeight: 600 }}>
+                  Attended By Signature
+                  {rtuPMData?.pmReportFormRTU?.attendedBy && (
+                    <Typography component="span" sx={{ ml: 1, color: '#4ade80', fontSize: '13px' }}>
+                      ({rtuPMData.pmReportFormRTU.attendedBy})
+                    </Typography>
+                  )}
+                </Typography>
+                <ToggleButtonGroup
+                  value={attendedByMode}
+                  exclusive
+                  onChange={(e, newMode) => newMode && setAttendedByMode(newMode)}
+                  size="small"
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      color: 'rgba(226,232,240,0.7)',
+                      borderColor: 'rgba(226,232,240,0.3)',
+                      py: 0.5,
+                      px: 1.5,
+                      fontSize: '12px',
+                      '&.Mui-selected': {
+                        backgroundColor: 'rgba(74,222,128,0.2)',
+                        color: '#4ade80',
+                        borderColor: '#4ade80',
+                        '&:hover': {
+                          backgroundColor: 'rgba(74,222,128,0.3)',
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <ToggleButton value="draw">
+                    <BrushIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                    Draw
+                  </ToggleButton>
+                  <ToggleButton value="upload">
+                    <PhotoCamera sx={{ fontSize: 16, mr: 0.5 }} />
+                    Upload
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+
+              {attendedByMode === 'draw' ? (
+                <Box>
+                  <Box sx={{ 
+                    border: '2px solid rgba(226,232,240,0.3)', 
+                    borderRadius: 2, 
+                    backgroundColor: 'white',
+                    cursor: 'crosshair'
+                  }}>
+                    <canvas
+                      ref={attendedByCanvasRef}
+                      width={400}
+                      height={150}
+                      onMouseDown={startDrawing(attendedByCanvasRef, setIsDrawingAttended)}
+                      onMouseMove={draw(attendedByCanvasRef, isDrawingAttended)}
+                      onMouseUp={stopDrawing(setIsDrawingAttended)}
+                      onMouseLeave={stopDrawing(setIsDrawingAttended)}
+                      style={{ display: 'block', width: '100%', height: '150px' }}
+                    />
+                  </Box>
+                  <Button
+                    size="small"
+                    startIcon={<ClearIcon />}
+                    onClick={() => clearCanvas(attendedByCanvasRef)}
+                    sx={{ 
+                      mt: 1, 
+                      color: 'rgba(226,232,240,0.7)',
+                      textTransform: 'none',
+                      fontSize: '12px'
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </Box>
+              ) : (
+                <Box>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    startIcon={<PhotoCamera />}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      width: '100%',
+                      py: 1.5,
+                      borderColor: attendedBySignature ? '#4ade80' : 'rgba(226,232,240,0.5)',
+                      color: attendedBySignature ? '#4ade80' : '#e2e8f0',
+                      fontWeight: 600,
+                      '&:hover': {
+                        borderColor: '#cbd5f5',
+                        backgroundColor: 'rgba(148,163,184,0.15)'
+                      }
+                    }}
+                  >
+                    {attendedBySignature ? attendedBySignature.name : 'Select Signature Image'}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={handleAttendedBySignatureChange}
+                    />
+                  </Button>
+                  {attendedBySignaturePreview && (
+                    <Box sx={{ mt: 1, textAlign: 'center' }}>
+                      <img 
+                        src={attendedBySignaturePreview} 
+                        alt="Attended By Signature" 
+                        style={{ maxWidth: '200px', maxHeight: '100px', border: '1px solid rgba(226,232,240,0.3)', borderRadius: '4px' }}
+                      />
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </Box>
+
+            {/* Approved By Signature */}
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" sx={{ color: 'rgba(241,245,249,0.85)', fontWeight: 600 }}>
+                  Approved By Signature
+                  {rtuPMData?.pmReportFormRTU?.approvedBy && (
+                    <Typography component="span" sx={{ ml: 1, color: '#4ade80', fontSize: '13px' }}>
+                      ({rtuPMData.pmReportFormRTU.approvedBy})
+                    </Typography>
+                  )}
+                </Typography>
+                <ToggleButtonGroup
+                  value={approvedByMode}
+                  exclusive
+                  onChange={(e, newMode) => newMode && setApprovedByMode(newMode)}
+                  size="small"
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      color: 'rgba(226,232,240,0.7)',
+                      borderColor: 'rgba(226,232,240,0.3)',
+                      py: 0.5,
+                      px: 1.5,
+                      fontSize: '12px',
+                      '&.Mui-selected': {
+                        backgroundColor: 'rgba(74,222,128,0.2)',
+                        color: '#4ade80',
+                        borderColor: '#4ade80',
+                        '&:hover': {
+                          backgroundColor: 'rgba(74,222,128,0.3)',
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <ToggleButton value="draw">
+                    <BrushIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                    Draw
+                  </ToggleButton>
+                  <ToggleButton value="upload">
+                    <PhotoCamera sx={{ fontSize: 16, mr: 0.5 }} />
+                    Upload
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+
+              {approvedByMode === 'draw' ? (
+                <Box>
+                  <Box sx={{ 
+                    border: '2px solid rgba(226,232,240,0.3)', 
+                    borderRadius: 2, 
+                    backgroundColor: 'white',
+                    cursor: 'crosshair'
+                  }}>
+                    <canvas
+                      ref={approvedByCanvasRef}
+                      width={400}
+                      height={150}
+                      onMouseDown={startDrawing(approvedByCanvasRef, setIsDrawingApproved)}
+                      onMouseMove={draw(approvedByCanvasRef, isDrawingApproved)}
+                      onMouseUp={stopDrawing(setIsDrawingApproved)}
+                      onMouseLeave={stopDrawing(setIsDrawingApproved)}
+                      style={{ display: 'block', width: '100%', height: '150px' }}
+                    />
+                  </Box>
+                  <Button
+                    size="small"
+                    startIcon={<ClearIcon />}
+                    onClick={() => clearCanvas(approvedByCanvasRef)}
+                    sx={{ 
+                      mt: 1, 
+                      color: 'rgba(226,232,240,0.7)',
+                      textTransform: 'none',
+                      fontSize: '12px'
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </Box>
+              ) : (
+                <Box>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    startIcon={<PhotoCamera />}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      width: '100%',
+                      py: 1.5,
+                      borderColor: approvedBySignature ? '#4ade80' : 'rgba(226,232,240,0.5)',
+                      color: approvedBySignature ? '#4ade80' : '#e2e8f0',
+                      fontWeight: 600,
+                      '&:hover': {
+                        borderColor: '#cbd5f5',
+                        backgroundColor: 'rgba(148,163,184,0.15)'
+                      }
+                    }}
+                  >
+                    {approvedBySignature ? approvedBySignature.name : 'Select Signature Image'}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={handleApprovedBySignatureChange}
+                    />
+                  </Button>
+                  {approvedBySignaturePreview && (
+                    <Box sx={{ mt: 1, textAlign: 'center' }}>
+                      <img 
+                        src={approvedBySignaturePreview} 
+                        alt="Approved By Signature" 
+                        style={{ maxWidth: '200px', maxHeight: '100px', border: '1px solid rgba(226,232,240,0.3)', borderRadius: '4px' }}
+                      />
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </Box>
+          </Box>
+          )}
+
+          {/* Error Message */}
           {finalReportUploadError && (
-            <Typography color="#fca5a5" variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
+            <Alert severity="error" sx={{ mt: 3 }}>
               {finalReportUploadError}
-            </Typography>
+            </Alert>
           )}
         </DialogContent>
         <DialogActions
@@ -1810,15 +2330,13 @@ const RTUPMReviewReportFormEdit = () => {
             onClick={handleCloseFinalReportDialog}
             disabled={finalReportUploading}
             sx={{
-              background: RMSTheme.components.button.primary.background,
-              color: RMSTheme.components.button.primary.text,
+              background: RMSTheme.components.button.secondary?.background || '#6c757d',
+              color: RMSTheme.components.button.secondary?.text || 'white',
               padding: '10px 28px',
-              borderRadius: RMSTheme.borderRadius.small,
-              border: `1px solid ${RMSTheme.components.button.primary.border}`,
-              boxShadow: RMSTheme.components.button.primary.shadow,
+              borderRadius: RMSTheme.borderRadius?.small || '8px',
               textTransform: 'none',
               mr: 2,
-              '&:hover': { background: RMSTheme.components.button.primary.hover },
+              '&:hover': { background: RMSTheme.components.button.secondary?.hover || '#5a6268' },
               '&:disabled': { opacity: 0.6 }
             }}
           >
@@ -1829,18 +2347,16 @@ const RTUPMReviewReportFormEdit = () => {
             onClick={handleUploadFinalReport}
             disabled={finalReportUploading}
             sx={{
-              background: RMSTheme.components.button.primary.background,
-              color: RMSTheme.components.button.primary.text,
+              background: RMSTheme.components.button.primary?.background || '#28a745',
+              color: RMSTheme.components.button.primary?.text || 'white',
               padding: '10px 28px',
-              borderRadius: RMSTheme.borderRadius.small,
-              border: `1px solid ${RMSTheme.components.button.primary.border}`,
-              boxShadow: RMSTheme.components.button.primary.shadow,
+              borderRadius: RMSTheme.borderRadius?.small || '8px',
               textTransform: 'none',
-              '&:hover': { background: RMSTheme.components.button.primary.hover },
+              '&:hover': { background: RMSTheme.components.button.primary?.hover || '#218838' },
               '&:disabled': { opacity: 0.6 }
             }}
           >
-            {finalReportUploading ? 'Uploading...' : 'Upload & Submit'}
+            {finalReportUploading ? 'Submitting...' : (activeTab === 0 ? 'Upload & Close Report' : 'Submit Signatures & Close')}
           </Button>
         </DialogActions>
       </Dialog>

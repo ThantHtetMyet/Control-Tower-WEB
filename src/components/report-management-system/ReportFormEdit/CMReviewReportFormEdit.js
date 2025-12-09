@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -28,7 +28,11 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Fade
+  Fade,
+  Tabs,
+  Tab,
+  ToggleButton,
+  ToggleButtonGroup
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -37,9 +41,11 @@ import {
   CheckCircle as CheckCircleIcon,
   Comment as CommentIcon,
   Close as CloseIcon,
-  UploadFile as UploadFileIcon
+  UploadFile as UploadFileIcon,
+  Brush as BrushIcon,
+  Clear as ClearIcon,
+  PhotoCamera
 } from '@mui/icons-material';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import moment from 'moment';
@@ -57,7 +63,10 @@ import {
   deleteReportFormImage,
   getReportFormImageTypes,
   uploadFinalReportAttachment,
-  generateCMReportPdf
+  generateCMReportPdf,
+  generateCMFinalReportPdf,
+  getFinalReportsByReportForm,
+  downloadFinalReportAttachment
 } from '../../api-services/reportFormService';
 import warehouseService from '../../api-services/warehouseService';
 import { API_BASE_URL } from '../../../config/apiConfig';
@@ -345,6 +354,23 @@ const CMReviewReportFormEdit = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [finalReportUploading, setFinalReportUploading] = useState(false);
   const [finalReportUploadError, setFinalReportUploadError] = useState('');
+  const [activeTab, setActiveTab] = useState(0); // 0 = PDF, 1 = Signatures
+  
+  // Signature states
+  const [attendedBySignature, setAttendedBySignature] = useState(null);
+  const [approvedBySignature, setApprovedBySignature] = useState(null);
+  const [attendedBySignaturePreview, setAttendedBySignaturePreview] = useState('');
+  const [approvedBySignaturePreview, setApprovedBySignaturePreview] = useState('');
+  
+  // Signature mode states ('draw' or 'upload')
+  const [attendedByMode, setAttendedByMode] = useState('draw');
+  const [approvedByMode, setApprovedByMode] = useState('draw');
+  
+  // Canvas refs for signature drawing
+  const attendedByCanvasRef = useRef(null);
+  const approvedByCanvasRef = useRef(null);
+  const [isDrawingAttended, setIsDrawingAttended] = useState(false);
+  const [isDrawingApproved, setIsDrawingApproved] = useState(false);
 
   // Helper function to format date for input
   const formatDateForInput = (date) => {
@@ -448,13 +474,21 @@ const CMReviewReportFormEdit = () => {
           });
 
           // Set image data from passed data
+          console.log('=== Image Data Debug ===');
+          console.log('passedData.afterActionImages:', passedData.afterActionImages);
+          console.log('Images with file property:', passedData.afterActionImages?.filter(img => img.file)?.length || 0);
+          console.log('passedData.originalImages?.afterActionImages:', passedData.originalImages?.afterActionImages);
+          
           if (passedData.beforeIssueImages) {
+            console.log('Before Issue Images - with file:', passedData.beforeIssueImages.filter(img => img.file).length);
             setBeforeIssueImages(passedData.beforeIssueImages);
             // Use passed original images if available, otherwise use current as original
             const originalBeforeImages = passedData.originalImages?.beforeIssueImages || passedData.beforeIssueImages;
             setOriginalImages(prev => ({ ...prev, beforeIssueImages: [...originalBeforeImages] }));
           }
           if (passedData.afterActionImages) {
+            console.log('After Action Images - total:', passedData.afterActionImages.length);
+            console.log('After Action Images - with file:', passedData.afterActionImages.filter(img => img.file).length);
             setAfterActionImages(passedData.afterActionImages);
             const originalAfterImages = passedData.originalImages?.afterActionImages || passedData.afterActionImages;
             setOriginalImages(prev => ({ ...prev, afterActionImages: [...originalAfterImages] }));
@@ -588,8 +622,73 @@ const CMReviewReportFormEdit = () => {
 
   const handleFinalReportFileChange = (event) => {
     setFinalReportUploadError('');
-    const file = event.target.files?.[0] || null;
+    const file = event.target.files && event.target.files[0] ? event.target.files[0] : null;
     setFinalReportFile(file);
+  };
+
+  const handleAttendedBySignatureChange = (event) => {
+    setFinalReportUploadError('');
+    const file = event.target.files && event.target.files[0] ? event.target.files[0] : null;
+    if (file) {
+      setAttendedBySignature(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAttendedBySignaturePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleApprovedBySignatureChange = (event) => {
+    setFinalReportUploadError('');
+    const file = event.target.files && event.target.files[0] ? event.target.files[0] : null;
+    if (file) {
+      setApprovedBySignature(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setApprovedBySignaturePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Canvas drawing handlers
+  const startDrawing = (canvasRef, setIsDrawing) => (e) => {
+    if (!canvasRef.current) return;
+    setIsDrawing(true);
+    const ctx = canvasRef.current.getContext('2d');
+    const rect = canvasRef.current.getBoundingClientRect();
+    ctx.beginPath();
+    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+  };
+
+  const draw = (canvasRef, isDrawing) => (e) => {
+    if (!isDrawing || !canvasRef.current) return;
+    const ctx = canvasRef.current.getContext('2d');
+    const rect = canvasRef.current.getBoundingClientRect();
+    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  };
+
+  const stopDrawing = (setIsDrawing) => () => {
+    setIsDrawing(false);
+  };
+
+  const clearCanvas = (canvasRef) => {
+    if (!canvasRef.current) return;
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+  };
+
+  const canvasToBlob = (canvas) => {
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, 'image/png');
+    });
   };
 
   const handleCloseFinalReportDialog = () => {
@@ -597,42 +696,186 @@ const CMReviewReportFormEdit = () => {
     setFinalReportDialogOpen(false);
     setFinalReportFile(null);
     setFinalReportUploadError('');
+    setAttendedBySignature(null);
+    setApprovedBySignature(null);
+    setAttendedBySignaturePreview('');
+    setApprovedBySignaturePreview('');
+    setAttendedByMode('draw');
+    setApprovedByMode('draw');
+    setActiveTab(0); // Reset to PDF tab
+    
+    // Clear canvases
+    clearCanvas(attendedByCanvasRef);
+    clearCanvas(approvedByCanvasRef);
   };
 
   const handleUploadFinalReport = async () => {
-    if (!finalReportFile) {
-      setFinalReportUploadError('Please select a file to upload.');
-      return;
+    // Check for drawn signatures and convert to blob
+    let attendedBySignatureToUpload = attendedBySignature;
+    let approvedBySignatureToUpload = approvedBySignature;
+    
+    // If mode is 'draw', get signature from canvas
+    if (attendedByMode === 'draw' && attendedByCanvasRef.current) {
+      const canvas = attendedByCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const hasDrawing = imageData.data.some(channel => channel !== 0);
+      
+      if (hasDrawing) {
+        const blob = await canvasToBlob(canvas);
+        attendedBySignatureToUpload = new File([blob], 'attended-by-signature.png', { type: 'image/png' });
+      }
+    }
+    
+    if (approvedByMode === 'draw' && approvedByCanvasRef.current) {
+      const canvas = approvedByCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const hasDrawing = imageData.data.some(channel => channel !== 0);
+      
+      if (hasDrawing) {
+        const blob = await canvasToBlob(canvas);
+        approvedBySignatureToUpload = new File([blob], 'approved-by-signature.png', { type: 'image/png' });
+      }
+    }
+    
+    // Validate based on active tab
+    if (activeTab === 0) {
+      // PDF tab - validate final report file
+      if (!finalReportFile) {
+        setFinalReportUploadError('Please upload a Final Report PDF.');
+        return;
+      }
+    } else {
+      // Signatures tab - validate both signatures
+      const hasBothSignatures = !!attendedBySignatureToUpload && !!approvedBySignatureToUpload;
+      
+      if (!hasBothSignatures) {
+        if (!attendedBySignatureToUpload && !approvedBySignatureToUpload) {
+          setFinalReportUploadError('Please provide both signatures (Attended By and Approved By).');
+          return;
+        }
+        if (attendedBySignatureToUpload && !approvedBySignatureToUpload) {
+          setFinalReportUploadError('Please also provide Approved By signature.');
+          return;
+        }
+        if (!attendedBySignatureToUpload && approvedBySignatureToUpload) {
+          setFinalReportUploadError('Please also provide Attended By signature.');
+          return;
+        }
+      }
     }
 
     setFinalReportUploading(true);
+    setFinalReportUploadError('');
+    
     try {
+      // First save the report data
       await handleSave({ skipNavigation: true, suppressSuccessToast: true });
+      
       const reportFormId = id;
       if (!reportFormId) {
         throw new Error('Report Form ID not found in URL parameters');
       }
 
-      await uploadFinalReportAttachment(reportFormId, finalReportFile);
+      // Handle PDF upload or signature-based generation
+      if (activeTab === 0 && finalReportFile) {
+        // Upload final report PDF
+        await uploadFinalReportAttachment(reportFormId, finalReportFile);
+      } else if (activeTab === 1 && attendedBySignatureToUpload && approvedBySignatureToUpload) {
+        // Upload signatures
+        const imageTypes = await getReportFormImageTypes();
+        const attendedByImageType = imageTypes.find(type => type.imageTypeName === 'AttendedBySignature');
+        const approvedByImageType = imageTypes.find(type => type.imageTypeName === 'ApprovedBySignature');
+        
+        if (attendedByImageType) {
+          await createReportFormImage(reportFormId, attendedBySignatureToUpload, attendedByImageType.id, 'Signatures');
+        }
+        
+        if (approvedByImageType) {
+          await createReportFormImage(reportFormId, approvedBySignatureToUpload, approvedByImageType.id, 'Signatures');
+        }
+        
+        // Generate final report PDF from signatures
+        try {
+          console.log(`Generating final report PDF for ReportForm ID: ${reportFormId}`);
+          await generateCMFinalReportPdf(reportFormId);
+          console.log('Final report PDF generated successfully');
+        } catch (pdfError) {
+          console.error('Error generating final report PDF:', pdfError);
+        }
+      }
 
+      // Reset dialog state
       setFinalReportDialogOpen(false);
       setFinalReportFile(null);
-      setFinalReportUploadError('');
+      setAttendedBySignature(null);
+      setApprovedBySignature(null);
+      setAttendedBySignaturePreview('');
+      setApprovedBySignaturePreview('');
+      setAttendedByMode('draw');
+      setApprovedByMode('draw');
+      clearCanvas(attendedByCanvasRef);
+      clearCanvas(approvedByCanvasRef);
 
       setNotification({
         open: true,
-        message: 'CM Report and Final Report saved successfully!',
+        message: activeTab === 0 
+          ? 'CM Report and Final Report saved successfully!' 
+          : 'CM Report saved! Final report PDF is being generated...',
         severity: 'success'
       });
 
-      setTimeout(() => {
+      // Auto-download the final report after a delay
+      setTimeout(async () => {
+        try {
+          await downloadSavedFinalReport(reportFormId, formData.jobNo);
+        } catch (downloadError) {
+          console.error('Error downloading final report:', downloadError);
+        }
         navigate('/report-management-system');
-      }, 1000);
+      }, activeTab === 1 ? 4000 : 2000);
+      
     } catch (error) {
       const message = error?.response?.data?.message || error?.message || 'Failed to submit report.';
       setFinalReportUploadError(message);
     } finally {
       setFinalReportUploading(false);
+    }
+  };
+
+  // Helper function to download the final report after saving
+  const downloadSavedFinalReport = async (reportFormId, jobNo) => {
+    try {
+      // Wait a bit for the final report to be created in the database
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Fetch the final reports for this report form
+      const finalReports = await getFinalReportsByReportForm(reportFormId);
+      
+      if (finalReports && finalReports.length > 0) {
+        // Get the most recent final report (first one)
+        const latestReport = finalReports[0];
+        
+        // Download the final report
+        const response = await downloadFinalReportAttachment(latestReport.id);
+        const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const fileName = latestReport.attachmentName || `FinalReport_${jobNo || 'report'}.pdf`;
+        link.href = downloadUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+        
+        console.log('Final report downloaded successfully:', fileName);
+      } else {
+        console.log('No final reports found for download');
+      }
+    } catch (downloadError) {
+      console.error('Error downloading final report:', downloadError);
     }
   };
 
@@ -753,6 +996,7 @@ const CMReviewReportFormEdit = () => {
       const imageTypes = await getReportFormImageTypes();
       
       // Define image mappings for CM Report Form
+      // NOTE: sectionName MUST match what backend expects in StoredDirectory query
       const imageMappings = [
         {
           current: beforeIssueImages,
@@ -764,7 +1008,7 @@ const CMReviewReportFormEdit = () => {
           current: afterActionImages,
           original: originalImages.afterActionImages,
           typeName: 'CMAfterIssueImage',
-          sectionName: 'CMAfterAction'
+          sectionName: 'CMAfterIssueImage'  // Changed from 'CMAfterAction' to match backend query
         },
         {
           current: materialUsedOldSerialImages,
@@ -789,20 +1033,28 @@ const CMReviewReportFormEdit = () => {
         }
 
         const currentImages = imageMapping.current || [];
-        const originalImages = imageMapping.original || [];
+        const originalImagesForSection = imageMapping.original || [];
+
+        console.log(`Processing ${imageMapping.typeName}:`, {
+          currentCount: currentImages.length,
+          originalCount: originalImagesForSection.length,
+          newImagesCount: currentImages.filter(img => img.file).length
+        });
 
         // Find deleted images (in original but not in current)
-        const deletedImages = originalImages.filter(originalImg => 
+        const deletedImages = originalImagesForSection.filter(originalImg => 
           !currentImages.some(currentImg => currentImg.id === originalImg.id)
         );
 
         // Find new images (have file property)
         const newImages = currentImages.filter(img => img.file);
+        
+        console.log(`New images to upload for ${imageMapping.typeName}:`, newImages.length);
 
         // Delete removed images
         for (const deletedImage of deletedImages) {
           if (deletedImage.id) {
-           // console.log(`Deleting image: ${deletedImage.imageName}`);
+            console.log(`Deleting image: ${deletedImage.imageName}`);
             await deleteReportFormImage(deletedImage.id);
           }
         }
@@ -810,7 +1062,7 @@ const CMReviewReportFormEdit = () => {
         // Upload new images
         for (const newImage of newImages) {
           if (newImage.file) {
-            //console.log(`Uploading new image for type ${imageMapping.typeName}`);
+            console.log(`Uploading new image for type ${imageMapping.typeName}:`, newImage.file.name);
             
             await createReportFormImage(
               reportFormId,           // reportFormId
@@ -845,41 +1097,53 @@ const CMReviewReportFormEdit = () => {
         throw new Error('CM Report Form ID not found. Please ensure the report has been properly created.');
       }
 
+      // Helper function to convert empty strings to null for GUID fields
+      const toNullableGuid = (value) => (value && value.trim() !== '') ? value : null;
+      
       // Step 1: Update ReportForm table first
       setSaveProgress('Updating Report Form basic data...');
       const reportFormData = {
-        ReportFormTypeID: formData.reportFormTypeID,
-        JobNo: formData.jobNo,
-        SystemNameWarehouseID: formData.systemNameWarehouseID,
-        StationNameWarehouseID: formData.stationNameWarehouseID,
+        ReportFormTypeID: toNullableGuid(formData.reportFormTypeID),
+        JobNo: formData.jobNo || '',
+        SystemNameWarehouseID: toNullableGuid(formData.systemNameWarehouseID),
+        StationNameWarehouseID: toNullableGuid(formData.stationNameWarehouseID),
         UploadStatus: formData.uploadStatus || 'Pending',
         UploadHostname: formData.uploadHostname || '',
         UploadIPAddress: formData.uploadIPAddress || '',
         FormStatus: formData.formStatus || 'Draft'
       };
       
-       const reportFormResponse = await updateReportForm(reportFormId, reportFormData);
+      const reportFormResponse = await updateReportForm(reportFormId, reportFormData);
       
       // Step 2: Update CMReportForm data
       setSaveProgress('Updating CM Report Form data...');
-      const cmReportFormData = {
-        furtherActionTakenID: formData.furtherActionTakenID,
-        formstatusID: formData.formstatusID,
-        customer: formData.customer,
-        projectNo: formData.projectNo,
-        issueReportedDescription: formData.issueReportedDescription,
-        issueFoundDescription: formData.issueFoundDescription,
-        actionTakenDescription: formData.actionTakenDescription,
-        failureDetectedDate: formData.failureDetectedDate ? formData.failureDetectedDate.toISOString() : null,
-        responseDate: formData.responseDate ? formData.responseDate.toISOString() : null,
-        arrivalDate: formData.arrivalDate ? formData.arrivalDate.toISOString() : null,
-        completionDate: formData.completionDate ? formData.completionDate.toISOString() : null,
-        attendedBy: formData.attendedBy,
-        approvedBy: formData.approvedBy,
-        remark: formData.remark
+      
+      // Helper function to convert date to ISO string or null
+      const toISOStringOrNull = (date) => {
+        if (!date) return null;
+        if (date instanceof Date) return date.toISOString();
+        if (typeof date === 'string') return new Date(date).toISOString();
+        return null;
       };
       
-       const cmReportFormResponse = await updateCMReportForm(cmReportFormId, cmReportFormData);
+      const cmReportFormData = {
+        furtherActionTakenID: toNullableGuid(formData.furtherActionTakenID),
+        formstatusID: toNullableGuid(formData.formstatusID),
+        customer: formData.customer || '',
+        projectNo: formData.projectNo || '',
+        issueReportedDescription: formData.issueReportedDescription || '',
+        issueFoundDescription: formData.issueFoundDescription || '',
+        actionTakenDescription: formData.actionTakenDescription || '',
+        failureDetectedDate: toISOStringOrNull(formData.failureDetectedDate),
+        responseDate: toISOStringOrNull(formData.responseDate),
+        arrivalDate: toISOStringOrNull(formData.arrivalDate),
+        completionDate: toISOStringOrNull(formData.completionDate),
+        attendedBy: formData.attendedBy || '',
+        approvedBy: formData.approvedBy || '',
+        remark: formData.remark || ''
+      };
+      
+      const cmReportFormResponse = await updateCMReportForm(cmReportFormId, cmReportFormData);
       
       // Step 3: Handle Material Used deletions first
       if (materialUsedData && materialUsedData.length > 0) {
@@ -1186,22 +1450,8 @@ const CMReviewReportFormEdit = () => {
                     }}
                   />
                   </Box>
-            </Paper>            {/* Form Status */}
-            <Paper sx={sectionContainerStyle}>
-              <Typography variant="h5" sx={sectionHeaderStyle}>
-                Form Status
-              </Typography>
-              <Box sx={{ marginTop: 2 }}>
-                <TextField
-                  fullWidth
-                  label="Form Status"
-                  value={formStatusDisplayName || 'N/A'}
-                  InputProps={{ readOnly: true }}
-                  sx={fieldStyle}
-                />
-              </Box>
-            </Paper>
-          
+            </Paper>           
+            
             {/* Date & Time Information */}
             <Paper sx={sectionContainerStyle}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
@@ -1210,62 +1460,42 @@ const CMReviewReportFormEdit = () => {
               
               <Grid container spacing={3} sx={{ marginTop: 1 }}>
                 <Grid item xs={12} md={3}>
-                  <DateTimePicker
+                  <TextField
+                    fullWidth
                     label="Failure Detected Date"
-                    value={formData.failureDetectedDate}
-                    onChange={(newValue) => handleInputChange('failureDetectedDate', newValue)}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        sx={fieldStyle}
-                      />
-                    )}
+                    value={formData.failureDetectedDate ? formatDisplayDate(formData.failureDetectedDate) : 'N/A'}
+                    disabled
+                    sx={fieldStyle}
                   />
                 </Grid>
                 
                 <Grid item xs={12} md={3}>
-                  <DateTimePicker
+                  <TextField
+                    fullWidth
                     label="Response Date"
-                    value={formData.responseDate}
-                    onChange={(newValue) => handleInputChange('responseDate', newValue)}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        sx={fieldStyle}
-                      />
-                    )}
+                    value={formData.responseDate ? formatDisplayDate(formData.responseDate) : 'N/A'}
+                    disabled
+                    sx={fieldStyle}
                   />
                 </Grid>
                 
                 <Grid item xs={12} md={3}>
-                  <DateTimePicker
+                  <TextField
+                    fullWidth
                     label="Arrival Date"
-                    value={formData.arrivalDate}
-                    onChange={(newValue) => handleInputChange('arrivalDate', newValue)}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        sx={fieldStyle}
-                      />
-                    )}
+                    value={formData.arrivalDate ? formatDisplayDate(formData.arrivalDate) : 'N/A'}
+                    disabled
+                    sx={fieldStyle}
                   />
                 </Grid>
                 
                 <Grid item xs={12} md={3}>
-                  <DateTimePicker
+                  <TextField
+                    fullWidth
                     label="Completion Date"
-                    value={formData.completionDate}
-                    onChange={(newValue) => handleInputChange('completionDate', newValue)}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        sx={fieldStyle}
-                      />
-                    )}
+                    value={formData.completionDate ? formatDisplayDate(formData.completionDate) : 'N/A'}
+                    disabled
+                    sx={fieldStyle}
                   />
                 </Grid>
               </Grid>
@@ -1291,9 +1521,8 @@ const CMReviewReportFormEdit = () => {
                   multiline
                   rows={4}
                   label="Issue Reported Description"
-                  value={formData.issueReportedDescription || ''}
-                  onChange={(e) => handleInputChange('issueReportedDescription', e.target.value)}
-                  placeholder="Describe the issue as reported by the user or system..."
+                  value={formData.issueReportedDescription || 'N/A'}
+                  disabled
                   sx={fieldStyle}
                 />
 
@@ -1314,9 +1543,8 @@ const CMReviewReportFormEdit = () => {
                   multiline
                   rows={4}
                   label="Issue Found Description"
-                  value={formData.issueFoundDescription || ''}
-                  onChange={(e) => handleInputChange('issueFoundDescription', e.target.value)}
-                  placeholder="Describe the actual issue found during investigation and diagnosis..."
+                  value={formData.issueFoundDescription || 'N/A'}
+                  disabled
                   sx={fieldStyle}
                 />
               </Paper> 
@@ -1341,9 +1569,8 @@ const CMReviewReportFormEdit = () => {
                   multiline
                   rows={4}
                   label="Action Taken Description"
-                  value={formData.actionTakenDescription || ''}
-                  onChange={(e) => handleInputChange('actionTakenDescription', e.target.value)}
-                  placeholder="Describe the corrective actions taken to resolve the issue..."
+                  value={formData.actionTakenDescription || 'N/A'}
+                  disabled
                   sx={fieldStyle}
                 />
                 {/* After Action Images */} 
@@ -1505,6 +1732,23 @@ const CMReviewReportFormEdit = () => {
             
             </Paper>
 
+            {/* Form Status */}
+            <Paper sx={sectionContainerStyle}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                ✅ Form Status
+              </Typography>
+              <Box sx={{ marginTop: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Form Status"
+                  value={formStatusDisplayName || 'N/A'}
+                  InputProps={{ readOnly: true }}
+                  sx={fieldStyle}
+                />
+              </Box>
+            </Paper>
+          
+
         {/* Navigation Buttons Section - Moved outside main container */}
         <Paper sx={{ 
           padding: 3, 
@@ -1606,45 +1850,352 @@ const CMReviewReportFormEdit = () => {
               textAlign: 'center',
               fontWeight: 600,
               color: '#f8fafc',
-              pb: 1
+              pb: 0
             }}
           >
-            Upload Final Report
+            Close Report
           </DialogTitle>
+          
+          {/* Tabs */}
+          <Tabs
+            value={activeTab}
+            onChange={(e, newValue) => {
+              setActiveTab(newValue);
+              setFinalReportUploadError(''); // Clear errors when switching tabs
+            }}
+            centered
+            sx={{
+              borderBottom: '1px solid rgba(226,232,240,0.2)',
+              '& .MuiTab-root': {
+                color: 'rgba(226,232,240,0.6)',
+                fontWeight: 600,
+                textTransform: 'none',
+                fontSize: '14px',
+                minHeight: '48px',
+                '&.Mui-selected': {
+                  color: '#4ade80',
+                }
+              },
+              '& .MuiTabs-indicator': {
+                backgroundColor: '#4ade80',
+                height: '3px'
+              }
+            }}
+          >
+            <Tab 
+              icon={<UploadFileIcon sx={{ fontSize: 20 }} />} 
+              iconPosition="start"
+              label="Upload PDF Report" 
+            />
+            <Tab 
+              icon={<BrushIcon sx={{ fontSize: 20 }} />} 
+              iconPosition="start"
+              label="Provide Signatures" 
+            />
+          </Tabs>
+
           <DialogContent
             sx={{
-              py: 2,
+              py: 3,
               px: 4
             }}
           >
-            <Typography variant="body2" sx={{ mb: 2, textAlign: 'center', color: 'rgba(241,245,249,0.85)' }}>
-              Please attach the completed final report before submitting.
-            </Typography>
-            <Button
-              variant="outlined"
-              component="label"
-              startIcon={<UploadFileIcon />}
-              sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                width: '100%',
-                py: 1.5,
-                borderColor: 'rgba(226,232,240,0.5)',
-                color: '#e2e8f0',
-                fontWeight: 600,
-                '&:hover': {
-                  borderColor: '#cbd5f5',
-                  backgroundColor: 'rgba(148,163,184,0.15)'
-                }
-              }}
-            >
-              <input type="file" hidden accept="application/pdf" onChange={handleFinalReportFileChange} />
-              {finalReportFile ? finalReportFile.name : 'Select File'}
-            </Button>
+            {/* Tab Panel 0: Final Report PDF Upload */}
+            {activeTab === 0 && (
+              <Box>
+                <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: 'rgba(241,245,249,0.85)' }}>
+                  Upload the completed Final Report PDF to close this report.
+                </Typography>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<UploadFileIcon />}
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    width: '100%',
+                    py: 2,
+                    borderColor: finalReportFile ? '#4ade80' : 'rgba(226,232,240,0.5)',
+                    color: finalReportFile ? '#4ade80' : '#e2e8f0',
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: '#cbd5f5',
+                      backgroundColor: 'rgba(148,163,184,0.15)'
+                    }
+                  }}
+                >
+                  {finalReportFile ? finalReportFile.name : 'Select PDF File'}
+                  <input
+                    type="file"
+                    hidden
+                    accept="application/pdf"
+                    onChange={handleFinalReportFileChange}
+                  />
+                </Button>
+                {finalReportFile && (
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      display: 'block', 
+                      mt: 1, 
+                      textAlign: 'center', 
+                      color: '#4ade80' 
+                    }}
+                  >
+                    ✓ File selected: {finalReportFile.name}
+                  </Typography>
+                )}
+              </Box>
+            )}
+
+            {/* Tab Panel 1: Signature Uploads or Drawing */}
+            {activeTab === 1 && (
+              <Box>
+              {/* Attended By Signature */}
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(241,245,249,0.85)', fontWeight: 600 }}>
+                    Attended By Signature
+                    {formData.attendedBy && (
+                      <Typography component="span" sx={{ ml: 1, color: '#4ade80', fontSize: '13px' }}>
+                        ({formData.attendedBy})
+                      </Typography>
+                    )}
+                  </Typography>
+                  <ToggleButtonGroup
+                    value={attendedByMode}
+                    exclusive
+                    onChange={(e, newMode) => newMode && setAttendedByMode(newMode)}
+                    size="small"
+                    sx={{
+                      '& .MuiToggleButton-root': {
+                        color: 'rgba(226,232,240,0.7)',
+                        borderColor: 'rgba(226,232,240,0.3)',
+                        py: 0.5,
+                        px: 1.5,
+                        fontSize: '12px',
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(74,222,128,0.2)',
+                          color: '#4ade80',
+                          borderColor: '#4ade80',
+                          '&:hover': {
+                            backgroundColor: 'rgba(74,222,128,0.3)',
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    <ToggleButton value="draw">
+                      <BrushIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                      Draw
+                    </ToggleButton>
+                    <ToggleButton value="upload">
+                      <PhotoCamera sx={{ fontSize: 16, mr: 0.5 }} />
+                      Upload
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+
+                {attendedByMode === 'draw' ? (
+                  <Box>
+                    <Box sx={{ 
+                      border: '2px solid rgba(226,232,240,0.3)', 
+                      borderRadius: 2, 
+                      backgroundColor: 'white',
+                      cursor: 'crosshair'
+                    }}>
+                      <canvas
+                        ref={attendedByCanvasRef}
+                        width={400}
+                        height={150}
+                        onMouseDown={startDrawing(attendedByCanvasRef, setIsDrawingAttended)}
+                        onMouseMove={draw(attendedByCanvasRef, isDrawingAttended)}
+                        onMouseUp={stopDrawing(setIsDrawingAttended)}
+                        onMouseLeave={stopDrawing(setIsDrawingAttended)}
+                        style={{ display: 'block', width: '100%', height: '150px' }}
+                      />
+                    </Box>
+                    <Button
+                      size="small"
+                      startIcon={<ClearIcon />}
+                      onClick={() => clearCanvas(attendedByCanvasRef)}
+                      sx={{ 
+                        mt: 1, 
+                        color: 'rgba(226,232,240,0.7)',
+                        textTransform: 'none',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  </Box>
+                ) : (
+                  <Box>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<PhotoCamera />}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        width: '100%',
+                        py: 1.5,
+                        borderColor: attendedBySignature ? '#4ade80' : 'rgba(226,232,240,0.5)',
+                        color: attendedBySignature ? '#4ade80' : '#e2e8f0',
+                        fontWeight: 600,
+                        '&:hover': {
+                          borderColor: '#cbd5f5',
+                          backgroundColor: 'rgba(148,163,184,0.15)'
+                        }
+                      }}
+                    >
+                      {attendedBySignature ? attendedBySignature.name : 'Select Signature Image'}
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={handleAttendedBySignatureChange}
+                      />
+                    </Button>
+                    {attendedBySignaturePreview && (
+                      <Box sx={{ mt: 1, textAlign: 'center' }}>
+                        <img 
+                          src={attendedBySignaturePreview} 
+                          alt="Attended By Signature" 
+                          style={{ maxWidth: '200px', maxHeight: '100px', border: '1px solid rgba(226,232,240,0.3)', borderRadius: '4px' }}
+                        />
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
+
+              {/* Approved By Signature */}
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(241,245,249,0.85)', fontWeight: 600 }}>
+                    Approved By Signature
+                    {formData.approvedBy && (
+                      <Typography component="span" sx={{ ml: 1, color: '#4ade80', fontSize: '13px' }}>
+                        ({formData.approvedBy})
+                      </Typography>
+                    )}
+                  </Typography>
+                  <ToggleButtonGroup
+                    value={approvedByMode}
+                    exclusive
+                    onChange={(e, newMode) => newMode && setApprovedByMode(newMode)}
+                    size="small"
+                    sx={{
+                      '& .MuiToggleButton-root': {
+                        color: 'rgba(226,232,240,0.7)',
+                        borderColor: 'rgba(226,232,240,0.3)',
+                        py: 0.5,
+                        px: 1.5,
+                        fontSize: '12px',
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(74,222,128,0.2)',
+                          color: '#4ade80',
+                          borderColor: '#4ade80',
+                          '&:hover': {
+                            backgroundColor: 'rgba(74,222,128,0.3)',
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    <ToggleButton value="draw">
+                      <BrushIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                      Draw
+                    </ToggleButton>
+                    <ToggleButton value="upload">
+                      <PhotoCamera sx={{ fontSize: 16, mr: 0.5 }} />
+                      Upload
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+
+                {approvedByMode === 'draw' ? (
+                  <Box>
+                    <Box sx={{ 
+                      border: '2px solid rgba(226,232,240,0.3)', 
+                      borderRadius: 2, 
+                      backgroundColor: 'white',
+                      cursor: 'crosshair'
+                    }}>
+                      <canvas
+                        ref={approvedByCanvasRef}
+                        width={400}
+                        height={150}
+                        onMouseDown={startDrawing(approvedByCanvasRef, setIsDrawingApproved)}
+                        onMouseMove={draw(approvedByCanvasRef, isDrawingApproved)}
+                        onMouseUp={stopDrawing(setIsDrawingApproved)}
+                        onMouseLeave={stopDrawing(setIsDrawingApproved)}
+                        style={{ display: 'block', width: '100%', height: '150px' }}
+                      />
+                    </Box>
+                    <Button
+                      size="small"
+                      startIcon={<ClearIcon />}
+                      onClick={() => clearCanvas(approvedByCanvasRef)}
+                      sx={{ 
+                        mt: 1, 
+                        color: 'rgba(226,232,240,0.7)',
+                        textTransform: 'none',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  </Box>
+                ) : (
+                  <Box>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<PhotoCamera />}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        width: '100%',
+                        py: 1.5,
+                        borderColor: approvedBySignature ? '#4ade80' : 'rgba(226,232,240,0.5)',
+                        color: approvedBySignature ? '#4ade80' : '#e2e8f0',
+                        fontWeight: 600,
+                        '&:hover': {
+                          borderColor: '#cbd5f5',
+                          backgroundColor: 'rgba(148,163,184,0.15)'
+                        }
+                      }}
+                    >
+                      {approvedBySignature ? approvedBySignature.name : 'Select Signature Image'}
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={handleApprovedBySignatureChange}
+                      />
+                    </Button>
+                    {approvedBySignaturePreview && (
+                      <Box sx={{ mt: 1, textAlign: 'center' }}>
+                        <img 
+                          src={approvedBySignaturePreview} 
+                          alt="Approved By Signature" 
+                          style={{ maxWidth: '200px', maxHeight: '100px', border: '1px solid rgba(226,232,240,0.3)', borderRadius: '4px' }}
+                        />
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
+            </Box>
+            )}
+
+            {/* Error Message */}
             {finalReportUploadError && (
-              <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1, textAlign: 'center' }}>
+              <Alert severity="error" sx={{ mt: 3 }}>
                 {finalReportUploadError}
-              </Typography>
+              </Alert>
             )}
           </DialogContent>
           <DialogActions
@@ -1658,17 +2209,13 @@ const CMReviewReportFormEdit = () => {
               onClick={handleCloseFinalReportDialog}
               disabled={finalReportUploading}
               sx={{
-                background: 'transparent',
-                color: '#e2e8f0',
+                background: RMSTheme.components.button.secondary?.background || '#6c757d',
+                color: RMSTheme.components.button.secondary?.text || 'white',
                 padding: '10px 28px',
                 borderRadius: RMSTheme.borderRadius?.small || '8px',
-                border: '1px solid rgba(226,232,240,0.3)',
                 textTransform: 'none',
                 mr: 2,
-                '&:hover': {
-                  background: 'rgba(148,163,184,0.15)',
-                  borderColor: 'rgba(226,232,240,0.6)'
-                },
+                '&:hover': { background: RMSTheme.components.button.secondary?.hover || '#5a6268' },
                 '&:disabled': { opacity: 0.6 }
               }}
             >
@@ -1679,18 +2226,16 @@ const CMReviewReportFormEdit = () => {
               onClick={handleUploadFinalReport}
               disabled={finalReportUploading}
               sx={{
-                background: 'linear-gradient(135deg, #1D4ED8 0%, #312E81 100%)',
-                color: '#f8fafc',
+                background: RMSTheme.components.button.primary?.background || '#28a745',
+                color: RMSTheme.components.button.primary?.text || 'white',
                 padding: '10px 28px',
                 borderRadius: RMSTheme.borderRadius?.small || '8px',
                 textTransform: 'none',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #1E40AF 0%, #1E1B4B 100%)'
-                },
+                '&:hover': { background: RMSTheme.components.button.primary?.hover || '#218838' },
                 '&:disabled': { opacity: 0.6 }
               }}
             >
-              {finalReportUploading ? 'Uploading...' : 'Upload & Submit'}
+              {finalReportUploading ? 'Submitting...' : (activeTab === 0 ? 'Upload & Close Report' : 'Submit Signatures & Close')}
             </Button>
           </DialogActions>
         </Dialog>

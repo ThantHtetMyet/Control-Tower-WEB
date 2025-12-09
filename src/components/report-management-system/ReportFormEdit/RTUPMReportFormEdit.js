@@ -1374,40 +1374,6 @@ const RTUPMReportFormEdit = () => {
           </Box>
         </Paper>
 
-        {/* Form Status Section */}
-        <Paper sx={{ padding: 3, marginBottom: 3 }}>
-
-          <Typography variant="h5" sx={{
-            color: '#1976d2',
-            fontWeight: 'bold',
-            marginBottom: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}>
-            <AssignmentIcon />
-            Form Status
-          </Typography>
-
-          <TextField
-            fullWidth
-            select
-            label="Form Status"
-            value={formData.formstatusID || ''}
-            onChange={(e) => handleInputChange('formstatusID', e.target.value)}
-            sx={{ backgroundColor: 'white' }}
-          >
-            <MenuItem value="">
-              <em>Select Form Status</em>
-            </MenuItem>
-            {(formStatusOptions || []).map((status) => (
-              <MenuItem key={status.id || status.ID} value={status.id || status.ID}>
-                {status.name || status.Name}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Paper>
-
         {/* Date of Service Section */}
         <Paper sx={{ padding: 3, marginBottom: 3 }}>
           <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 'bold', marginBottom: 2 }}>
@@ -2308,7 +2274,7 @@ const RTUPMReportFormEdit = () => {
             variant="h6"
             sx={{
               marginBottom: 2,
-              color: '#ff6b35',
+              color: '#1976d2',
               fontWeight: 600,
               display: 'flex',
               alignItems: 'center'
@@ -2345,7 +2311,7 @@ const RTUPMReportFormEdit = () => {
             variant="h6"
             sx={{
               marginBottom: 2,
-              color: '#ff6b35',
+              color: '#1976d2',
               fontWeight: 600,
               display: 'flex',
               alignItems: 'center'
@@ -2380,13 +2346,13 @@ const RTUPMReportFormEdit = () => {
             variant="h6"
             sx={{
               marginBottom: 2,
-              color: '#28a745',
+              color: '#1976d2',
               fontWeight: 600,
               display: 'flex',
               alignItems: 'center'
             }}
           >
-            ✅ Approval Information
+            📝 Approval Information
           </Typography>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -2419,6 +2385,41 @@ const RTUPMReportFormEdit = () => {
             />
           </Box>
         </Paper>
+
+              
+        {/* Form Status Section */}
+        <Paper sx={{ padding: 3, marginBottom: 3 }}>
+          <Typography
+              variant="h6"
+              sx={{
+                marginBottom: 2,
+                color: '#1976d2',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+            ✅ Form Status
+          </Typography>
+
+          <TextField
+            fullWidth
+            select
+            label="Form Status"
+            value={formData.formstatusID || ''}
+            onChange={(e) => handleInputChange('formstatusID', e.target.value)}
+            sx={{ backgroundColor: 'white' }}
+          >
+            <MenuItem value="">
+              <em>Select Form Status</em>
+            </MenuItem>
+            {(formStatusOptions || []).map((status) => (
+              <MenuItem key={status.id || status.ID} value={status.id || status.ID}>
+                {status.name || status.Name}
+              </MenuItem>
+            ))}
+          </TextField>
+          </Paper>
 
         {/* Action Buttons Footer */}
         <Paper sx={{

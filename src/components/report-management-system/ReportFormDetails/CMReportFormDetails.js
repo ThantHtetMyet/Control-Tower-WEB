@@ -879,27 +879,7 @@ const CMReportFormDetails = () => {
         </Paper>
       )}
 
-      {/* Form Status Section */}
-      <Paper sx={{
-        ...sectionContainer,
-        background: '#f8f9fa',
-        border: '2px solid #e9ecef'
-      }}>
-        <Typography variant="h5" sx={sectionHeader}>
-          ✅ Form Status
-        </Typography>
-
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 1 }}>
-          <TextField
-            fullWidth
-            label="Form Status"
-            value={formStatusDisplay || ''}
-            disabled
-            sx={fieldStyle}
-          />
-        </Box>
-      </Paper>
-
+      
       {/* Date & Time Information Section */}
       <Paper sx={sectionContainer}>
         <Typography variant="h5" sx={sectionHeader}>
@@ -1133,6 +1113,26 @@ const CMReportFormDetails = () => {
             fullWidth
             label="Further Action Taken"
             value={formData.furtherActionTakenName || ''}
+            disabled
+            sx={fieldStyle}
+          />
+        </Box>
+      </Paper>
+{/* Form Status Section */}
+<Paper sx={{
+        ...sectionContainer,
+        background: '#f8f9fa',
+        border: '2px solid #e9ecef'
+      }}>
+        <Typography variant="h5" sx={sectionHeader}>
+          ✅ Form Status
+        </Typography>
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 1 }}>
+          <TextField
+            fullWidth
+            label="Form Status"
+            value={formStatusDisplay || ''}
             disabled
             sx={fieldStyle}
           />

@@ -46,6 +46,10 @@ export const generateRTUPMReportPdf = async (id) => {
   });
 };
 
+export const generateRTUPMFinalReportPdf = async (id) => {
+  return api.post(`/PMReportFormRTU/${id}/generate-final-report-pdf`);
+};
+
 export const createReportForm = async (reportFormData) => {
   // Ensure all required fields are present
   const completeData = {

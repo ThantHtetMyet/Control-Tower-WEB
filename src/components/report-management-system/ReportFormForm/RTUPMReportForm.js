@@ -1144,55 +1144,7 @@ const RTUPMReportForm = ({
               </Box>
             </Paper>
 
-            <Paper sx={sectionContainerStyle}>
-              <Typography
-                variant="h5"
-                sx={{
-                  color: themeColor,
-                  fontWeight: 'bold',
-                  marginBottom: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1
-                }}
-              >
-                <AssignmentTurnedInIcon
-                  fontSize="small"
-                  sx={{ color: themeColor }}
-                />
-                Form Status
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-                <TextField
-                  fullWidth
-                  select
-                  label="Form Status"
-                  value={formData.formstatusID || ''}
-                  onChange={(e) => handleInputChange('formstatusID', e.target.value)}
-                  SelectProps={{
-                    displayEmpty: true,
-                    renderValue: (selected) =>
-                      selected
-                        ? (formStatusOptions.find((s) => (s.id || s.ID) === selected)?.name ||
-                          formStatusOptions.find((s) => (s.id || s.ID) === selected)?.Name ||
-                          selected)
-                        : <em>Select Form Status</em>
-                  }}
-                  InputLabelProps={{ shrink: true }}
-                  sx={fieldStyle}
-                >
-                  <MenuItem value="">
-                    <em>Select Form Status</em>
-                  </MenuItem>
-                  {(formStatusOptions || []).map((status) => (
-                    <MenuItem key={status.id || status.ID} value={status.id || status.ID}>
-                      {status.name || status.Name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Box>
-            </Paper>
-
+            
             {/* Date of Service Section */}
             <Paper sx={sectionContainerStyle}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
@@ -2486,7 +2438,7 @@ const RTUPMReportForm = ({
               background: '#ffffff'
             }}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
-                Approval Information
+                📝 Approval Information
               </Typography>
 
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
@@ -2508,6 +2460,42 @@ const RTUPMReportForm = ({
                 />
               </Box>
             </Paper>
+
+            <Paper sx={sectionContainerStyle}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                ✅ Form Status
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Form Status"
+                  value={formData.formstatusID || ''}
+                  onChange={(e) => handleInputChange('formstatusID', e.target.value)}
+                  SelectProps={{
+                    displayEmpty: true,
+                    renderValue: (selected) =>
+                      selected
+                        ? (formStatusOptions.find((s) => (s.id || s.ID) === selected)?.name ||
+                          formStatusOptions.find((s) => (s.id || s.ID) === selected)?.Name ||
+                          selected)
+                        : <em>Select Form Status</em>
+                  }}
+                  InputLabelProps={{ shrink: true }}
+                  sx={fieldStyle}
+                >
+                  <MenuItem value="">
+                    <em>Select Form Status</em>
+                  </MenuItem>
+                  {(formStatusOptions || []).map((status) => (
+                    <MenuItem key={status.id || status.ID} value={status.id || status.ID}>
+                      {status.name || status.Name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Box>
+            </Paper>
+
 
             {/* Navigation Buttons Section */}
             <Paper sx={{

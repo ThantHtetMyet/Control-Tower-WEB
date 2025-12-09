@@ -835,81 +835,62 @@ const CMReportFormEdit = () => {
               </Box>
             </Paper>
 
-            {/* Section 2: Form Status */}
-            <Paper sx={sectionContainerStyle}>
-              <Typography variant="h5" sx={sectionHeaderStyle}>
-                ✅ Form Status
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
-                <FormControl fullWidth sx={fieldStyle}>
-                  <InputLabel id="form-status-label">Form Status</InputLabel>
-                  <Select
-                    labelId="form-status-label"
-                    value={formData.formstatusID || ''}
-                    onChange={(e) => handleFormStatusChange(e.target.value)}
-                    label="Form Status"
-                  >
-                    <MenuItem value="">
-                      <em>Select Form Status</em>
-                    </MenuItem>
-                    {warehouseData.formStatuses.map((option) => (
-                      <MenuItem key={option.id} value={option.id}>
-                        {option.status || option.name || `Status ${option.id}`}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-            </Paper>
-
             {/* Section 3: Date & Time Information */}
             <Paper sx={sectionContainerStyle}>
               <Typography variant="h5" sx={sectionHeaderStyle}>
                 📅 Date & Time Information
               </Typography>
               <Grid container spacing={3} sx={{ marginTop: 1 }}>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={3}>
                   <DateTimePicker
                     label="Failure Detected"
                     value={formData.failureDetectedDate}
-                    onChange={(newValue) => {
-                      const formattedDate = formatDateForInput(newValue);
-                      handleInputChange('failureDetectedDate', formattedDate);
+                    onChange={(newValue) => handleInputChange('failureDetectedDate', newValue)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        sx: dateTimePickerStyle
+                      }
                     }}
-                    renderInput={(params) => <TextField {...params} fullWidth sx={dateTimePickerStyle} />}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={3}>
                   <DateTimePicker
                     label="Response"
                     value={formData.responseDate}
-                    onChange={(newValue) => {
-                      const formattedDate = formatDateForInput(newValue);
-                      handleInputChange('responseDate', formattedDate);
+                    onChange={(newValue) => handleInputChange('responseDate', newValue)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        sx: dateTimePickerStyle
+                      }
                     }}
-                    renderInput={(params) => <TextField {...params} fullWidth sx={dateTimePickerStyle} />}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={3}>
                   <DateTimePicker
                     label="Arrival"
                     value={formData.arrivalDate}
-                    onChange={(newValue) => {
-                      const formattedDate = formatDateForInput(newValue);
-                      handleInputChange('arrivalDate', formattedDate);
+                    onChange={(newValue) => handleInputChange('arrivalDate', newValue)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        sx: dateTimePickerStyle
+                      }
                     }}
-                    renderInput={(params) => <TextField {...params} fullWidth sx={dateTimePickerStyle} />}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={3}>
                   <DateTimePicker
                     label="Completion"
                     value={formData.completionDate}
-                    onChange={(newValue) => {
-                      const formattedDate = formatDateForInput(newValue);
-                      handleInputChange('completionDate', formattedDate);
+                    onChange={(newValue) => handleInputChange('completionDate', newValue)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        sx: dateTimePickerStyle
+                      }
                     }}
-                    renderInput={(params) => <TextField {...params} fullWidth sx={dateTimePickerStyle} />}
                   />
                 </Grid>
               </Grid>
@@ -1160,6 +1141,34 @@ const CMReportFormEdit = () => {
                 </FormControl>
               </Box>
             </Paper>
+
+                    {/* Section 2: Form Status */}
+            <Paper sx={sectionContainerStyle}>
+              <Typography variant="h5" sx={sectionHeaderStyle}>
+                ✅ Form Status
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                <FormControl fullWidth sx={fieldStyle}>
+                  <InputLabel id="form-status-label">Form Status</InputLabel>
+                  <Select
+                    labelId="form-status-label"
+                    value={formData.formstatusID || ''}
+                    onChange={(e) => handleFormStatusChange(e.target.value)}
+                    label="Form Status"
+                  >
+                    <MenuItem value="">
+                      <em>Select Form Status</em>
+                    </MenuItem>
+                    {warehouseData.formStatuses.map((option) => (
+                      <MenuItem key={option.id} value={option.id}>
+                        {option.status || option.name || `Status ${option.id}`}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Paper>
+
 
             {/* Footer Action Buttons */}
             <Paper sx={{
