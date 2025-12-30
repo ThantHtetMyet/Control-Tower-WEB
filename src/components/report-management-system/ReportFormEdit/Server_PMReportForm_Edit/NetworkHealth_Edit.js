@@ -31,7 +31,10 @@ const NetworkHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
       (data.remarks && data.remarks.trim() !== '')
     );
     
-    if (hasData && !isInitialized.current) {
+    // Only initialize once
+    if (isInitialized.current) return;
+    
+    if (hasData) {
       // Handle new API structure with pmServerNetworkHealths
       if (data.pmServerNetworkHealths && data.pmServerNetworkHealths.length > 0) {
         const networkHealthData = data.pmServerNetworkHealths[0]; // Take the first entry
@@ -56,13 +59,11 @@ const NetworkHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
         if (data.result) setResult(data.result);
         if (data.remarks) setRemarks(data.remarks);
       }
-      isInitialized.current = true;
     }
     
-    // Reset initialization flag when data changes significantly
-    if (!hasData && isInitialized.current) {
-      isInitialized.current = false;
-    }
+    // Always mark as initialized after first render, even if no data
+    // This ensures onDataChange will be called when user fills in data
+    isInitialized.current = true;
   }, [data]);
 
   // Fetch Yes/No options

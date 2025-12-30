@@ -38,6 +38,9 @@ const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
 
   // Initialize data from props when meaningful data is available
   useEffect(() => {
+    // Only initialize once
+    if (isInitialized.current) return;
+    
     // Check if we have meaningful data to initialize with
     const hasData = data && (
       (Array.isArray(data) && data.length > 0) ||
@@ -46,7 +49,7 @@ const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
       (data.remarks && data.remarks.trim() !== '')
     );
     
-    if (hasData && !isInitialized.current) {
+    if (hasData) {
       // Handle API response format (from ServerPMReportForm_Edit)
       if (data.pmServerHotFixes && Array.isArray(data.pmServerHotFixes)) {
         const hotFixesRecord = data.pmServerHotFixes[0];
@@ -107,9 +110,11 @@ const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
       if (data.remarks) {
         setRemarks(data.remarks);
       }
-      
-      isInitialized.current = true;
     }
+    
+    // Always mark as initialized after first render, even if no data
+    // This ensures onDataChange will be called when user fills in data
+    isInitialized.current = true;
   }, [data]);
 
   // Fetch ResultStatus options on component mount

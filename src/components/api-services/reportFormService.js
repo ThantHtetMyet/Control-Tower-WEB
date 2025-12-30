@@ -50,6 +50,11 @@ export const generateRTUPMFinalReportPdf = async (id) => {
   return api.post(`/PMReportFormRTU/${id}/generate-final-report-pdf`);
 };
 
+// Generate Server PM Final Report PDF (with signatures)
+export const generateServerPMFinalReportPdf = async (id) => {
+  return api.post(`/PMReportFormServer/${id}/generate-final-report-pdf`);
+};
+
 export const createReportForm = async (reportFormData) => {
   // Ensure all required fields are present
   const completeData = {

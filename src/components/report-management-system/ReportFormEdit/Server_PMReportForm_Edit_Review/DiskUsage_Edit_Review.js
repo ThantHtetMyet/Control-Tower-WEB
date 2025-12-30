@@ -57,15 +57,15 @@ const DiskUsage_Edit_Review = ({ data, disabled = true, formData }) => {
             
             // Add disk to the server
             const diskEntry = {
-              id: detail.id,
-              disk: detail.diskName || '',
-              status: detail.serverDiskStatusID || '',
-              capacity: detail.capacity || '',
-              freeSpace: detail.freeSpace || '',
-              usage: detail.usage || '',
-              check: detail.resultStatusID || '',
-              remarks: detail.remarks || '',
-              isDeleted: false
+              id: detail.id || detail.ID,
+              disk: detail.diskName || detail.DiskName || '',
+              status: detail.serverDiskStatusID || detail.ServerDiskStatusID || '',
+              capacity: detail.capacity || detail.Capacity || '',
+              freeSpace: detail.freeSpace || detail.FreeSpace || '',
+              usage: detail.usage || detail.Usage || '', // Handle both lowercase and capitalized
+              check: detail.resultStatusID || detail.ResultStatusID || '',
+              remarks: detail.remarks || detail.Remarks || '',
+              isDeleted: detail.isDeleted || detail.IsDeleted || false
             };
             serverMap.get(serverName).disks.push(diskEntry);
           });

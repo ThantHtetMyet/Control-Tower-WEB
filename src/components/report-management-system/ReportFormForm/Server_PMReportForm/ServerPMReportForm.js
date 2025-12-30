@@ -51,7 +51,7 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
 
 
   const [loading, setLoading] = useState(true);
-  const [currentStep, setCurrentStep] = useState('formStatus');
+  const [currentStep, setCurrentStep] = useState('signOff');
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Add state for Form Status warning modal
@@ -59,7 +59,6 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
 
   // Step configuration
   const steps = [
-    'formStatus',
     'signOff',
     'serverHealth',
     'hardDriveHealth',
@@ -78,7 +77,8 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
     'hotFixes',
     'autoFailOver',
     'asaFirewall',
-    'softwarePatch'
+    'softwarePatch',
+    'formStatus'
   ];
 
   const stepTitles = {
@@ -147,17 +147,9 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
     softwarePatch: createDataChangeHandler('softwarePatchData')
   };
 
-  const formStatusIndex = steps.indexOf('formStatus');
-  const hasFormStatus = Boolean(formData.formstatusID);
-
   // Navigation functions
   const handleStepNavigation = (targetStep) => {
     if (targetStep === currentStep || isTransitioning) return;
-
-    const targetIndex = steps.indexOf(targetStep);
-    if (!hasFormStatus && targetIndex > formStatusIndex) {
-      return;
-    }
 
     setIsTransitioning(true);
     setTimeout(() => {
@@ -167,8 +159,8 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
   };
 
   const handleNext = () => {
-    // Validate FormStatus on formStatus step
-    if (currentStep === 'formStatus' && !hasFormStatus) {
+    // Validate FormStatus on formStatus step (last step)
+    if (currentStep === 'formStatus' && !formData.formstatusID) {
       setShowFormStatusWarning(true);
       return;
     }
@@ -203,14 +195,6 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
   // Component rendering
   const renderCurrentStep = () => {
     switch (currentStep) {
-      case 'formStatus':
-        return (
-          <FormStatus
-            value={formData.formstatusID || ''}
-            formStatusOptions={formStatusOptions}
-            onChange={(value) => onInputChange('formstatusID', value)}
-          />
-        );
       case 'signOff':
         return (
           <ServerPMReportFormSignOff
@@ -344,6 +328,14 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
             onDataChange={dataChangeHandlers.softwarePatch}
           />
         );
+      case 'formStatus':
+        return (
+          <FormStatus
+            value={formData.formstatusID || ''}
+            formStatusOptions={formStatusOptions}
+            onChange={(value) => onInputChange('formstatusID', value)}
+          />
+        );
       default:
         return null;
     }
@@ -361,7 +353,6 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
       }}>
         {steps.map((step, index) => {
           const isActive = currentStep === step;
-          const isLocked = !hasFormStatus && steps.indexOf(step) > formStatusIndex;
 
           return (
             <Tooltip
@@ -384,20 +375,18 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
               }}
             >
               <Box
-                onClick={() => !isLocked && handleStepNavigation(step)}
+                onClick={() => handleStepNavigation(step)}
                 sx={{
                   width: 18,
                   height: 18,
                   borderRadius: '50%',
                   backgroundColor: isActive ? '#1976d2' : '#e0e0e0',
                   transition: 'all 0.3s ease',
-                  cursor: isLocked ? 'not-allowed' : 'pointer',
-                  opacity: isLocked ? 0.4 : 1,
+                  cursor: 'pointer',
                   flexShrink: 0,
-                  pointerEvents: isLocked ? 'none' : 'auto',
                   '&:hover': {
-                    transform: isLocked ? 'none' : 'scale(1.2)',
-                    backgroundColor: isLocked ? '#e0e0e0' : (isActive ? '#1565c0' : '#bdbdbd')
+                    transform: 'scale(1.2)',
+                    backgroundColor: isActive ? '#1565c0' : '#bdbdbd'
                   }
                 }}
               />
@@ -666,7 +655,7 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
                     }
                   }}
                 >
-                  {currentStep === 'softwarePatch' ? 'Complete' : 'Next'}
+                  {currentStep === 'formStatus' ? 'Complete' : 'Next'}
                 </Button>
               </Box>
             </Paper>

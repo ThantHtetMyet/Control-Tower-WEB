@@ -39,13 +39,36 @@ const HardDriveHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const isInitialized = useRef(false);
+  const onDataChangeRef = useRef(onDataChange);
+  const lastDataRef = useRef(null);
+
+  // Keep onDataChange ref updated
+  useEffect(() => {
+    onDataChangeRef.current = onDataChange;
+  }, [onDataChange]);
 
   // Initialize data from props when meaningful data is available
   useEffect(() => {
+    // Check if data actually changed
+    const dataKey = data ? JSON.stringify({ 
+      hardDriveHealthData: data.hardDriveHealthData, 
+      remarks: data.remarks 
+    }) : 'null';
+    
+    // Skip if data hasn't changed
+    if (dataKey === lastDataRef.current) {
+      return;
+    }
+    
+    lastDataRef.current = dataKey;
+    
+    // Only initialize once
+    if (isInitialized.current) return;
+    
     // Check if we have meaningful data to initialize with
     const hasData = data && ((data.hardDriveHealthData && data.hardDriveHealthData.length > 0) || (data.remarks && data.remarks.trim() !== ''));
     
-    if (hasData && !isInitialized.current) {
+    if (hasData) {
       if (data.hardDriveHealthData && data.hardDriveHealthData.length > 0) {
         // Map existing data and preserve all tracking flags including isDeleted
         const mappedData = data.hardDriveHealthData.map(item => ({
@@ -62,8 +85,15 @@ const HardDriveHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
       if (data.remarks) {
         setRemarks(data.remarks);
       }
-      isInitialized.current = true;
+    } else {
+      // Reset if no data
+      setHardDriveHealthData([]);
+      setRemarks('');
     }
+    
+    // Always mark as initialized after first render, even if no data
+    // This ensures onDataChange will be called when user fills in data
+    isInitialized.current = true;
   }, [data]);
 
   // Fetch ResultStatus options on component mount
@@ -85,13 +115,14 @@ const HardDriveHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
 
   // Update parent component when data changes (but not on initial load)
   useEffect(() => {
-    if (isInitialized.current && onDataChange) {
-      onDataChange({
+    if (isInitialized.current && onDataChangeRef.current) {
+      console.log('HardDriveHealth_Edit - Calling onDataChange with:', { hardDriveHealthData, remarks });
+      onDataChangeRef.current({
         hardDriveHealthData,
         remarks
       });
     }
-  }, [hardDriveHealthData, remarks, onDataChange]);
+  }, [hardDriveHealthData, remarks]); // Removed onDataChange from dependencies to prevent infinite loop
 
   // Calculate completion status
   useEffect(() => {

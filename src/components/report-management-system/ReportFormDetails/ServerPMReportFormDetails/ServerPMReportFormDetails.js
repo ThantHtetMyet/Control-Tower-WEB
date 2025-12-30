@@ -69,7 +69,7 @@ const ServerPMReportFormDetails = () => {
   const [serverPMData, setServerPMData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentStep, setCurrentStep] = useState('formStatus');
+  const [currentStep, setCurrentStep] = useState('signOff');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [finalReports, setFinalReports] = useState([]);
@@ -79,7 +79,6 @@ const ServerPMReportFormDetails = () => {
 
   // Step configuration - matching ServerPMReportForm exactly
   const steps = [
-    'formStatus',
     'signOff',
     'serverHealth',
     'hardDriveHealth',
@@ -98,7 +97,8 @@ const ServerPMReportFormDetails = () => {
     'hotFixes',
     'autoFailOver',
     'asaFirewall',
-    'softwarePatch'
+    'softwarePatch',
+    'formStatus'
   ];
 
   const stepTitles = {
@@ -846,7 +846,7 @@ const ServerPMReportFormDetails = () => {
               <Button
                 variant="contained"
                 onClick={handleNext}
-                disabled={isTransitioning || currentStep === 'softwarePatch'}
+                disabled={isTransitioning || currentStep === 'formStatus'}
                 endIcon={<ArrowForwardIosIcon fontSize="small" />}
                 sx={{
                   background: RMSTheme.components.button.primary.background,
@@ -863,7 +863,7 @@ const ServerPMReportFormDetails = () => {
                   }
                 }}
               >
-                {currentStep === 'softwarePatch' ? 'End' : 'Next '}
+                {currentStep === 'formStatus' ? 'End' : 'Next '}
               </Button>
             </Box>
           </Paper>

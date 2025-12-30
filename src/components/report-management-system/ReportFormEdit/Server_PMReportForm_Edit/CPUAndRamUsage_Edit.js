@@ -43,6 +43,9 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
 
   // Initialize data from props when meaningful data is available
   useEffect(() => {
+    // Only initialize once
+    if (isInitialized.current) return;
+    
     // Check if we have meaningful data to initialize with - following DiskUsage_Edit pattern
     const hasData = data && (
       (data.memoryUsageData !== undefined) || // Accept even empty array
@@ -51,7 +54,7 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
       (data.remarks !== undefined) // Accept even empty remarks
     );
     
-    if (hasData && !isInitialized.current) {
+    if (hasData) {
       
       // Handle API response format (pmServerCPUAndMemoryUsages)
       if (data.pmServerCPUAndMemoryUsages && data.pmServerCPUAndMemoryUsages.length > 0) {
@@ -156,9 +159,11 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
           setRemarks(data.remarks);
         }
       }
-      
-      isInitialized.current = true;
     }
+    
+    // Always mark as initialized after first render, even if no data
+    // This ensures onDataChange will be called when user fills in data
+    isInitialized.current = true;
   }, [data]);
 
   // Fetch ResultStatus options on component mount
@@ -186,6 +191,7 @@ const CPUAndRamUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
   // Update parent component when data changes (but not on initial load)
   useEffect(() => {
     if (isInitialized.current && onDataChange) {
+      console.log('CPUAndRamUsage_Edit - Calling onDataChange with:', { memoryUsageData, cpuUsageData, remarks });
       onDataChange({
         memoryUsageData,
         cpuUsageData,

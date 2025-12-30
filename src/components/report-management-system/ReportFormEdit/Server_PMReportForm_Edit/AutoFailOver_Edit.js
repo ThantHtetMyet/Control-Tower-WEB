@@ -31,6 +31,9 @@ const AutoFailOver_Edit = ({ data, onDataChange, onStatusChange }) => {
 
   // Initialize data when meaningful data is available
   useEffect(() => {
+    // Only initialize once
+    if (isInitialized.current) return;
+    
     // Check if we have meaningful data to initialize with
     const hasData = data && (
       (data.pmServerFailOvers && data.pmServerFailOvers.length > 0) ||
@@ -39,7 +42,7 @@ const AutoFailOver_Edit = ({ data, onDataChange, onStatusChange }) => {
       (data.result && data.result.trim() !== '')
     );
     
-    if (hasData && !isInitialized.current) {
+    if (hasData) {
       // Handle new API structure with pmServerFailOvers
       if (data.pmServerFailOvers && data.pmServerFailOvers.length > 0) {
         const failOverRecord = data.pmServerFailOvers[0];
@@ -92,7 +95,7 @@ const AutoFailOver_Edit = ({ data, onDataChange, onStatusChange }) => {
       isInitialized.current = true;
     }
     // Initialize with default scenarios if no data
-    else if (!hasData && !isInitialized.current) {
+    else if (!hasData) {
       setAutoFailOverData(failoverScenarios.map((scenario, index) => ({ 
         serialNumber: index + 1,
         failoverType: scenario.type,
@@ -105,8 +108,11 @@ const AutoFailOver_Edit = ({ data, onDataChange, onStatusChange }) => {
         isDeleted: false
       })));
       setRemarks('');
-      isInitialized.current = true;
     }
+    
+    // Always mark as initialized after first render, even if no data
+    // This ensures onDataChange will be called when user fills in data
+    isInitialized.current = true;
   }, [data]);
 
   // Fetch YesNoStatus options on component mount

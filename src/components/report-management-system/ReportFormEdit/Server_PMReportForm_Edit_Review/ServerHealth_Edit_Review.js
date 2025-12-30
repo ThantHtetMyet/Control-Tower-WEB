@@ -31,18 +31,41 @@ const ServerHealth_Edit_Review = ({ data, disabled = true, formData }) => {
   // Initialize data from props only once
   useEffect(() => {
     if (!isInitialized.current) {
+      let serverData = [];
+      let remarksData = '';
+      
       // Handle case where data is the serverHealthData array directly
       if (Array.isArray(data) && data.length > 0) {
-        setServerHealthData(data);
-      } else if (data && data.pmServerHealths && data.pmServerHealths.length > 0) {
-        setServerHealthData(data.pmServerHealths);
-      } else if (data && data.serverHealthData && data.serverHealthData.length > 0) {
-        setServerHealthData(data.serverHealthData);
+        serverData = data;
+      } else if (data && data.pmServerHealths) {
+        // Handle transformed format: pmServerHealths is array with [{ details: [...], remarks: '' }]
+        if (Array.isArray(data.pmServerHealths) && data.pmServerHealths.length > 0) {
+          const firstItem = data.pmServerHealths[0];
+          // Check if it has details array (transformed format from Edit)
+          if (firstItem.details && Array.isArray(firstItem.details)) {
+            serverData = firstItem.details;
+            remarksData = firstItem.remarks || '';
+          } else {
+            // Legacy format: array of server objects
+            serverData = data.pmServerHealths;
+          }
+        }
+        // Get remarks from top level if not found in details
+        if (!remarksData && data.remarks) {
+          remarksData = data.remarks;
+        }
+      } else if (data && data.serverHealthData && Array.isArray(data.serverHealthData)) {
+        serverData = data.serverHealthData;
+        remarksData = data.remarks || '';
       }
+      
+      setServerHealthData(serverData);
       
       // Get remarks from formData or data
       if (formData && formData.serverHealthRemarks) {
         setRemarks(formData.serverHealthRemarks);
+      } else if (remarksData) {
+        setRemarks(remarksData);
       } else if (data && data.remarks) {
         setRemarks(data.remarks);
       }
@@ -174,7 +197,7 @@ const ServerHealth_Edit_Review = ({ data, disabled = true, formData }) => {
                       <TextField
                         fullWidth
                         variant="outlined"
-                        value={getStatusName(server.result, resultStatusOptions)}
+                        value={getStatusName(server.result || server.resultStatusID, resultStatusOptions)}
                         disabled
                         sx={disabledFieldStyle}
                         size="small"

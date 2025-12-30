@@ -40,6 +40,9 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
 
   // Initialize data when meaningful data is available
   useEffect(() => {
+    // Only initialize once
+    if (isInitialized.current) return;
+    
     // Check if we have meaningful data to initialize with
     const hasData = data && (
       (data.pmServerASAFirewalls && data.pmServerASAFirewalls.length > 0) ||
@@ -48,7 +51,7 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
       (data.result && data.result.trim() !== '')
     );
     
-    if (hasData && !isInitialized.current) {
+    if (hasData) {
       
       // Handle new API structure with pmServerASAFirewalls
       if (data.pmServerASAFirewalls && data.pmServerASAFirewalls.length > 0) {
@@ -84,11 +87,9 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
       else {
         setRemarks(data.remarks || '');
       }
-      
-      isInitialized.current = true;
     }
     // Initialize with default data if no data
-    else if (!hasData && !isInitialized.current) {
+    else if (!hasData) {
       const defaultData = [
         { 
           serialNumber: 1,
@@ -117,8 +118,11 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
       ];
       setAsaFirewallData(defaultData);
       setRemarks('');
-      isInitialized.current = true;
     }
+    
+    // Always mark as initialized after first render, even if no data
+    // This ensures onDataChange will be called when user fills in data
+    isInitialized.current = true;
   }, [data]);
 
   // Snackbar helper function

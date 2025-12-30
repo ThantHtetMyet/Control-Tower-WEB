@@ -31,7 +31,10 @@ const WillowlynxSumpPitCCTVCamera_Edit = ({ data, onDataChange, onStatusChange }
       (data.remarks && data.remarks.trim() !== '')
     );
     
-    if (hasData && !isInitialized.current) {
+    // Only initialize once
+    if (isInitialized.current) return;
+    
+    if (hasData) {
       // Handle new API structure with pmServerWillowlynxCCTVCameras
       if (data.pmServerWillowlynxCCTVCameras && data.pmServerWillowlynxCCTVCameras.length > 0) {
         const cctvCameraData = data.pmServerWillowlynxCCTVCameras[0];
@@ -44,12 +47,11 @@ const WillowlynxSumpPitCCTVCamera_Edit = ({ data, onDataChange, onStatusChange }
         if (data.result) setResult(data.result);
         if (data.remarks) setRemarks(data.remarks);
       }
-      
-      isInitialized.current = true;
-    } else if (!hasData && isInitialized.current) {
-      // Reset initialization flag when no meaningful data is present
-      isInitialized.current = false;
     }
+    
+    // Always mark as initialized after first render, even if no data
+    // This ensures onDataChange will be called when user fills in data
+    isInitialized.current = true;
   }, [data]);
 
   // Fetch YesNoStatus options on component mount

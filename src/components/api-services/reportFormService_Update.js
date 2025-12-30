@@ -18,10 +18,22 @@ export const updateServerPMReportForm = async (id, formData, user) => {
         return details.map(detail => {
           const transformedDetail = { ...detail };
           
+          // Preserve ID for updates (convert to uppercase ID for API)
+          if (transformedDetail.id !== undefined) {
+            transformedDetail.ID = transformedDetail.id;
+            // Don't delete id, keep both for compatibility
+          }
+          
           // Transform "result" field to "ResultStatusID" for API compatibility
           if (transformedDetail.result !== undefined) {
             transformedDetail.ResultStatusID = transformedDetail.result;
             delete transformedDetail.result;
+          }
+          
+          // Transform "resultStatusID" field to "ResultStatusID" (capitalize)
+          if (transformedDetail.resultStatusID !== undefined) {
+            transformedDetail.ResultStatusID = transformedDetail.resultStatusID;
+            delete transformedDetail.resultStatusID;
           }
           
           // Transform "done" field to "ResultStatusID" for API compatibility (used by HotFixes)
@@ -39,6 +51,69 @@ export const updateServerPMReportForm = async (id, formData, user) => {
           if (transformedDetail.doneId !== undefined) {
             transformedDetail.ResultStatusID = transformedDetail.doneId;
             delete transformedDetail.doneId;
+          }
+          
+          // Transform yesNoStatusID to YesNoStatusID
+          if (transformedDetail.yesNoStatusID !== undefined) {
+            transformedDetail.YesNoStatusID = transformedDetail.yesNoStatusID;
+            delete transformedDetail.yesNoStatusID;
+          }
+          
+          // Transform serverName to ServerName
+          if (transformedDetail.serverName !== undefined) {
+            transformedDetail.ServerName = transformedDetail.serverName;
+            // Keep serverName for compatibility
+          }
+          
+          // Transform serialNo to SerialNo
+          if (transformedDetail.serialNo !== undefined) {
+            transformedDetail.SerialNo = transformedDetail.serialNo;
+            // Keep serialNo for compatibility
+          }
+          
+          // Transform remarks to Remarks
+          if (transformedDetail.remarks !== undefined) {
+            transformedDetail.Remarks = transformedDetail.remarks;
+            // Keep remarks for compatibility
+          }
+          
+          // Transform disk-related fields for diskUsageData
+          if (transformedDetail.diskName !== undefined) {
+            transformedDetail.DiskName = transformedDetail.diskName;
+            // Keep diskName for compatibility
+          }
+          
+          if (transformedDetail.capacity !== undefined) {
+            transformedDetail.Capacity = transformedDetail.capacity;
+            // Keep capacity for compatibility
+          }
+          
+          if (transformedDetail.freeSpace !== undefined) {
+            transformedDetail.FreeSpace = transformedDetail.freeSpace;
+            // Keep freeSpace for compatibility
+          }
+          
+          if (transformedDetail.usage !== undefined) {
+            transformedDetail.Usage = transformedDetail.usage;
+            // Keep usage for compatibility
+          }
+          
+          // Transform serverDiskStatusID to ServerDiskStatusID
+          if (transformedDetail.serverDiskStatusID !== undefined) {
+            transformedDetail.ServerDiskStatusID = transformedDetail.serverDiskStatusID;
+            // Keep serverDiskStatusID for compatibility
+          }
+          
+          // Mark as new or modified based on ID presence
+          if (transformedDetail.ID || transformedDetail.id) {
+            transformedDetail.IsNew = false;
+          } else {
+            transformedDetail.IsNew = true;
+          }
+          
+          // Preserve isDeleted flag
+          if (transformedDetail.isDeleted !== undefined) {
+            transformedDetail.IsDeleted = transformedDetail.isDeleted;
           }
           
           return transformedDetail;
@@ -93,6 +168,399 @@ export const updateServerPMReportForm = async (id, formData, user) => {
         return {
           remarks: '',
           details: transformDetailFields(componentData)
+        };
+      }
+      
+      // Handle Review format (pmServerHealths, pmServerHardDriveHealths, etc.)
+      if (componentData.pmServerHealths && Array.isArray(componentData.pmServerHealths) && componentData.pmServerHealths.length > 0) {
+        const firstItem = componentData.pmServerHealths[0];
+        const details = firstItem.details || [];
+        const remarks = firstItem.remarks || componentData.remarks || '';
+        
+        if (details.length === 0 && !remarks.trim()) {
+          return null;
+        }
+        
+        return {
+          remarks: remarks,
+          details: transformDetailFields(details)
+        };
+      }
+      
+      if (componentData.pmServerHardDriveHealths && Array.isArray(componentData.pmServerHardDriveHealths) && componentData.pmServerHardDriveHealths.length > 0) {
+        const firstItem = componentData.pmServerHardDriveHealths[0];
+        const details = firstItem.details || [];
+        const remarks = firstItem.remarks || componentData.remarks || '';
+        
+        if (details.length === 0 && !remarks.trim()) {
+          return null;
+        }
+        
+        return {
+          remarks: remarks,
+          details: transformDetailFields(details)
+        };
+      }
+      
+      if (componentData.pmServerCPUAndMemoryUsages && Array.isArray(componentData.pmServerCPUAndMemoryUsages) && componentData.pmServerCPUAndMemoryUsages.length > 0) {
+        const firstItem = componentData.pmServerCPUAndMemoryUsages[0];
+        const memoryDetails = firstItem.memoryUsageDetails || [];
+        const cpuDetails = firstItem.cpuUsageDetails || [];
+        const remarks = firstItem.remarks || componentData.remarks || '';
+        
+        if (memoryDetails.length === 0 && cpuDetails.length === 0 && !remarks.trim()) {
+          return null;
+        }
+        
+        // Transform memory details with proper field mappings
+        const transformedMemoryDetails = memoryDetails.map(detail => {
+          const detailId = detail.ID || detail.id || null;
+          return {
+            ID: detailId,
+            SerialNo: detail.SerialNo || detail.serialNo || '',
+            ServerName: detail.ServerName || detail.serverName || '',
+            MemorySize: detail.MemorySize || detail.memorySize || '',
+            MemoryInUse: detail.MemoryInUse || detail.memoryInUse || detail.memoryUsagePercentage || '',
+            ResultStatusID: detail.ResultStatusID || detail.resultStatusID || detail.result || null,
+            Remarks: detail.Remarks || detail.remarks || '',
+            IsNew: !detailId,
+            IsDeleted: detail.IsDeleted || detail.isDeleted || false
+          };
+        });
+        
+        // Transform CPU details with proper field mappings
+        const transformedCpuDetails = cpuDetails.map(detail => {
+          const detailId = detail.ID || detail.id || null;
+          return {
+            ID: detailId,
+            SerialNo: detail.SerialNo || detail.serialNo || '',
+            ServerName: detail.ServerName || detail.serverName || '',
+            CpuUsage: detail.CpuUsage || detail.cpuUsage || detail.cpuUsagePercentage || '',
+            ResultStatusID: detail.ResultStatusID || detail.resultStatusID || detail.result || null,
+            Remarks: detail.Remarks || detail.remarks || '',
+            IsNew: !detailId,
+            IsDeleted: detail.IsDeleted || detail.isDeleted || false
+          };
+        });
+        
+        return {
+          remarks: remarks,
+          memoryUsageDetails: transformedMemoryDetails,
+          cpuUsageDetails: transformedCpuDetails
+        };
+      }
+      
+      if (componentData.pmServerDiskUsageHealths && Array.isArray(componentData.pmServerDiskUsageHealths) && componentData.pmServerDiskUsageHealths.length > 0) {
+        const firstItem = componentData.pmServerDiskUsageHealths[0];
+        const details = firstItem.pmServerDiskUsageHealthDetails || firstItem.details || [];
+        const remarks = firstItem.remarks || componentData.remarks || '';
+        
+        if (details.length === 0 && !remarks.trim()) {
+          return null;
+        }
+        
+        // Convert Review format (flat details) to Edit format (servers structure) for consistency
+        // But if data already has servers structure (from Edit component), use that instead
+        if (componentData.servers && Array.isArray(componentData.servers)) {
+          // Data is already in Edit format (servers structure), transform directly
+          const transformedServers = componentData.servers.map(server => ({
+            Id: server.id || null,
+            ServerName: server.serverName,
+            Disks: (server.disks || []).map(disk => {
+              // Map status name to ID if needed
+              let statusId = disk.status;
+              if (typeof disk.status === 'string' && componentData.serverDiskStatusOptions) {
+                const statusOption = componentData.serverDiskStatusOptions.find(option => option.name === disk.status);
+                if (statusOption) {
+                  statusId = statusOption.id;
+                }
+              }
+              
+              // Map check name to ID if needed
+              let checkId = disk.check;
+              if (typeof disk.check === 'string' && componentData.resultStatusOptions) {
+                const checkOption = componentData.resultStatusOptions.find(option => option.name === disk.check);
+                if (checkOption) {
+                  checkId = checkOption.id;
+                }
+              }
+              
+              return {
+                Id: disk.id || null,
+                Disk: disk.disk,
+                Status: statusId,
+                Capacity: disk.capacity,
+                FreeSpace: disk.freeSpace,
+                Usage: disk.usage || '', // Ensure Usage is capitalized and included
+                Check: checkId,
+                Remarks: disk.remarks || '',
+                IsNew: !disk.id, // Set IsNew based on ID presence
+                IsModified: disk.isModified || false, // Preserve isModified flag
+                IsDeleted: disk.isDeleted || false
+              };
+            }),
+            IsNew: !server.id, // Set IsNew based on ID presence
+            IsModified: server.isModified || false, // Preserve isModified flag
+            IsDeleted: server.isDeleted || false
+          }));
+          
+          return {
+            remarks: componentData.remarks || remarks,
+            servers: transformedServers,
+            details: [] // Keep empty for backward compatibility
+          };
+        }
+        
+        // Otherwise, convert from Review format (flat details) to servers structure
+        const serverMap = new Map();
+        
+        details.forEach(detail => {
+          const serverName = detail.ServerName || detail.serverName || '';
+          if (!serverName) return;
+          
+          if (!serverMap.has(serverName)) {
+            const serverId = detail.PMServerDiskUsageHealthID || detail.pmServerDiskUsageHealthID || null;
+            serverMap.set(serverName, {
+              id: serverId,
+              serverName: serverName,
+              disks: [],
+              isNew: !serverId,
+              isModified: false,
+              isDeleted: false
+            });
+          }
+          
+          const diskId = detail.ID || detail.id || null;
+          serverMap.get(serverName).disks.push({
+            id: diskId,
+            disk: detail.DiskName || detail.diskName || '',
+            status: detail.ServerDiskStatusID || detail.serverDiskStatusID || '',
+            capacity: detail.Capacity || detail.capacity || '',
+            freeSpace: detail.FreeSpace || detail.freeSpace || '',
+            usage: detail.Usage || detail.usage || '', // Ensure usage field is included
+            check: detail.ResultStatusID || detail.resultStatusID || '',
+            remarks: detail.Remarks || detail.remarks || '',
+            isNew: !diskId, // Set IsNew based on ID presence
+            isModified: false, // Will be set to true by Edit component when user modifies
+            isDeleted: detail.IsDeleted || detail.isDeleted || false
+          });
+        });
+        
+        const servers = Array.from(serverMap.values());
+        
+        // Transform to backend DTO structure (same as Edit format handling)
+        const transformedServers = servers.map(server => ({
+          Id: server.id || null,
+          ServerName: server.serverName,
+          Disks: server.disks.map(disk => {
+            // Map status name to ID if needed
+            let statusId = disk.status;
+            if (typeof disk.status === 'string' && componentData.serverDiskStatusOptions) {
+              const statusOption = componentData.serverDiskStatusOptions.find(option => option.name === disk.status);
+              if (statusOption) {
+                statusId = statusOption.id;
+              }
+            }
+            
+            // Map check name to ID if needed
+            let checkId = disk.check;
+            if (typeof disk.check === 'string' && componentData.resultStatusOptions) {
+              const checkOption = componentData.resultStatusOptions.find(option => option.name === disk.check);
+              if (checkOption) {
+                checkId = checkOption.id;
+              }
+            }
+            
+            return {
+              Id: disk.id || null,
+              Disk: disk.disk,
+              Status: statusId,
+              Capacity: disk.capacity,
+              FreeSpace: disk.freeSpace,
+              Usage: disk.usage || '', // Ensure Usage is capitalized and included
+              Check: checkId,
+              Remarks: disk.remarks || '',
+              IsNew: !disk.id, // Set IsNew based on ID presence
+              IsModified: disk.isModified || false, // Preserve isModified flag
+              IsDeleted: disk.isDeleted || false
+            };
+          }),
+          IsNew: !server.id, // Set IsNew based on ID presence
+          IsModified: server.isModified || false, // Preserve isModified flag
+          IsDeleted: server.isDeleted || false
+        }));
+        
+        return {
+          remarks: remarks,
+          servers: transformedServers,
+          details: [] // Keep empty for backward compatibility
+        };
+      }
+      
+      // Handle Review format for timeSyncData
+      if (componentData.pmServerTimeSyncs && Array.isArray(componentData.pmServerTimeSyncs) && componentData.pmServerTimeSyncs.length > 0) {
+        const firstItem = componentData.pmServerTimeSyncs[0];
+        const details = firstItem.details || [];
+        const remarks = firstItem.remarks || componentData.remarks || '';
+        
+        if (details.length === 0 && !remarks.trim()) {
+          return null;
+        }
+        
+        return {
+          remarks: remarks,
+          details: transformDetailFields(details)
+        };
+      }
+      
+      // Handle Review format for hotFixesData
+      if (componentData.pmServerHotFixes && Array.isArray(componentData.pmServerHotFixes) && componentData.pmServerHotFixes.length > 0) {
+        const firstItem = componentData.pmServerHotFixes[0];
+        const details = firstItem.details || [];
+        const remarks = firstItem.remarks || componentData.remarks || '';
+        
+        if (details.length === 0 && !remarks.trim()) {
+          return null;
+        }
+        
+        return {
+          remarks: remarks,
+          details: transformDetailFields(details)
+        };
+      }
+      
+      // Handle Review format for monthlyDatabaseCreationData
+      if (componentData.pmServerMonthlyDatabaseCreations && Array.isArray(componentData.pmServerMonthlyDatabaseCreations) && componentData.pmServerMonthlyDatabaseCreations.length > 0) {
+        const firstItem = componentData.pmServerMonthlyDatabaseCreations[0];
+        const details = firstItem.details || [];
+        const remarks = firstItem.remarks || componentData.remarks || '';
+        
+        if (details.length === 0 && !remarks.trim()) {
+          return null;
+        }
+        
+        return {
+          remarks: remarks,
+          details: transformDetailFields(details)
+        };
+      }
+      
+      // Handle Review format for autoFailOverData
+      if (componentData.pmServerFailOvers && Array.isArray(componentData.pmServerFailOvers) && componentData.pmServerFailOvers.length > 0) {
+        const firstItem = componentData.pmServerFailOvers[0];
+        const details = firstItem.details || [];
+        const remarks = firstItem.remarks || componentData.remarks || '';
+        
+        if (details.length === 0 && !remarks.trim()) {
+          return null;
+        }
+        
+        return {
+          remarks: remarks,
+          details: transformDetailFields(details)
+        };
+      }
+      
+      // Handle Review format for asaFirewallData
+      if (componentData.pmServerASAFirewalls && Array.isArray(componentData.pmServerASAFirewalls) && componentData.pmServerASAFirewalls.length > 0) {
+        const firstItem = componentData.pmServerASAFirewalls[0];
+        const details = firstItem.details || [];
+        const remarks = firstItem.remarks || componentData.remarks || '';
+        
+        if (details.length === 0 && !remarks.trim()) {
+          return null;
+        }
+        
+        return {
+          remarks: remarks,
+          details: transformDetailFields(details)
+        };
+      }
+      
+      // Handle Review format for databaseBackupData
+      if (componentData.pmServerDatabaseBackups && Array.isArray(componentData.pmServerDatabaseBackups) && componentData.pmServerDatabaseBackups.length > 0) {
+        const firstItem = componentData.pmServerDatabaseBackups[0];
+        const mssqlDetails = firstItem.mssqlDetails || firstItem.mssqlDatabaseBackupDetails || [];
+        const scadaDetails = firstItem.scadaDetails || firstItem.scadaDataBackupDetails || [];
+        const remarks = firstItem.remarks || componentData.remarks || '';
+        const latestBackupFileName = firstItem.latestBackupFileName || componentData.latestBackupFileName || '';
+        
+        if (mssqlDetails.length === 0 && scadaDetails.length === 0 && !remarks.trim() && !latestBackupFileName.trim()) {
+          return null;
+        }
+        
+        return {
+          remarks: remarks,
+          latestBackupFileName: latestBackupFileName,
+          mssqlDetails: transformDetailFields(mssqlDetails),
+          scadaDetails: transformDetailFields(scadaDetails)
+        };
+      }
+      
+      // Handle Review format for networkHealthData
+      if (componentData.pmServerNetworkHealths && Array.isArray(componentData.pmServerNetworkHealths) && componentData.pmServerNetworkHealths.length > 0) {
+        const firstItem = componentData.pmServerNetworkHealths[0];
+        return {
+          YesNoStatusID: firstItem.yesNoStatusID || firstItem.result || null,
+          DateChecked: firstItem.dateChecked || null,
+          Remarks: firstItem.remarks || componentData.remarks || ''
+        };
+      }
+      
+      // Handle Review format for willowlynxProcessStatusData
+      if (componentData.pmServerWillowlynxProcessStatuses && Array.isArray(componentData.pmServerWillowlynxProcessStatuses) && componentData.pmServerWillowlynxProcessStatuses.length > 0) {
+        const firstItem = componentData.pmServerWillowlynxProcessStatuses[0];
+        return {
+          YesNoStatusID: firstItem.yesNoStatusID || firstItem.result || null,
+          Remarks: firstItem.remarks || componentData.remarks || ''
+        };
+      }
+      
+      // Handle Review format for willowlynxNetworkStatusData
+      if (componentData.pmServerWillowlynxNetworkStatuses && Array.isArray(componentData.pmServerWillowlynxNetworkStatuses) && componentData.pmServerWillowlynxNetworkStatuses.length > 0) {
+        const firstItem = componentData.pmServerWillowlynxNetworkStatuses[0];
+        return {
+          YesNoStatusID: firstItem.yesNoStatusID || firstItem.result || null,
+          DateChecked: firstItem.dateChecked || null,
+          Remarks: firstItem.remarks || componentData.remarks || ''
+        };
+      }
+      
+      // Handle Review format for willowlynxRTUStatusData
+      if (componentData.pmServerWillowlynxRTUStatuses && Array.isArray(componentData.pmServerWillowlynxRTUStatuses) && componentData.pmServerWillowlynxRTUStatuses.length > 0) {
+        const firstItem = componentData.pmServerWillowlynxRTUStatuses[0];
+        return {
+          YesNoStatusID: firstItem.yesNoStatusID || firstItem.result || null,
+          DateChecked: firstItem.dateChecked || null,
+          Remarks: firstItem.remarks || componentData.remarks || ''
+        };
+      }
+      
+      // Handle Review format for willowlynxHistoricalTrendData
+      if (componentData.pmServerWillowlynxHistoricalTrends && Array.isArray(componentData.pmServerWillowlynxHistoricalTrends) && componentData.pmServerWillowlynxHistoricalTrends.length > 0) {
+        const firstItem = componentData.pmServerWillowlynxHistoricalTrends[0];
+        return {
+          YesNoStatusID: firstItem.yesNoStatusID || firstItem.result || null,
+          DateChecked: firstItem.dateChecked || null,
+          Remarks: firstItem.remarks || componentData.remarks || ''
+        };
+      }
+      
+      // Handle Review format for willowlynxHistoricalReportData
+      if (componentData.pmServerWillowlynxHistoricalReports && Array.isArray(componentData.pmServerWillowlynxHistoricalReports) && componentData.pmServerWillowlynxHistoricalReports.length > 0) {
+        const firstItem = componentData.pmServerWillowlynxHistoricalReports[0];
+        return {
+          YesNoStatusID: firstItem.yesNoStatusID || firstItem.result || null,
+          Remarks: firstItem.remarks || componentData.remarks || ''
+        };
+      }
+      
+      // Handle Review format for willowlynxSumpPitCCTVCameraData
+      if (componentData.pmServerWillowlynxCCTVCameras && Array.isArray(componentData.pmServerWillowlynxCCTVCameras) && componentData.pmServerWillowlynxCCTVCameras.length > 0) {
+        const firstItem = componentData.pmServerWillowlynxCCTVCameras[0];
+        return {
+          YesNoStatusID: firstItem.yesNoStatusID || firstItem.result || null,
+          Remarks: firstItem.remarks || componentData.remarks || ''
         };
       }
       
@@ -524,43 +992,81 @@ export const updateServerPMReportForm = async (id, formData, user) => {
         let detailsToTransform = dataArray;
         
         // Special handling for diskUsageData - send hierarchical structure directly
-        if (componentName === 'diskUsageData' && componentData.servers) {
-          console.log('DiskUsage Transform - Input servers:', componentData.servers);
+        // Priority: Use servers structure if available (from Edit component with flags)
+        if (componentName === 'diskUsageData' && componentData.servers && Array.isArray(componentData.servers)) {
+          console.log('DiskUsage Transform - Input servers (Edit format):', JSON.stringify(componentData.servers, null, 2));
+          
+          // Include ALL servers (including deleted ones with IDs) so backend can process deletions
+          // Only exclude new items (no ID) that are deleted (can't delete what doesn't exist)
+          const serversToProcess = componentData.servers.filter(server => 
+            !server.isDeleted || server.id // Include if not deleted OR if it has an ID (needs to be marked as deleted)
+          );
           
           // Transform servers to match backend DTO structure
-          const transformedServers = componentData.servers.map(server => ({
-            Id: server.id || null,
-            ServerName: server.serverName,
-            Disks: server.disks.map(disk => {
-              // Map status name to ID if needed
-              let statusId = disk.status;
-              if (typeof disk.status === 'string' && componentData.serverDiskStatusOptions) {
-                const statusOption = componentData.serverDiskStatusOptions.find(option => option.name === disk.status);
-                if (statusOption) {
-                  statusId = statusOption.id;
+          const transformedServers = serversToProcess.map(server => {
+            // Include ALL disks (including deleted ones with IDs) so backend can process deletions
+            // Only exclude new items (no ID) that are deleted
+            const disksToProcess = (server.disks || []).filter(disk => 
+              !disk.isDeleted || disk.id // Include if not deleted OR if it has an ID (needs to be marked as deleted)
+            );
+            
+            return {
+              Id: server.id || null,
+              ServerName: server.serverName,
+              Disks: disksToProcess.map(disk => {
+                // Map status name to ID if needed
+                let statusId = disk.status;
+                if (typeof disk.status === 'string' && componentData.serverDiskStatusOptions) {
+                  const statusOption = componentData.serverDiskStatusOptions.find(option => 
+                    option.name === disk.status || option.Name === disk.status
+                  );
+                  if (statusOption) {
+                    statusId = statusOption.id || statusOption.ID;
+                  }
                 }
-              }
-              
-              return {
-                Id: disk.id || null,
-                Disk: disk.disk,
-                Status: statusId,
-                Capacity: disk.capacity,
-                FreeSpace: disk.freeSpace,
-                Usage: disk.usage,
-                Check: disk.check,
-                Remarks: disk.remarks || '',
-                IsNew: disk.isNew || false,
-                IsModified: disk.isModified || false,
-                IsDeleted: disk.isDeleted || false
-              };
-            }),
-            IsNew: server.isNew || false,
-            IsModified: server.isModified || false,
-            IsDeleted: server.isDeleted || false
-          }));
+                
+                // Map check name to ID if needed
+                let checkId = disk.check;
+                if (typeof disk.check === 'string' && componentData.resultStatusOptions) {
+                  const checkOption = componentData.resultStatusOptions.find(option => 
+                    option.name === disk.check || option.Name === disk.check
+                  );
+                  if (checkOption) {
+                    checkId = checkOption.id || checkOption.ID;
+                  }
+                }
+                
+                const diskId = disk.id || null;
+                return {
+                  Id: diskId,
+                  Disk: disk.disk || '',
+                  Status: statusId || '',
+                  Capacity: disk.capacity || '',
+                  FreeSpace: disk.freeSpace || '',
+                  Usage: disk.usage || '', // Ensure Usage field is included
+                  Check: checkId || '',
+                  Remarks: disk.remarks || '',
+                  IsNew: !diskId, // Set IsNew based on ID presence
+                  IsModified: disk.isModified || false, // Preserve isModified flag
+                  IsDeleted: disk.isDeleted || false // Include IsDeleted flag - backend needs this to mark as deleted
+                };
+              }),
+              IsNew: !server.id, // Set IsNew based on ID presence
+              IsModified: server.isModified || false, // Preserve isModified flag
+              IsDeleted: server.isDeleted || false // Include IsDeleted flag - backend needs this to mark as deleted
+            };
+          });
           
-          console.log('DiskUsage Transform - Transformed servers:', transformedServers);
+          console.log('DiskUsage Transform - Transformed servers:', JSON.stringify(transformedServers, null, 2));
+          
+          // Check if there's meaningful data
+          const hasServers = transformedServers.length > 0;
+          const hasDisks = transformedServers.some(server => server.Disks && server.Disks.length > 0);
+          const hasRemarks = componentData.remarks && componentData.remarks.trim() !== '';
+          
+          if (!hasServers && !hasDisks && !hasRemarks) {
+            return null;
+          }
           
           return {
             remarks: componentData.remarks || '',
@@ -577,46 +1083,59 @@ export const updateServerPMReportForm = async (id, formData, user) => {
           // Add memory usage data
           if (componentData.memoryUsageData && Array.isArray(componentData.memoryUsageData)) {
             componentData.memoryUsageData.forEach((memory, index) => {
-              // Include all items, even if marked as deleted (backend needs to handle deletion)
-              if (memory) {
-                const resultStatusID = memory.memoryUsageCheck && memory.memoryUsageCheck.trim() !== '' ? memory.memoryUsageCheck : null;
-                
-                memoryUsageDetails.push({
-                  ID: (memory.IsNew || memory.isNew) ? null : (memory.ID || memory.id || null),
-                  serialNo: (index + 1).toString(),
-                  serverName: memory.machineName || '',
-                  memorySize: memory.memorySize || '',
-                  memoryInUse: memory.memoryInUse || '',
-                  resultStatusID: resultStatusID,
-                  remarks: memory.remarks || '',
-                  IsNew: memory.IsNew || memory.isNew || false,
-                  IsDeleted: memory.IsDeleted || memory.isDeleted || false
-                  // Note: IsModified is not supported in UpdatePMServerMemoryUsageDetailDto
-                });
+              // Skip deleted items unless they have an ID (need to mark as deleted in backend)
+              if (!memory || (memory.isDeleted && !memory.id && !memory.ID)) {
+                return;
               }
+              
+              const memoryId = memory.ID || memory.id || null;
+              const resultStatusID = memory.memoryUsageCheck && memory.memoryUsageCheck.trim() !== '' ? memory.memoryUsageCheck : null;
+              
+              memoryUsageDetails.push({
+                ID: memoryId,
+                SerialNo: memory.serialNo || (index + 1).toString(), // Preserve actual serialNo
+                ServerName: memory.machineName || memory.serverName || '',
+                MemorySize: memory.memorySize || '',
+                MemoryInUse: memory.memoryInUse || memory.memoryInUsed || '',
+                ResultStatusID: resultStatusID,
+                Remarks: memory.remarks || '',
+                IsNew: !memoryId, // Set IsNew based on ID presence
+                IsDeleted: memory.IsDeleted || memory.isDeleted || false
+              });
             });
           }
           
           // Add CPU usage data
           if (componentData.cpuUsageData && Array.isArray(componentData.cpuUsageData)) {
             componentData.cpuUsageData.forEach((cpu, index) => {
-              // Include all items, even if marked as deleted (backend needs to handle deletion)
-              if (cpu) {
-                const resultStatusID = cpu.cpuUsageCheck && cpu.cpuUsageCheck.trim() !== '' ? cpu.cpuUsageCheck : null;
-                
-                cpuUsageDetails.push({
-                  ID: (cpu.IsNew || cpu.isNew) ? null : (cpu.ID || cpu.id || null),
-                  serialNo: (index + 1).toString(),
-                  serverName: cpu.machineName || '',
-                  cpuUsage: cpu.cpuUsage || '',
-                  resultStatusID: resultStatusID,
-                  remarks: cpu.remarks || '',
-                  IsNew: cpu.IsNew || cpu.isNew || false,
-                  IsDeleted: cpu.IsDeleted || cpu.isDeleted || false
-                  // Note: IsModified is not supported in UpdatePMServerCPUUsageDetailDto
-                });
+              // Skip deleted items unless they have an ID (need to mark as deleted in backend)
+              if (!cpu || (cpu.isDeleted && !cpu.id && !cpu.ID)) {
+                return;
               }
+              
+              const cpuId = cpu.ID || cpu.id || null;
+              const resultStatusID = cpu.cpuUsageCheck && cpu.cpuUsageCheck.trim() !== '' ? cpu.cpuUsageCheck : null;
+              
+              cpuUsageDetails.push({
+                ID: cpuId,
+                SerialNo: cpu.serialNo || (index + 1).toString(), // Preserve actual serialNo
+                ServerName: cpu.machineName || cpu.serverName || '',
+                CpuUsage: cpu.cpuUsage || '',
+                ResultStatusID: resultStatusID,
+                Remarks: cpu.remarks || '',
+                IsNew: !cpuId, // Set IsNew based on ID presence
+                IsDeleted: cpu.IsDeleted || cpu.isDeleted || false
+              });
             });
+          }
+          
+          // Check if there's meaningful data
+          const hasMemoryData = memoryUsageDetails.length > 0;
+          const hasCpuData = cpuUsageDetails.length > 0;
+          const hasRemarks = componentData.remarks && componentData.remarks.trim() !== '';
+          
+          if (!hasMemoryData && !hasCpuData && !hasRemarks) {
+            return null;
           }
           
           return {

@@ -31,16 +31,39 @@ const HardDriveHealth_Edit_Review = ({ data, disabled = true, formData }) => {
   // Initialize data from props only once
   useEffect(() => {
     if (!isInitialized.current) {
+      let driveData = [];
+      let remarksData = '';
+      
       if (Array.isArray(data) && data.length > 0) {
-        setHardDriveHealthData(data);
-      } else if (data && data.pmServerHardDriveHealths && data.pmServerHardDriveHealths.length > 0) {
-        setHardDriveHealthData(data.pmServerHardDriveHealths);
-      } else if (data && data.hardDriveHealthData && data.hardDriveHealthData.length > 0) {
-        setHardDriveHealthData(data.hardDriveHealthData);
+        driveData = data;
+      } else if (data && data.pmServerHardDriveHealths) {
+        // Handle transformed format: pmServerHardDriveHealths is array with [{ details: [...], remarks: '' }]
+        if (Array.isArray(data.pmServerHardDriveHealths) && data.pmServerHardDriveHealths.length > 0) {
+          const firstItem = data.pmServerHardDriveHealths[0];
+          // Check if it has details array (transformed format from Edit)
+          if (firstItem.details && Array.isArray(firstItem.details)) {
+            driveData = firstItem.details;
+            remarksData = firstItem.remarks || '';
+          } else {
+            // Legacy format: array of drive objects
+            driveData = data.pmServerHardDriveHealths;
+          }
+        }
+        // Get remarks from top level if not found in details
+        if (!remarksData && data.remarks) {
+          remarksData = data.remarks;
+        }
+      } else if (data && data.hardDriveHealthData && Array.isArray(data.hardDriveHealthData)) {
+        driveData = data.hardDriveHealthData;
+        remarksData = data.remarks || '';
       }
+      
+      setHardDriveHealthData(driveData);
       
       if (formData && formData.hardDriveHealthRemarks) {
         setRemarks(formData.hardDriveHealthRemarks);
+      } else if (remarksData) {
+        setRemarks(remarksData);
       } else if (data && data.remarks) {
         setRemarks(data.remarks);
       }
@@ -183,7 +206,7 @@ const HardDriveHealth_Edit_Review = ({ data, disabled = true, formData }) => {
                       <TextField
                         fullWidth
                         variant="outlined"
-                        value={getStatusName(drive.result, resultStatusOptions)}
+                        value={getStatusName(drive.result || drive.resultStatusID, resultStatusOptions)}
                         disabled
                         sx={disabledFieldStyle}
                         size="small"

@@ -42,6 +42,9 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
   // Initialize data from props when meaningful data is available
   useEffect(() => {
     
+    // Only initialize once
+    if (isInitialized.current) return;
+    
     // Check if we have meaningful data to initialize with - following HardDriveHealth_Edit pattern
     // Accept data even if servers array is empty, as long as the data object exists
     const hasData = data && (
@@ -49,7 +52,7 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
       (data.pmServerDiskUsageHealths && data.pmServerDiskUsageHealths.length > 0) ||
       (data.remarks !== undefined) // Accept even empty remarks
     );
-    if (hasData && !isInitialized.current) {
+    if (hasData) {
       
       // Handle API response format (pmServerDiskUsageHealths) - similar to DiskUsage_Review flexible approach
       if (data.pmServerDiskUsageHealths && data.pmServerDiskUsageHealths.length > 0) {
@@ -142,15 +145,16 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
       } else if (data.comment) {
         setRemarks(data.comment);
       }
-      
-      isInitialized.current = true;
-    } else if (!hasData && !isInitialized.current) {
+    } else if (!hasData) {
       // Initialize with empty state if no data provided - following HardDriveHealth_Edit pattern
       console.log('DiskUsage_Edit - No data provided, initializing empty state'); // Debug log
       setServers([]);
       setRemarks('');
-      isInitialized.current = true;
     }
+    
+    // Always mark as initialized after first render, even if no data
+    // This ensures onDataChange will be called when user fills in data
+    isInitialized.current = true;
   }, [data]);
 
   // Fetch Server Disk Status options

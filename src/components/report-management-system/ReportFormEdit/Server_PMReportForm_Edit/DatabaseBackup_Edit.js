@@ -45,7 +45,10 @@ const DatabaseBackup_Edit = ({ data, onDataChange, onStatusChange }) => {
 
   // Initialize data from props - handle both API array format and legacy format, following MonthlyDatabaseCreation_Edit pattern
   useEffect(() => {
-    if (data && !isInitialized.current) {
+    // Only initialize once
+    if (isInitialized.current) return;
+    
+    if (data) {
       console.log('DatabaseBackup_Edit - Initializing with data:', data); // Debug log
       
       // Check if we already have processed data from previous user input (legacy format)
@@ -135,9 +138,11 @@ const DatabaseBackup_Edit = ({ data, onDataChange, onStatusChange }) => {
         setRemarks(remarksFromAPI);
         setLatestBackupFileName(latestBackupFileNameFromAPI);
       }
-      
-      isInitialized.current = true;
     }
+    
+    // Always mark as initialized after first render, even if no data
+    // This ensures onDataChange will be called when user fills in data
+    isInitialized.current = true;
   }, [data]);
 
   // Fetch YesNoStatus options on component mount

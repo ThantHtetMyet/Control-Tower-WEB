@@ -48,7 +48,10 @@ const MonthlyDatabaseCreation_Edit = ({ data, onDataChange, onStatusChange }) =>
   };
   // Initialize data from props - handle both API array format and legacy format
   useEffect(() => {
-    if (data && !isInitialized.current) {
+    // Only initialize once
+    if (isInitialized.current) return;
+    
+    if (data) {
       // Handle API array format (pmServerMonthlyDatabaseCreations)
       if (data.pmServerMonthlyDatabaseCreations && Array.isArray(data.pmServerMonthlyDatabaseCreations)) {
         const mappedData = data.pmServerMonthlyDatabaseCreations.flatMap(item => 
@@ -106,8 +109,11 @@ const MonthlyDatabaseCreation_Edit = ({ data, onDataChange, onStatusChange }) =>
         setMonthlyDatabaseData(processedData);
         setRemarks(data.remarks || '');
       }
-      isInitialized.current = true;
     }
+    
+    // Always mark as initialized after first render, even if no data
+    // This ensures onDataChange will be called when user fills in data
+    isInitialized.current = true;
   }, [data]);
 
   // Fetch YesNoStatus options on component mount

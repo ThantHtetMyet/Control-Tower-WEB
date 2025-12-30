@@ -17,7 +17,7 @@ import FirstContainer from './FirstContainer';
 import CMReportForm from './CMReportForm';
 import RTUPMReportForm from './RTUPMReportForm'; // Updated import
 import ServerPMReportForm from './Server_PMReportForm/ServerPMReportForm'; // Add Server PM import
-import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, submitServerPMReportForm, getNextJobNumber, uploadFinalReportAttachment, createReportFormImage, getReportFormImageTypes, generateCMFinalReportPdf, generateRTUPMFinalReportPdf, getFinalReportsByReportForm, downloadFinalReportAttachment } from '../../api-services/reportFormService';
+import { getReportFormTypes, createReportForm, submitCMReportForm, submitRTUPMReportForm, submitServerPMReportForm, getNextJobNumber, uploadFinalReportAttachment, createReportFormImage, getReportFormImageTypes, generateCMFinalReportPdf, generateRTUPMFinalReportPdf, generateServerPMFinalReportPdf, getFinalReportsByReportForm, downloadFinalReportAttachment } from '../../api-services/reportFormService';
 import warehouseService from '../../api-services/warehouseService';
 import CMReviewReportForm from './CMReviewReportForm';
 import RTUPMReviewReportForm from './RTUPMReviewReportForm';
@@ -168,38 +168,56 @@ const ReportFormForm = () => {
   };
 
   // Helper function to download the final report after saving
-  const downloadSavedFinalReport = async (reportFormId, jobNo) => {
-    try {
-      // Wait a bit for the final report to be created in the database
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Fetch the final reports for this report form
-      const finalReports = await getFinalReportsByReportForm(reportFormId);
-      
-      if (finalReports && finalReports.length > 0) {
-        // Get the most recent final report (first one)
-        const latestReport = finalReports[0];
+  const downloadSavedFinalReport = async (reportFormId, jobNo, maxRetries = 1) => {
+    let retries = 0;
+    const maxAttempts = maxRetries || 1;
+    
+    while (retries < maxAttempts) {
+      try {
+        // Wait a bit for the final report to be created in the database
+        // For signature-based PDFs, wait longer on each retry
+        const waitTime = retries === 0 ? 2000 : 3000;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
         
-        // Download the final report
-        const response = await downloadFinalReportAttachment(latestReport.id);
-        const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const fileName = latestReport.attachmentName || `FinalReport_${jobNo || 'report'}.pdf`;
-        link.href = downloadUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(downloadUrl);
+        // Fetch the final reports for this report form
+        const finalReports = await getFinalReportsByReportForm(reportFormId);
         
-        console.log('Final report downloaded successfully:', fileName);
-      } else {
-        console.log('No final reports found for download');
+        if (finalReports && finalReports.length > 0) {
+          // Get the most recent final report (first one)
+          const latestReport = finalReports[0];
+          
+          // Download the final report
+          const response = await downloadFinalReportAttachment(latestReport.id);
+          const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          const fileName = latestReport.attachmentName || `FinalReport_${jobNo || 'report'}.pdf`;
+          link.href = downloadUrl;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(downloadUrl);
+          
+          console.log('Final report downloaded successfully:', fileName);
+          return; // Success, exit the retry loop
+        } else {
+          retries++;
+          if (retries < maxAttempts) {
+            console.log(`No final reports found yet, retrying... (${retries}/${maxAttempts})`);
+          } else {
+            console.log('No final reports found for download after all retries');
+          }
+        }
+      } catch (downloadError) {
+        retries++;
+        if (retries < maxAttempts) {
+          console.log(`Error downloading final report, retrying... (${retries}/${maxAttempts}):`, downloadError);
+        } else {
+          console.error('Error downloading final report after all retries:', downloadError);
+          // Don't show error to user - the report was still saved successfully
+        }
       }
-    } catch (downloadError) {
-      console.error('Error downloading final report:', downloadError);
-      // Don't show error to user - the report was still saved successfully
     }
   };
 
@@ -323,10 +341,10 @@ const ReportFormForm = () => {
 
           // Download the final report after it's saved (for both upload and signature options)
           if (finalReportFile || signaturesUploaded) {
-            // Use longer delay for signature-based PDFs since they need to be generated
+            // Use longer delay for signature-based PDFs since they need to be generated via MQTT
             const downloadDelay = signaturesUploaded && !finalReportFile ? 3000 : 1000;
             setTimeout(() => {
-              downloadSavedFinalReport(newReportFormId, formData.jobNo);
+              downloadSavedFinalReport(newReportFormId, formData.jobNo, signaturesUploaded && !finalReportFile ? 3 : 1);
             }, downloadDelay);
           }
         } catch (uploadError) {
@@ -361,6 +379,9 @@ const ReportFormForm = () => {
           return false;
         }
 
+        // Check if signatures were uploaded (declare outside try block for later use)
+        const signaturesUploaded = !!(attendedBySignature && approvedBySignature);
+
         try {
           // Upload final report PDF if provided
           if (finalReportFile) {
@@ -376,11 +397,26 @@ const ReportFormForm = () => {
             await createReportFormImage(newReportFormId, approvedBySignature, approvedByImageType.id, 'Signatures');
           }
 
-          // Download the final report after it's saved (for upload option)
-          if (finalReportFile) {
+          // If signatures were uploaded (instead of PDF), trigger final report PDF generation
+          if (signaturesUploaded && !finalReportFile) {
+            try {
+              console.log(`Generating Server PM final report PDF for ReportForm ID: ${newReportFormId}`);
+              await generateServerPMFinalReportPdf(newReportFormId);
+              console.log('Server PM final report PDF generated successfully');
+            } catch (pdfError) {
+              console.error('Error generating Server PM final report PDF:', pdfError);
+              // Don't fail the entire submission if PDF generation fails
+            }
+          }
+
+          // Download the final report after it's saved (for both upload and signature options)
+          if (finalReportFile || signaturesUploaded) {
+            // Use longer delay for signature-based PDFs since they need to be generated via MQTT
+            // Server PM PDF generation can take longer, so use a longer delay
+            const downloadDelay = signaturesUploaded && !finalReportFile ? 5000 : 1000;
             setTimeout(() => {
-              downloadSavedFinalReport(newReportFormId, formData.jobNo);
-            }, 1000);
+              downloadSavedFinalReport(newReportFormId, formData.jobNo, signaturesUploaded && !finalReportFile ? 3 : 1);
+            }, downloadDelay);
           }
         } catch (uploadError) {
           setError(uploadError?.response?.data?.message || 'Failed to upload attachments.');
@@ -388,12 +424,18 @@ const ReportFormForm = () => {
         }
 
         // Show success toast for Server PM reports
-        setShowSuccessToast(true);
+        setNotification({
+          open: true,
+          message: signaturesUploaded && !finalReportFile 
+            ? 'Server PM Report created successfully! Final report PDF is being generated and will download shortly...' 
+            : 'Server PM Report Form created successfully! Downloading final report...',
+          severity: 'success'
+        });
 
         // Navigate after a short delay to show the toast
         setTimeout(() => {
           navigate('/report-management-system/report-forms');
-        }, finalReportFile ? 4000 : 2000);
+        }, (finalReportFile || signaturesUploaded) ? 4000 : 2000);
 
         // Return the result object so ReportForm ID can be extracted
         return result;
@@ -441,7 +483,7 @@ const ReportFormForm = () => {
           // Download the final report after it's saved (for both upload and signature options)
           if (finalReportFile || signaturesUploaded) {
             setTimeout(() => {
-              downloadSavedFinalReport(newReportFormId, formData.jobNo);
+              downloadSavedFinalReport(newReportFormId, formData.jobNo, signaturesUploaded && !finalReportFile ? 3 : 1);
             }, finalReportFile ? 1000 : 2000); // Wait longer for signature-generated PDFs
           }
         } catch (uploadError) {

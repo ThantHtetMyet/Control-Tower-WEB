@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Grid,
@@ -57,7 +57,7 @@ const ServerPMReportForm_Edit = () => {
   const [formStatusOptions, setFormStatusOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentStep, setCurrentStep] = useState('formStatus');
+  const [currentStep, setCurrentStep] = useState('signOff');
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Add state for Form Status warning modal
@@ -106,7 +106,6 @@ const ServerPMReportForm_Edit = () => {
 
   // Step configuration
   const steps = [
-    'formStatus',
     'signOff',
     'serverHealth',
     'hardDriveHealth',
@@ -125,7 +124,8 @@ const ServerPMReportForm_Edit = () => {
     'hotFixes',
     'autoFailOver',
     'asaFirewall',
-    'softwarePatch'
+    'softwarePatch',
+    'formStatus'
   ];
 
   const stepTitles = {
@@ -423,34 +423,40 @@ const ServerPMReportForm_Edit = () => {
   };
 
   // Data change handlers - update the serverPMData state to persist changes
-  const createDataChangeHandler = (dataKey) => (data) => {
-    setServerPMData(prevData => ({
-      ...prevData,
-      [dataKey]: data
-    }));
-  };
+  // Use useCallback to memoize handlers and prevent infinite loops
+  const updateServerPMData = useCallback((dataKey, data) => {
+    console.log(`ServerPMReportForm_Edit - Updating ${dataKey}:`, data);
+    setServerPMData(prevData => {
+      const updated = {
+        ...prevData,
+        [dataKey]: data
+      };
+      console.log(`ServerPMReportForm_Edit - Updated serverPMData.${dataKey}:`, updated[dataKey]);
+      return updated;
+    });
+  }, []);
 
-  const dataChangeHandlers = {
-    signOff: createDataChangeHandler('signOffData'),
-    serverHealth: createDataChangeHandler('serverHealthData'),
-    networkHealth: createDataChangeHandler('networkHealthData'),
-    hardDriveHealth: createDataChangeHandler('hardDriveHealthData'),
-    diskUsage: createDataChangeHandler('diskUsageData'),
-    cpuAndRamUsage: createDataChangeHandler('cpuAndRamUsageData'),
-    willowlynxProcessStatus: createDataChangeHandler('willowlynxProcessStatusData'),
-    willowlynxNetworkStatus: createDataChangeHandler('willowlynxNetworkStatusData'),
-    willowlynxRTUStatus: createDataChangeHandler('willowlynxRTUStatusData'),
-    willowlynxHistorialTrend: createDataChangeHandler('willowlynxHistorialTrendData'),
-    willowlynxHistoricalReport: createDataChangeHandler('willowlynxHistoricalReportData'),
-    willowlynxSumpPitCCTVCamera: createDataChangeHandler('willowlynxSumpPitCCTVCameraData'),
-    monthlyDatabaseCreation: createDataChangeHandler('monthlyDatabaseCreationData'),
-    databaseBackup: createDataChangeHandler('databaseBackupData'),
-    timeSync: createDataChangeHandler('timeSyncData'),
-    hotFixes: createDataChangeHandler('hotFixesData'),
-    autoFailOver: createDataChangeHandler('autoFailOverData'),
-    asaFirewall: createDataChangeHandler('asaFirewallData'),
-    softwarePatch: createDataChangeHandler('softwarePatchData')
-  };
+  const dataChangeHandlers = useMemo(() => ({
+    signOff: (data) => updateServerPMData('signOffData', data),
+    serverHealth: (data) => updateServerPMData('serverHealthData', data),
+    networkHealth: (data) => updateServerPMData('networkHealthData', data),
+    hardDriveHealth: (data) => updateServerPMData('hardDriveHealthData', data),
+    diskUsage: (data) => updateServerPMData('diskUsageData', data),
+    cpuAndRamUsage: (data) => updateServerPMData('cpuAndRamUsageData', data),
+    willowlynxProcessStatus: (data) => updateServerPMData('willowlynxProcessStatusData', data),
+    willowlynxNetworkStatus: (data) => updateServerPMData('willowlynxNetworkStatusData', data),
+    willowlynxRTUStatus: (data) => updateServerPMData('willowlynxRTUStatusData', data),
+    willowlynxHistorialTrend: (data) => updateServerPMData('willowlynxHistorialTrendData', data),
+    willowlynxHistoricalReport: (data) => updateServerPMData('willowlynxHistoricalReportData', data),
+    willowlynxSumpPitCCTVCamera: (data) => updateServerPMData('willowlynxSumpPitCCTVCameraData', data),
+    monthlyDatabaseCreation: (data) => updateServerPMData('monthlyDatabaseCreationData', data),
+    databaseBackup: (data) => updateServerPMData('databaseBackupData', data),
+    timeSync: (data) => updateServerPMData('timeSyncData', data),
+    hotFixes: (data) => updateServerPMData('hotFixesData', data),
+    autoFailOver: (data) => updateServerPMData('autoFailOverData', data),
+    asaFirewall: (data) => updateServerPMData('asaFirewallData', data),
+    softwarePatch: (data) => updateServerPMData('softwarePatchData', data)
+  }), [updateServerPMData]);
 
   const formStatusIndex = steps.indexOf('formStatus');
   const hasFormStatus = Boolean(formData.formstatusID);
@@ -459,10 +465,8 @@ const ServerPMReportForm_Edit = () => {
   const handleStepNavigation = (targetStep) => {
     if (targetStep === currentStep || isTransitioning) return;
 
-    const targetIndex = steps.indexOf(targetStep);
-    if (!hasFormStatus && targetIndex > formStatusIndex) {
-      return;
-    }
+    // Allow navigation to formStatus step at any time - users should be able to click on it
+    // Validation will happen when they try to proceed from formStatus step
 
     setIsTransitioning(true);
     setTimeout(() => {
@@ -482,6 +486,10 @@ const ServerPMReportForm_Edit = () => {
     if (currentIndex < steps.length - 1) {
       handleStepNavigation(steps[currentIndex + 1]);
     } else {
+      // Debug: Log serverPMData before creating reviewData
+      console.log('ServerPMReportForm_Edit - serverPMData before navigation:', serverPMData);
+      console.log('ServerPMReportForm_Edit - cpuAndRamUsageData:', serverPMData.cpuAndRamUsageData);
+      
       const reviewData = {
         reportTitle: formData.reportTitle,
         systemDescription: formData.systemDescription,
@@ -517,6 +525,8 @@ const ServerPMReportForm_Edit = () => {
         asaFirewallData: serverPMData.asaFirewallData,
         softwarePatchData: serverPMData.softwarePatchData
       };
+      
+      console.log('ServerPMReportForm_Edit - reviewData.cpuAndRamUsageData:', reviewData.cpuAndRamUsageData);
 
       navigate(`/report-management-system/server-pm-report-review-edit/${id}`, {
         state: { formData: reviewData }
@@ -614,7 +624,9 @@ const ServerPMReportForm_Edit = () => {
       }}>
         {steps.map((step, index) => {
           const isActive = currentStep === step;
-          const isLocked = !hasFormStatus && steps.indexOf(step) > formStatusIndex;
+          // Form Status step should always be clickable so users can navigate to it
+          // No steps should be locked based on formStatus since it's now the last step
+          const isLocked = false;
 
           return (
             <Tooltip
@@ -953,7 +965,7 @@ const ServerPMReportForm_Edit = () => {
                       }
                     }}
                   >
-                    {currentStep === 'softwarePatch' ? 'Complete' : 'Next'}
+                    {currentStep === 'formStatus' ? 'Complete' : 'Next'}
                   </Button>
                 </Box>
               </Box>
