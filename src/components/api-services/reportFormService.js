@@ -813,6 +813,12 @@ export const submitServerPMReportForm = async (formData, user) => {
         return details.map(detail => {
           const transformedDetail = { ...detail };
           
+          // Transform "serverName" to "ServerName" for API compatibility
+          if (transformedDetail.serverName !== undefined) {
+            transformedDetail.ServerName = transformedDetail.serverName;
+            // Keep serverName for compatibility, but ServerName takes precedence
+          }
+          
           // Transform "result" field to "ResultStatusID" for API compatibility
           if (transformedDetail.result !== undefined) {
             transformedDetail.ResultStatusID = transformedDetail.result;

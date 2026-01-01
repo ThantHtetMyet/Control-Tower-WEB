@@ -503,24 +503,26 @@ const ServerPMReportForm_Edit_Review = () => {
               }
               // Transform from Edit format (asaFirewallData array, remarks)
               // Include deleted items with IDs (so backend can mark them as deleted)
-              const details = (passedData.asaFirewallData.asaFirewallData || [])
+              // Create flat array structure (not nested with details)
+              const transformedItems = (passedData.asaFirewallData.asaFirewallData || [])
                 .filter(item => item && (!item.isDeleted || item.id))
                 .map((item, index) => ({
                   id: item.id || null,
-                  serialNo: item.serialNumber || (index + 1).toString(),
+                  serialNumber: item.serialNumber || (index + 1),
                   commandInput: item.commandInput || '',
                   asaFirewallStatusID: item.asaFirewallStatusID || '',
+                  asaFirewallStatusName: item.asaFirewallStatusName || '',
                   resultStatusID: item.resultStatusID || '',
+                  resultStatusName: item.resultStatusName || '',
                   remarks: item.remarks || '',
+                  isNew: item.isNew || !item.id,
+                  isModified: item.isModified || false,
                   isDeleted: item.isDeleted || false // Preserve isDeleted flag
                 }));
               
-              if (details.length > 0 || (passedData.asaFirewallData.remarks && passedData.asaFirewallData.remarks.trim() !== '')) {
+              if (transformedItems.length > 0 || (passedData.asaFirewallData.remarks && passedData.asaFirewallData.remarks.trim() !== '')) {
                 return {
-                  pmServerASAFirewalls: [{
-                    details: details,
-                    remarks: passedData.asaFirewallData.remarks || ''
-                  }],
+                  pmServerASAFirewalls: transformedItems, // Flat array structure
                   asaFirewallData: passedData.asaFirewallData.asaFirewallData || [], // Keep for Review component compatibility
                   remarks: passedData.asaFirewallData.remarks || ''
                 };
@@ -1060,25 +1062,60 @@ const ServerPMReportForm_Edit_Review = () => {
     }
     
     // Convert asaFirewallData from Review format to Edit format
-    if (converted.asaFirewallData && converted.asaFirewallData.pmServerASAFirewalls) {
-      const pmServerASAFirewalls = converted.asaFirewallData.pmServerASAFirewalls;
-      if (Array.isArray(pmServerASAFirewalls) && pmServerASAFirewalls.length > 0) {
-        const firstItem = pmServerASAFirewalls[0];
+    if (converted.asaFirewallData) {
+      // Check if data is already in Edit format (has asaFirewallData array)
+      if (converted.asaFirewallData.asaFirewallData && Array.isArray(converted.asaFirewallData.asaFirewallData)) {
+        // Already in Edit format, just ensure structure is correct
         converted.asaFirewallData = {
-          asaFirewallData: (firstItem.details || []).map(detail => ({
-            id: detail.id || detail.ID || null,
-            serialNumber: detail.serialNo || detail.SerialNo || '',
-            commandInput: detail.commandInput || detail.CommandInput || '',
-            asaFirewallStatusID: detail.asaFirewallStatusID || detail.ASAFirewallStatusID || '',
-            resultStatusID: detail.resultStatusID || detail.ResultStatusID || detail.result || '',
-            remarks: detail.remarks || detail.Remarks || '',
-            isNew: !(detail.id || detail.ID),
-            isModified: detail.isModified || detail.IsModified || false,
-            isDeleted: detail.isDeleted || detail.IsDeleted || false
-          })),
-          remarks: firstItem.remarks || converted.asaFirewallData.remarks || ''
+          asaFirewallData: converted.asaFirewallData.asaFirewallData,
+          remarks: converted.asaFirewallData.remarks || ''
         };
+      } else if (converted.asaFirewallData.pmServerASAFirewalls) {
+        const pmServerASAFirewalls = converted.asaFirewallData.pmServerASAFirewalls;
+        if (Array.isArray(pmServerASAFirewalls) && pmServerASAFirewalls.length > 0) {
+          const firstItem = pmServerASAFirewalls[0];
+          
+          // Check if it's a nested structure with details array
+          if (firstItem.details && Array.isArray(firstItem.details)) {
+            // Nested structure: pmServerASAFirewalls[0].details
+            converted.asaFirewallData = {
+              asaFirewallData: (firstItem.details || []).map(detail => ({
+                id: detail.id || detail.ID || null,
+                serialNumber: detail.serialNo || detail.SerialNo || '',
+                commandInput: detail.commandInput || detail.CommandInput || '',
+                asaFirewallStatusID: detail.asaFirewallStatusID || detail.ASAFirewallStatusID || '',
+                resultStatusID: detail.resultStatusID || detail.ResultStatusID || detail.result || '',
+                remarks: detail.remarks || detail.Remarks || '',
+                isNew: !(detail.id || detail.ID),
+                isModified: detail.isModified || detail.IsModified || false,
+                isDeleted: detail.isDeleted || detail.IsDeleted || false
+              })),
+              remarks: firstItem.remarks || converted.asaFirewallData.remarks || ''
+            };
+          } else {
+            // Flat array structure: pmServerASAFirewalls is the array of items directly
+            converted.asaFirewallData = {
+              asaFirewallData: pmServerASAFirewalls
+                .filter(item => item && (!item.isDeleted || item.id || item.ID)) // Filter out deleted items without IDs
+                .map(item => ({
+                  id: item.id || item.ID || null,
+                  serialNumber: item.serialNumber || item.SerialNumber || '',
+                  commandInput: item.commandInput || item.CommandInput || '',
+                  asaFirewallStatusID: item.asaFirewallStatusID || item.ASAFirewallStatusID || '',
+                  resultStatusID: item.resultStatusID || item.ResultStatusID || item.result || '',
+                  remarks: item.remarks || item.Remarks || '',
+                  isNew: !(item.id || item.ID),
+                  isModified: item.isModified || item.IsModified || false,
+                  isDeleted: item.isDeleted || item.IsDeleted || false
+                })),
+              remarks: converted.asaFirewallData.remarks || ''
+            };
+          }
+        } else {
+          converted.asaFirewallData = { asaFirewallData: [], remarks: converted.asaFirewallData?.remarks || '' };
+        }
       } else {
+        // No data structure found, initialize empty
         converted.asaFirewallData = { asaFirewallData: [], remarks: converted.asaFirewallData?.remarks || '' };
       }
     }
@@ -1117,22 +1154,91 @@ const ServerPMReportForm_Edit_Review = () => {
       }
     }
     
-    // Convert softwarePatchData - it's already an array in Review format
-    if (Array.isArray(converted.softwarePatchData)) {
-      converted.softwarePatchData = {
-        softwarePatchData: converted.softwarePatchData.map(item => ({
-          id: item.id || item.ID || null,
-          serialNo: item.serialNo || item.SerialNo || '',
-          machineName: item.machineName || item.ServerName || '',
-          previousPatch: item.previousPatch || item.PreviousPatch || '',
-          currentPatch: item.currentPatch || item.CurrentPatch || '',
-          remarks: item.remarks || item.Remarks || '',
-          isNew: !(item.id || item.ID),
-          isModified: item.isModified || item.IsModified || false,
-          isDeleted: item.isDeleted || item.IsDeleted || false
-        })),
-        remarks: converted.softwarePatchRemarks || ''
-      };
+    // Convert softwarePatchData - handle both array format and nested object format
+    // Helper function to validate if a string is a valid GUID format
+    const isValidGuid = (value) => {
+      if (!value || typeof value !== 'string') return false;
+      const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const guidPatternNoDashes = /^[0-9a-f]{32}$/i;
+      const trimmed = value.trim();
+      return guidPattern.test(trimmed) || guidPatternNoDashes.test(trimmed);
+    };
+    
+    if (converted.softwarePatchData) {
+      // Check if data is already in Edit format (has softwarePatchData array inside)
+      if (converted.softwarePatchData.softwarePatchData && Array.isArray(converted.softwarePatchData.softwarePatchData)) {
+        // Already in Edit format, just ensure IDs are properly set
+        converted.softwarePatchData = {
+          softwarePatchData: converted.softwarePatchData.softwarePatchData.map(item => {
+            // Ensure ID is either a valid GUID string or null (not empty string)
+            let itemId = null;
+            const idValue = item.id || item.ID;
+            // Only use ID if it's a valid GUID
+            if (idValue && String(idValue).trim() !== '') {
+              const idStr = String(idValue).trim();
+              if (isValidGuid(idStr)) {
+                itemId = idStr;
+              }
+              // If not a valid GUID, itemId remains null (treat as new item)
+            }
+            
+            // Determine if item is new based on ID presence and validity
+            const isItemNew = !itemId;
+            
+            return {
+              id: itemId, // null for new items, valid GUID string for existing items
+              serialNo: item.serialNo || item.SerialNo || '',
+              machineName: item.machineName || item.ServerName || '',
+              previousPatch: item.previousPatch || item.PreviousPatch || '',
+              currentPatch: item.currentPatch || item.CurrentPatch || '',
+              remarks: item.remarks || item.Remarks || '',
+              isNew: isItemNew, // Explicitly set based on ID presence and validity
+              isModified: item.isModified || item.IsModified || false,
+              isDeleted: item.isDeleted || item.IsDeleted || false
+            };
+          }),
+          remarks: converted.softwarePatchData.remarks || converted.softwarePatchRemarks || ''
+        };
+      } else if (Array.isArray(converted.softwarePatchData)) {
+        // Review format: array directly
+        converted.softwarePatchData = {
+          softwarePatchData: converted.softwarePatchData.map(item => {
+            // Ensure ID is either a valid GUID string or null (not empty string)
+            let itemId = null;
+            const idValue = item.id || item.ID;
+            // Only use ID if it's a valid GUID
+            if (idValue && String(idValue).trim() !== '') {
+              const idStr = String(idValue).trim();
+              if (isValidGuid(idStr)) {
+                itemId = idStr;
+              }
+              // If not a valid GUID, itemId remains null (treat as new item)
+            }
+            
+            // Determine if item is new based on ID presence and validity
+            const isItemNew = !itemId;
+            
+            return {
+              id: itemId, // null for new items, valid GUID string for existing items
+              serialNo: item.serialNo || item.SerialNo || '',
+              machineName: item.machineName || item.ServerName || '',
+              previousPatch: item.previousPatch || item.PreviousPatch || '',
+              currentPatch: item.currentPatch || item.CurrentPatch || '',
+              remarks: item.remarks || item.Remarks || '',
+              isNew: isItemNew, // Explicitly set based on ID presence and validity
+              isModified: item.isModified || item.IsModified || false,
+              isDeleted: item.isDeleted || item.IsDeleted || false
+            };
+          }),
+          remarks: converted.softwarePatchRemarks || ''
+        };
+      } else {
+        // No data or unknown format, initialize empty
+        converted.softwarePatchData = {
+          softwarePatchData: [],
+          remarks: converted.softwarePatchRemarks || ''
+        };
+      }
     }
     
     // Convert networkHealthData and willowlynx components - they're simple structures

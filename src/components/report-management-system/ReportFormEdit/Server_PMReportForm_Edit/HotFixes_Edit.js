@@ -14,6 +14,9 @@ import {
   IconButton,
   CircularProgress,
   MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
   Snackbar,
   Alert
 } from '@mui/material';
@@ -26,12 +29,16 @@ import {
 
 // Import the result status service
 import resultStatusService from '../../../api-services/resultStatusService';
+// Import the warehouse service
+import warehouseService from '../../../api-services/warehouseService';
 
-const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
+const HotFixes_Edit = ({ data, onDataChange, onStatusChange, stationNameWarehouseID }) => {
   const [hotFixesData, setHotFixesData] = useState([]);
   const [remarks, setRemarks] = useState('');
   const [resultStatusOptions, setResultStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [serverHostNameOptions, setServerHostNameOptions] = useState([]);
+  const [loadingServerHostNames, setLoadingServerHostNames] = useState(false);
   const [undoStack, setUndoStack] = useState([]);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const isInitialized = useRef(false);
@@ -133,6 +140,61 @@ const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
 
     fetchResultStatuses();
   }, []);
+
+  // Fetch Server Host Name options when stationNameWarehouseID changes
+  useEffect(() => {
+    const fetchServerHostNames = async () => {
+      if (!stationNameWarehouseID) {
+        setServerHostNameOptions([]);
+        return;
+      }
+
+      try {
+        setLoadingServerHostNames(true);
+        const response = await warehouseService.getServerHostNameWarehouses(stationNameWarehouseID);
+        const options = Array.isArray(response) ? response : (response?.data || []);
+        setServerHostNameOptions(options);
+      } catch (error) {
+        console.error('Error fetching server host name options:', error);
+        setServerHostNameOptions([]);
+      } finally {
+        setLoadingServerHostNames(false);
+      }
+    };
+
+    fetchServerHostNames();
+  }, [stationNameWarehouseID]); // Only fetch when stationNameWarehouseID changes, not when data changes
+
+  // Merge existing machine names into options when data changes (without re-fetching)
+  useEffect(() => {
+    if (hotFixesData.length > 0) {
+      const existingMachineNames = hotFixesData
+        .filter(row => row.machineName && row.machineName.trim() !== '' && !row.isDeleted)
+        .map(row => row.machineName.trim());
+      
+      if (existingMachineNames.length > 0) {
+        // Use functional setState to avoid dependency on serverHostNameOptions
+        setServerHostNameOptions(prevOptions => {
+          const optionsMap = new Map(prevOptions.map(opt => [
+            String(opt.name || opt.Name || '').trim(),
+            opt
+          ]));
+          
+          // Add existing machine names that aren't already in options
+          let hasChanges = false;
+          existingMachineNames.forEach(machineName => {
+            if (!optionsMap.has(machineName)) {
+              optionsMap.set(machineName, { id: `existing-${machineName}`, name: machineName });
+              hasChanges = true;
+            }
+          });
+          
+          // Only return new array if there are changes to avoid unnecessary re-renders
+          return hasChanges ? Array.from(optionsMap.values()) : prevOptions;
+        });
+      }
+    }
+  }, [hotFixesData]); // Only merge existing names when data changes
 
   // Update parent component when data changes (but not on initial load)
   useEffect(() => {
@@ -333,17 +395,89 @@ const HotFixes_Edit = ({ data, onDataChange, onStatusChange }) => {
                       {row.serialNo}
                     </Typography>
                   </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.machineName}
-                      onChange={(e) => handleHotFixesChange(index, 'machineName', e.target.value)}
-                      placeholder="Enter machine name"
-                      size="small"
-                      disabled={row.isDeleted}
-                    />
-                  </TableCell>
+                    <TableCell>
+                      {(() => {
+                        // Compute complete options list including current value for this row
+                        const currentValue = String(row.machineName || '').trim();
+                        const optionsWithCurrent = [...serverHostNameOptions];
+                        
+                        // Always include current value in options if it exists and is not already there
+                        if (currentValue && currentValue !== '' && !optionsWithCurrent.some(opt => {
+                          const optName = String(opt.name || opt.Name || '').trim();
+                          return optName === currentValue;
+                        })) {
+                          optionsWithCurrent.push({ 
+                            id: `current-${currentValue}`, 
+                            name: currentValue 
+                          });
+                        }
+                        
+                        // Since we always add currentValue to optionsWithCurrent if it exists,
+                        // the value should always be valid if currentValue is not empty
+                        const selectValue = currentValue && currentValue !== '' ? currentValue : '';
+                        
+                        return (
+                          <FormControl fullWidth size="small">
+                            <InputLabel id={`hotfixes-machine-name-label-${index}`} shrink>
+                              Machine Name
+                            </InputLabel>
+                            <Select
+                              labelId={`hotfixes-machine-name-label-${index}`}
+                              value={selectValue}
+                              onChange={(e) => handleHotFixesChange(index, 'machineName', String(e.target.value || '').trim())}
+                              label="Machine Name"
+                              disabled={row.isDeleted || loadingServerHostNames}
+                              sx={{
+                                '& .MuiSelect-select': {
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                }
+                              }}
+                            >
+                              {loadingServerHostNames ? (
+                                <MenuItem disabled value="">
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CircularProgress size={16} />
+                                    Loading server names...
+                                  </Box>
+                                </MenuItem>
+                              ) : optionsWithCurrent.length === 0 ? (
+                                !stationNameWarehouseID ? (
+                                  <MenuItem disabled value="">
+                                    <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                                      Please select Station Name first
+                                    </Typography>
+                                  </MenuItem>
+                                ) : (
+                                  <MenuItem disabled value="">
+                                    <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                                      No server names available
+                                    </Typography>
+                                  </MenuItem>
+                                )
+                              ) : (
+                                [
+                                  <MenuItem key="empty-placeholder" value="">
+                                    <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                                      Select Machine Name
+                                    </Typography>
+                                  </MenuItem>,
+                                  ...optionsWithCurrent.map((option) => {
+                                    const optionName = String(option.name || option.Name || '').trim();
+                                    const optionId = String(option.id || option.ID || optionName);
+                                    return (
+                                      <MenuItem key={optionId} value={optionName}>
+                                        {optionName}
+                                      </MenuItem>
+                                    );
+                                  })
+                                ]
+                              )}
+                            </Select>
+                          </FormControl>
+                        );
+                      })()}
+                    </TableCell>
                   <TableCell>
                     <TextField
                       fullWidth

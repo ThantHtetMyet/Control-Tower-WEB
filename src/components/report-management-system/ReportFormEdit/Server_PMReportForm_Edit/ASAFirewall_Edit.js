@@ -55,31 +55,61 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
       
       // Handle new API structure with pmServerASAFirewalls
       if (data.pmServerASAFirewalls && data.pmServerASAFirewalls.length > 0) {
-        const transformedData = data.pmServerASAFirewalls.map((item, index) => ({
-          id: item.id || item.ID,
-          serialNumber: item.serialNumber || item.SerialNumber || (index + 1),
-          commandInput: item.commandInput || item.CommandInput || '',
-          asaFirewallStatusID: item.asaFirewallStatusID || item.ASAFirewallStatusID || '',
-          asaFirewallStatusName: item.asaFirewallStatusName || item.ASAFirewallStatusName || '',
-          resultStatusID: item.resultStatusID || item.ResultStatusID || '',
-          resultStatusName: item.resultStatusName || item.ResultStatusName || '',
-          remarks: item.remarks || item.Remarks || '',
-          isNew: !item.id && !item.ID,
-          isModified: false,
-          isDeleted: false
-        }));
+        // Check if it's a nested structure with details array (like other components)
+        const firstItem = data.pmServerASAFirewalls[0];
+        let itemsToTransform = [];
+        
+        if (firstItem && firstItem.details && Array.isArray(firstItem.details)) {
+          // Nested structure with details array
+          itemsToTransform = firstItem.details;
+          setRemarks(data.remarks || firstItem.remarks || '');
+        } else {
+          // Flat array structure
+          itemsToTransform = data.pmServerASAFirewalls;
+          setRemarks(data.remarks || data.pmServerASAFirewalls[0]?.remarks || '');
+        }
+        
+        const transformedData = itemsToTransform
+          .filter(item => !item.isDeleted && !item.IsDeleted) // Filter out deleted items for display
+          .map((item, index) => {
+            const itemId = item.id || item.ID || null;
+            const asaFirewallStatusId = item.asaFirewallStatusID || item.ASAFirewallStatusID || '';
+            const resultStatusId = item.resultStatusID || item.ResultStatusID || '';
+            
+            return {
+              id: itemId,
+              serialNumber: item.serialNumber || item.SerialNumber || (index + 1),
+              commandInput: item.commandInput || item.CommandInput || '',
+              asaFirewallStatusID: asaFirewallStatusId,
+              asaFirewallStatusName: item.asaFirewallStatusName || item.ASAFirewallStatusName || '',
+              resultStatusID: resultStatusId,
+              resultStatusName: item.resultStatusName || item.ResultStatusName || '',
+              remarks: item.remarks || item.Remarks || '',
+              isNew: !itemId,
+              isModified: false,
+              isDeleted: item.isDeleted || item.IsDeleted || false
+            };
+          });
         
         setAsaFirewallData(transformedData);
-        setRemarks(data.remarks || data.pmServerASAFirewalls[0]?.remarks || '');
       }
       // Handle legacy asaFirewallData structure
       else if (data.asaFirewallData && data.asaFirewallData.length > 0) {
-        const transformedData = data.asaFirewallData.map((item, index) => ({
-          ...item,
-          isNew: !item.id,
-          isModified: false,
-          isDeleted: false
-        }));
+        const transformedData = data.asaFirewallData
+          .filter(item => !item.isDeleted && !item.IsDeleted) // Filter out deleted items for display
+          .map((item, index) => ({
+            id: item.id || item.ID || null,
+            serialNumber: item.serialNumber || item.SerialNumber || (index + 1),
+            commandInput: item.commandInput || item.CommandInput || '',
+            asaFirewallStatusID: item.asaFirewallStatusID || item.ASAFirewallStatusID || '',
+            asaFirewallStatusName: item.asaFirewallStatusName || item.ASAFirewallStatusName || '',
+            resultStatusID: item.resultStatusID || item.ResultStatusID || '',
+            resultStatusName: item.resultStatusName || item.ResultStatusName || '',
+            remarks: item.remarks || item.Remarks || '',
+            isNew: !(item.id || item.ID),
+            isModified: false,
+            isDeleted: item.isDeleted || item.IsDeleted || false
+          }));
         setAsaFirewallData(transformedData);
         setRemarks(data.remarks || '');
       }
@@ -166,36 +196,81 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
     fetchResultStatusOptions();
   }, []);
 
-  // Auto-assign expected results after options are loaded
+  // Auto-assign expected results after options are loaded and ensure dropdown values match
   useEffect(() => {
     if (asaFirewallStatusOptions.length > 0 && asaFirewallData.length > 0) {
       console.log('Available ASA Firewall Status Options:', asaFirewallStatusOptions);
+      console.log('Current ASA Firewall Data:', asaFirewallData);
       
       const updatedData = asaFirewallData.map(item => {
-        if (item.commandInput === 'show cpu usage') {
+        let updatedItem = { ...item };
+        
+        // Auto-assign expected results for default commands (only if not already set)
+        if (item.commandInput === 'show cpu usage' && !item.asaFirewallStatusID) {
           // Find "CPU Usage <80%" option
           const cpuOption = asaFirewallStatusOptions.find(option => 
-            option.name && option.name.includes('CPU Usage <80%')
+            (option.name || option.Name) && (option.name || option.Name).includes('CPU Usage <80%')
           );
-          return { ...item, expectedResultId: cpuOption ? cpuOption.id : '' };
-        } else if (item.commandInput === 'show environment') {
+          if (cpuOption) {
+            updatedItem.asaFirewallStatusID = String(cpuOption.id || cpuOption.ID);
+            updatedItem.asaFirewallStatusName = cpuOption.name || cpuOption.Name;
+          }
+        } else if (item.commandInput === 'show environment' && !item.asaFirewallStatusID) {
           // Find "Overall hardware health" option
           const envOption = asaFirewallStatusOptions.find(option => 
-            option.name && option.name.includes('Overall hardware health')
+            (option.name || option.Name) && (option.name || option.Name).includes('Overall hardware health')
           );
-          console.log('Environment Option found:', envOption);
-          return { ...item, expectedResultId: envOption ? envOption.id : '' };
+          if (envOption) {
+            updatedItem.asaFirewallStatusID = String(envOption.id || envOption.ID);
+            updatedItem.asaFirewallStatusName = envOption.name || envOption.Name;
+          }
         }
-        return item;
+        
+        // Ensure existing asaFirewallStatusID matches option IDs (handle case differences and format)
+        if (item.asaFirewallStatusID) {
+          const itemIdStr = String(item.asaFirewallStatusID);
+          const matchingOption = asaFirewallStatusOptions.find(option => {
+            const optionId = String(option.id || option.ID || '');
+            // Compare both as strings (case-insensitive for GUIDs)
+            return optionId.toLowerCase() === itemIdStr.toLowerCase();
+          });
+          
+          if (matchingOption) {
+            // Update to use the exact ID format from options
+            const matchedId = String(matchingOption.id || matchingOption.ID);
+            if (matchedId !== itemIdStr) {
+              updatedItem.asaFirewallStatusID = matchedId;
+            }
+            updatedItem.asaFirewallStatusName = matchingOption.name || matchingOption.Name || item.asaFirewallStatusName;
+          } else if (item.asaFirewallStatusName) {
+            // Try to find by name if ID doesn't match
+            const nameMatch = asaFirewallStatusOptions.find(option => 
+              (option.name || option.Name) === item.asaFirewallStatusName
+            );
+            if (nameMatch) {
+              updatedItem.asaFirewallStatusID = String(nameMatch.id || nameMatch.ID);
+            }
+          }
+        }
+        
+        return updatedItem;
       });
 
       // Only update if there are actual changes
-      if (JSON.stringify(updatedData) !== JSON.stringify(asaFirewallData)) {
-        console.log('Updating ASA Firewall Data:', updatedData);
+      const hasChanges = updatedData.some((item, index) => {
+        const original = asaFirewallData[index];
+        const originalId = String(original.asaFirewallStatusID || '');
+        const updatedId = String(item.asaFirewallStatusID || '');
+        return updatedId !== originalId ||
+               item.asaFirewallStatusName !== original.asaFirewallStatusName;
+      });
+      
+      if (hasChanges) {
+        console.log('Updating ASA Firewall Data with matched dropdown values:', updatedData);
         setAsaFirewallData(updatedData);
       }
     }
-  }, [asaFirewallStatusOptions, asaFirewallData]);
+  }, [asaFirewallStatusOptions, resultStatusOptions, asaFirewallData]);
 
   // Update parent component when data changes (but not on initial load)
   useEffect(() => {
@@ -401,7 +476,7 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
                     select
                     fullWidth
                     size="small"
-                    value={row.asaFirewallStatusID}
+                    value={row.asaFirewallStatusID ? String(row.asaFirewallStatusID) : ''}
                     onChange={(e) => handleInputChange(index, 'asaFirewallStatusID', e.target.value)}
                     disabled={true}
                   >
@@ -415,11 +490,14 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
                         '-'
                       )}
                     </MenuItem>
-                    {asaFirewallStatusOptions.map((option) => (
-                      <MenuItem key={option.id} value={option.id}>
-                        {option.name}
-                      </MenuItem>
-                    ))}
+                    {asaFirewallStatusOptions.map((option) => {
+                      const optionId = String(option.id || option.ID || '');
+                      return (
+                        <MenuItem key={optionId} value={optionId}>
+                          {option.name || option.Name || ''}
+                        </MenuItem>
+                      );
+                    })}
                   </TextField>
                 </TableCell>
                 <TableCell>
@@ -427,7 +505,7 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
                     select
                     fullWidth
                     size="small"
-                    value={row.resultStatusID}
+                    value={row.resultStatusID ? String(row.resultStatusID) : ''}
                     onChange={(e) => handleInputChange(index, 'resultStatusID', e.target.value)}
                     disabled={loading || row.isDeleted}
                   >
@@ -441,11 +519,14 @@ const ASAFirewall_Edit = ({ data, onDataChange, onStatusChange }) => {
                         '-'
                       )}
                     </MenuItem>
-                    {resultStatusOptions.map((option) => (
-                      <MenuItem key={option.id} value={option.id}>
-                        {option.name}
-                      </MenuItem>
-                    ))}
+                    {resultStatusOptions.map((option) => {
+                      const optionId = String(option.id || option.ID || '');
+                      return (
+                        <MenuItem key={optionId} value={optionId}>
+                          {option.name || option.Name || ''}
+                        </MenuItem>
+                      );
+                    })}
                   </TextField>
                 </TableCell>
                 <TableCell>

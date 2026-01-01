@@ -28,13 +28,17 @@ import {
 import CPUAndRamUsageImage from '../../../resources/ServerPMReportForm/CPUAndRamUsage.png';
 // Import the result status service
 import resultStatusService from '../../../api-services/resultStatusService';
+// Import the warehouse service
+import warehouseService from '../../../api-services/warehouseService';
 
-const CPUAndRamUsage = ({ data, onDataChange, onStatusChange }) => {
+const CPUAndRamUsage = ({ data, onDataChange, onStatusChange, stationNameWarehouseID }) => {
   const [memoryUsageData, setMemoryUsageData] = useState([]);
   const [cpuUsageData, setCpuUsageData] = useState([]);
   const [remarks, setRemarks] = useState('');
   const [resultStatusOptions, setResultStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [serverHostNameOptions, setServerHostNameOptions] = useState([]);
+  const [loadingServerHostNames, setLoadingServerHostNames] = useState(false);
   const isInitialized = useRef(false);
 
   // Initialize data from props only once
@@ -74,6 +78,30 @@ const CPUAndRamUsage = ({ data, onDataChange, onStatusChange }) => {
 
     fetchResultStatuses();
   }, []);
+
+  // Fetch Server Host Name options when stationNameWarehouseID changes
+  useEffect(() => {
+    const fetchServerHostNames = async () => {
+      if (!stationNameWarehouseID) {
+        setServerHostNameOptions([]);
+        return;
+      }
+
+      try {
+        setLoadingServerHostNames(true);
+        const response = await warehouseService.getServerHostNameWarehouses(stationNameWarehouseID);
+        const options = Array.isArray(response) ? response : (response?.data || []);
+        setServerHostNameOptions(options);
+      } catch (error) {
+        console.error('Error fetching server host name options:', error);
+        setServerHostNameOptions([]);
+      } finally {
+        setLoadingServerHostNames(false);
+      }
+    };
+
+    fetchServerHostNames();
+  }, [stationNameWarehouseID]);
 
   // Update parent component when data changes (but not on initial load)
   useEffect(() => {
@@ -245,14 +273,62 @@ const CPUAndRamUsage = ({ data, onDataChange, onStatusChange }) => {
                   <TableRow key={index}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>
-                      <TextField
-                        fullWidth
-                        variant="outlined"
-                        value={row.machineName}
-                        onChange={(e) => handleMemoryUsageChange(index, 'machineName', e.target.value)}
-                        placeholder="Enter machine name"
-                        size="small"
-                      />
+                      <FormControl fullWidth size="small">
+                        <InputLabel id={`memory-machine-name-label-${index}`} shrink>
+                          Machine Name
+                        </InputLabel>
+                        <Select
+                          labelId={`memory-machine-name-label-${index}`}
+                          value={row.machineName || ''}
+                          onChange={(e) => handleMemoryUsageChange(index, 'machineName', e.target.value)}
+                          label="Machine Name"
+                          disabled={loadingServerHostNames || !stationNameWarehouseID}
+                          displayEmpty
+                          sx={{
+                            '& .MuiSelect-select': {
+                              display: 'flex',
+                              alignItems: 'center',
+                            }
+                          }}
+                          renderValue={(selected) => {
+                            if (!selected) {
+                              return (
+                                <Typography component="span" sx={{ color: '#999', fontStyle: 'italic' }}>
+                                  {loadingServerHostNames ? 'Loading...' : !stationNameWarehouseID ? 'Select Station Name first' : 'Select Machine Name'}
+                                </Typography>
+                              );
+                            }
+                            return selected;
+                          }}
+                        >
+                          {loadingServerHostNames ? (
+                            <MenuItem disabled>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CircularProgress size={16} />
+                                Loading server names...
+                              </Box>
+                            </MenuItem>
+                          ) : !stationNameWarehouseID ? (
+                            <MenuItem disabled>
+                              <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                                Please select Station Name first
+                              </Typography>
+                            </MenuItem>
+                          ) : serverHostNameOptions.length === 0 ? (
+                            <MenuItem disabled>
+                              <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                                No server names available
+                              </Typography>
+                            </MenuItem>
+                          ) : (
+                            serverHostNameOptions.map((option) => (
+                              <MenuItem key={option.id} value={option.name}>
+                                {option.name}
+                              </MenuItem>
+                            ))
+                          )}
+                        </Select>
+                      </FormControl>
                     </TableCell>
                     <TableCell>
                       <TextField
@@ -362,14 +438,62 @@ const CPUAndRamUsage = ({ data, onDataChange, onStatusChange }) => {
                   <TableRow key={index}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>
-                      <TextField
-                        fullWidth
-                        variant="outlined"
-                        value={row.machineName}
-                        onChange={(e) => handleCpuUsageChange(index, 'machineName', e.target.value)}
-                        placeholder="Enter machine name"
-                        size="small"
-                      />
+                      <FormControl fullWidth size="small">
+                        <InputLabel id={`cpu-machine-name-label-${index}`} shrink>
+                          Machine Name
+                        </InputLabel>
+                        <Select
+                          labelId={`cpu-machine-name-label-${index}`}
+                          value={row.machineName || ''}
+                          onChange={(e) => handleCpuUsageChange(index, 'machineName', e.target.value)}
+                          label="Machine Name"
+                          disabled={loadingServerHostNames || !stationNameWarehouseID}
+                          displayEmpty
+                          sx={{
+                            '& .MuiSelect-select': {
+                              display: 'flex',
+                              alignItems: 'center',
+                            }
+                          }}
+                          renderValue={(selected) => {
+                            if (!selected) {
+                              return (
+                                <Typography component="span" sx={{ color: '#999', fontStyle: 'italic' }}>
+                                  {loadingServerHostNames ? 'Loading...' : !stationNameWarehouseID ? 'Select Station Name first' : 'Select Machine Name'}
+                                </Typography>
+                              );
+                            }
+                            return selected;
+                          }}
+                        >
+                          {loadingServerHostNames ? (
+                            <MenuItem disabled>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CircularProgress size={16} />
+                                Loading server names...
+                              </Box>
+                            </MenuItem>
+                          ) : !stationNameWarehouseID ? (
+                            <MenuItem disabled>
+                              <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                                Please select Station Name first
+                              </Typography>
+                            </MenuItem>
+                          ) : serverHostNameOptions.length === 0 ? (
+                            <MenuItem disabled>
+                              <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                                No server names available
+                              </Typography>
+                            </MenuItem>
+                          ) : (
+                            serverHostNameOptions.map((option) => (
+                              <MenuItem key={option.id} value={option.name}>
+                                {option.name}
+                              </MenuItem>
+                            ))
+                          )}
+                        </Select>
+                      </FormControl>
                     </TableCell>
                     <TableCell>
                       <TextField

@@ -45,6 +45,17 @@ const warehouseService = {
     }
   },
 
+  // Get Server Host Name Warehouse options by Station Name ID
+  getServerHostNameWarehouses: async (stationNameID, page = 1, pageSize = 100, search = '') => {
+    try {
+      const response = await api.get(`/ServerHostNameWarehouse/ByStationName/${stationNameID}?page=${page}&pageSize=${pageSize}&search=${search}`);
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      // console.error('Error fetching server host name warehouses:', error);
+      throw error;
+    }
+  },
+
   // Get all warehouse data in one call (for better performance)
   getAllWarehouseData: async () => {
     try {

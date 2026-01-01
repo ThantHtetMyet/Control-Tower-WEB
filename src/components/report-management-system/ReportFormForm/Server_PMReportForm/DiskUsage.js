@@ -19,6 +19,8 @@ import {
   MenuItem,
   Select,
   FormControl,
+  InputLabel,
+  CircularProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -32,13 +34,17 @@ import {
 import serverDiskStatusService from '../../../api-services/serverDiskStatusService';
 // Import the ResultStatus service
 import resultStatusService from '../../../api-services/resultStatusService';
+// Import the warehouse service
+import warehouseService from '../../../api-services/warehouseService';
 
-const DiskUsage = ({ data = {}, onDataChange }) => {
+const DiskUsage = ({ data = {}, stationNameWarehouseID, onDataChange }) => {
   const [servers, setServers] = useState(data.servers || []);
   const [remarks, setRemarks] = useState(data.remarks || '');
   const [serverDiskStatusOptions, setServerDiskStatusOptions] = useState([]);
   const [resultStatusOptions, setResultStatusOptions] = useState([]);
+  const [serverHostNameOptions, setServerHostNameOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingServerHostNames, setLoadingServerHostNames] = useState(false);
 
   // Fetch ServerDiskStatus and ResultStatus options on component mount
   useEffect(() => {
@@ -72,6 +78,29 @@ const DiskUsage = ({ data = {}, onDataChange }) => {
 
     fetchOptions();
   }, []);
+
+  // Fetch Server Host Name options when stationNameWarehouseID is available
+  useEffect(() => {
+    const fetchServerHostNames = async () => {
+      if (!stationNameWarehouseID) {
+        setServerHostNameOptions([]);
+        return;
+      }
+
+      try {
+        setLoadingServerHostNames(true);
+        const response = await warehouseService.getServerHostNameWarehouses(stationNameWarehouseID);
+        setServerHostNameOptions(response || []);
+      } catch (error) {
+        console.error('Error fetching server host name options:', error);
+        setServerHostNameOptions([]);
+      } finally {
+        setLoadingServerHostNames(false);
+      }
+    };
+
+    fetchServerHostNames();
+  }, [stationNameWarehouseID]);
 
   // Update parent component when data changes
   useEffect(() => {
@@ -252,13 +281,62 @@ const DiskUsage = ({ data = {}, onDataChange }) => {
           <AccordionDetails>
             <Grid container spacing={2} sx={{ marginBottom: 3 }}>
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Server Name"
-                  value={server.serverName}
-                  onChange={(e) => updateServerName(server.id, e.target.value)}
-                  placeholder="Enter server name"
-                />
+                <FormControl fullWidth>
+                  <InputLabel id={`server-name-label-${server.id}`} shrink>
+                    Server Name
+                  </InputLabel>
+                  <Select
+                    labelId={`server-name-label-${server.id}`}
+                    value={server.serverName || ''}
+                    onChange={(e) => updateServerName(server.id, e.target.value)}
+                    label="Server Name"
+                    disabled={loadingServerHostNames || !stationNameWarehouseID}
+                    displayEmpty
+                    sx={{
+                      '& .MuiSelect-select': {
+                        display: 'flex',
+                        alignItems: 'center',
+                      }
+                    }}
+                    renderValue={(selected) => {
+                      if (!selected) {
+                        return (
+                          <Typography component="span" sx={{ color: '#999', fontStyle: 'italic' }}>
+                            {loadingServerHostNames ? 'Loading...' : !stationNameWarehouseID ? 'Select Station Name first' : 'Select Server Name'}
+                          </Typography>
+                        );
+                      }
+                      return selected;
+                    }}
+                  >
+                    {loadingServerHostNames ? (
+                      <MenuItem disabled>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CircularProgress size={16} />
+                          Loading server names...
+                        </Box>
+                      </MenuItem>
+                    ) : !stationNameWarehouseID ? (
+                      <MenuItem disabled>
+                        <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                          Please select Station Name first
+                        </Typography>
+                      </MenuItem>
+                    ) : serverHostNameOptions.length === 0 ? (
+                      <MenuItem disabled>
+                        <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                          No server names available
+                        </Typography>
+                      </MenuItem>
+                    ) : (
+                      serverHostNameOptions.map((option) => (
+                        <MenuItem key={option.id} value={option.name}>
+                          {option.name}
+                        </MenuItem>
+                      ))
+                    )}
+                  </Select>
+                </FormControl>
               </Grid>
             </Grid>
 

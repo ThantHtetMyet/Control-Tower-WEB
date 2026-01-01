@@ -206,6 +206,7 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
         return (
           <ServerHealth
             data={formData.serverHealthData || {}}
+            stationNameWarehouseID={formData.stationNameWarehouseID}
             onDataChange={dataChangeHandlers.serverHealth}
           />
         );
@@ -220,6 +221,7 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
         return (
           <HardDriveHealth
             data={formData.hardDriveHealthData || {}}
+            stationNameWarehouseID={formData.stationNameWarehouseID}
             onDataChange={dataChangeHandlers.hardDriveHealth}
           />
         );
@@ -227,6 +229,7 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
         return (
           <DiskUsage
             data={formData.diskUsageData || {}}
+            stationNameWarehouseID={formData.stationNameWarehouseID}
             onDataChange={dataChangeHandlers.diskUsage}
           />
         );
@@ -235,6 +238,7 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
           <CPUAndRamUsage
             data={formData.cpuAndRamUsageData || {}}
             onDataChange={dataChangeHandlers.cpuAndRamUsage}
+            stationNameWarehouseID={formData.stationNameWarehouseID}
           />
         );
       case 'willowlynxProcessStatus':
@@ -298,6 +302,7 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
           <TimeSync
             data={formData.timeSyncData || {}}
             onDataChange={dataChangeHandlers.timeSync}
+            stationNameWarehouseID={formData.stationNameWarehouseID}
           />
         );
       case 'hotFixes':
@@ -305,6 +310,7 @@ const ServerPMReportForm = ({ formData, formStatusOptions = [], onInputChange, o
           <HotFixes
             data={formData.hotFixesData || {}}
             onDataChange={dataChangeHandlers.hotFixes}
+            stationNameWarehouseID={formData.stationNameWarehouseID}
           />
         );
       case 'autoFailOver':

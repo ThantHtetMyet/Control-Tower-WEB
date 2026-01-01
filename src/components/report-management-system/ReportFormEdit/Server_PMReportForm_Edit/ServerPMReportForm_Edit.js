@@ -205,10 +205,10 @@ const ServerPMReportForm_Edit = () => {
         // Set basic form data
         setFormData({
           reportTitle: response.pmReportFormServer.reportTitle || 'Edit Server Preventive Maintenance Report',
-          systemDescription: response.systemNameWarehouseName || response.pmReportFormServer?.systemDescription || '',
-          systemNameWarehouseID: response.systemNameWarehouseID || '',
-          stationName: response.stationNameWarehouseName || response.pmReportFormServer?.stationName || '',
-          stationNameWarehouseID: response.stationNameWarehouseID || '',
+          systemDescription: response.reportForm?.systemDescription || response.pmReportFormServer?.systemDescription || '',
+          systemNameWarehouseID: response.reportForm?.systemNameWarehouseID || '',
+          stationName: response.reportForm?.stationName || response.pmReportFormServer?.stationName || '',
+          stationNameWarehouseID: response.reportForm?.stationNameWarehouseID || '',
           jobNo: response.reportForm.jobNo || '',
           projectNo: response.pmReportFormServer?.projectNo || '',
           customer: response.pmReportFormServer?.customer || '',
@@ -608,6 +608,7 @@ const ServerPMReportForm_Edit = () => {
       <Component
         data={serverPMData[dataKey] || {}}
         onDataChange={dataChangeHandlers[currentStep]}
+        stationNameWarehouseID={formData.stationNameWarehouseID}
       />
     );
   };

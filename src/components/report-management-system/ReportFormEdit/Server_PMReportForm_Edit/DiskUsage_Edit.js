@@ -16,6 +16,9 @@ import {
   TableRow,
   IconButton,
   MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
   CircularProgress,
   Snackbar,
   Alert
@@ -29,13 +32,17 @@ import {
 } from '@mui/icons-material';
 import serverDiskStatusService from '../../../api-services/serverDiskStatusService';
 import resultStatusService from '../../../api-services/resultStatusService';
+// Import the warehouse service
+import warehouseService from '../../../api-services/warehouseService';
 
-const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
+const DiskUsage_Edit = ({ data, onDataChange, onStatusChange, stationNameWarehouseID }) => {
   const [servers, setServers] = useState([]);
   const [remarks, setRemarks] = useState('');
   const [serverDiskStatusOptions, setServerDiskStatusOptions] = useState([]);
   const [resultStatusOptions, setResultStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [serverHostNameOptions, setServerHostNameOptions] = useState([]);
+  const [loadingServerHostNames, setLoadingServerHostNames] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const isInitialized = useRef(false);
 
@@ -192,6 +199,93 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
 
     fetchResultStatusOptions();
   }, []);
+
+  // Fetch Server Host Name options when stationNameWarehouseID changes
+  useEffect(() => {
+    const fetchServerHostNames = async () => {
+      if (!stationNameWarehouseID || stationNameWarehouseID.trim() === '') {
+        setServerHostNameOptions([]);
+        return;
+      }
+
+      try {
+        setLoadingServerHostNames(true);
+        const stationID = stationNameWarehouseID.trim();
+        const response = await warehouseService.getServerHostNameWarehouses(stationID);
+        const fetchedOptions = Array.isArray(response) ? response : [];
+        
+        // Get existing server names from current data
+        const existingServerNames = servers
+          .filter(server => server.serverName && server.serverName.trim() !== '' && !server.isDeleted)
+          .map(server => server.serverName.trim());
+        
+        // Create a map to avoid duplicates
+        const optionsMap = new Map();
+        
+        // First, add ALL fetched options from API
+        fetchedOptions.forEach(option => {
+          const optionName = option.name || option.Name;
+          if (option && optionName) {
+            optionsMap.set(optionName, { id: option.id || option.ID || `api-${optionName}`, name: optionName });
+          }
+        });
+        
+        // Then, add existing server names that are not in the fetched options
+        existingServerNames.forEach(serverName => {
+          if (!optionsMap.has(serverName)) {
+            optionsMap.set(serverName, { id: `existing-${serverName}`, name: serverName });
+          }
+        });
+        
+        // Convert map back to array
+        const finalOptions = Array.from(optionsMap.values());
+        setServerHostNameOptions(finalOptions);
+      } catch (error) {
+        console.error('Error fetching server host name options:', error);
+        // Even on error, include existing server names so current values are visible
+        const existingServerNames = servers
+          .filter(server => server.serverName && server.serverName.trim() !== '' && !server.isDeleted)
+          .map(server => server.serverName.trim());
+        const existingOptions = existingServerNames.map(name => ({ id: `existing-${name}`, name }));
+        setServerHostNameOptions(existingOptions);
+      } finally {
+        setLoadingServerHostNames(false);
+      }
+    };
+
+    fetchServerHostNames();
+  }, [stationNameWarehouseID]); // Only fetch when stationNameWarehouseID changes, not when data changes
+
+  // Merge existing server names into options when data changes (without re-fetching)
+  useEffect(() => {
+    if (servers.length > 0) {
+      const existingServerNames = servers
+        .filter(server => server.serverName && server.serverName.trim() !== '' && !server.isDeleted)
+        .map(server => server.serverName.trim());
+      
+      if (existingServerNames.length > 0) {
+        // Use functional setState to avoid dependency on serverHostNameOptions
+        setServerHostNameOptions(prevOptions => {
+          const optionsMap = new Map(prevOptions.map(opt => [
+            String(opt.name || opt.Name || '').trim(),
+            opt
+          ]));
+          
+          // Add existing server names that aren't already in options
+          let hasChanges = false;
+          existingServerNames.forEach(serverName => {
+            if (!optionsMap.has(serverName)) {
+              optionsMap.set(serverName, { id: `existing-${serverName}`, name: serverName });
+              hasChanges = true;
+            }
+          });
+          
+          // Only return new array if there are changes to avoid unnecessary re-renders
+          return hasChanges ? Array.from(optionsMap.values()) : prevOptions;
+        });
+      }
+    }
+  }, [servers]); // Only merge existing names when data changes
 
   // Utility functions for snackbar
   const showSnackbar = (message, severity = 'success') => {
@@ -362,7 +456,9 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
       usage: '',
       check: '',
       remarks: '', // Add remarks field for new disks
-      isNew: server.isNew || true // Mark as new if server is new or disk is new
+      isNew: true, // Always true for new disks (id is null)
+      isModified: false,
+      isDeleted: false
     };
     
     updatedServers[serverIndex] = {
@@ -596,45 +692,108 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange }) => {
         >
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-              <TextField
-                value={server.serverName}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  updateServerName(serverIndex, e.target.value);
-                }}
-                onClick={(e) => e.stopPropagation()}
-                placeholder={`Server ${serverIndex + 1}`}
-                variant="outlined"
-                size="small"
-                disabled={server.isDeleted}
-                sx={{ 
-                  minWidth: '200px',
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: '#f8f9fa',
-                    '&:hover': {
-                      backgroundColor: '#e9ecef',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#1976d2'
-                      }
-                    },
-                    '&.Mui-focused': {
-                      backgroundColor: '#ffffff',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#1976d2',
-                        borderWidth: '2px'
-                      }
-                    },
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#dee2e6'
-                    }
-                  },
-                  '& .MuiInputBase-input': {
-                    padding: '8px 12px',
-                    fontSize: '1rem',
-                    fontWeight: '500'
-                  }
-                }}
-              />
+              {(() => {
+                // Compute complete options list including current value for this server
+                const currentValue = String(server.serverName || '').trim();
+                const optionsWithCurrent = [...serverHostNameOptions];
+                
+                // Always include current value in options if it exists and is not already there
+                if (currentValue && currentValue !== '' && !optionsWithCurrent.some(opt => {
+                  const optName = String(opt.name || opt.Name || '').trim();
+                  return optName === currentValue;
+                })) {
+                  optionsWithCurrent.push({ 
+                    id: `current-${currentValue}`, 
+                    name: currentValue 
+                  });
+                }
+                
+                // Since we always add currentValue to optionsWithCurrent if it exists,
+                // the value should always be valid if currentValue is not empty
+                const selectValue = currentValue && currentValue !== '' ? currentValue : '';
+                
+                return (
+                  <FormControl size="small" sx={{ minWidth: '200px' }}>
+                    <InputLabel id={`disk-usage-server-name-label-${serverIndex}`} shrink>
+                      Server Name
+                    </InputLabel>
+                    <Select
+                      labelId={`disk-usage-server-name-label-${serverIndex}`}
+                      value={selectValue}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        updateServerName(serverIndex, String(e.target.value || '').trim());
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      label="Server Name"
+                      disabled={server.isDeleted || loadingServerHostNames}
+                      sx={{
+                        backgroundColor: '#f8f9fa',
+                        '& .MuiSelect-select': {
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '8px 12px',
+                          fontSize: '1rem',
+                          fontWeight: '500'
+                        },
+                        '&:hover': {
+                          backgroundColor: '#e9ecef',
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#1976d2'
+                          }
+                        },
+                        '&.Mui-focused': {
+                          backgroundColor: '#ffffff',
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#1976d2',
+                            borderWidth: '2px'
+                          }
+                        }
+                      }}
+                    >
+                      {loadingServerHostNames ? (
+                        <MenuItem disabled value="">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CircularProgress size={16} />
+                            Loading server names...
+                          </Box>
+                        </MenuItem>
+                      ) : optionsWithCurrent.length === 0 ? (
+                        !stationNameWarehouseID ? (
+                          <MenuItem disabled value="">
+                            <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                              Please select Station Name first
+                            </Typography>
+                          </MenuItem>
+                        ) : (
+                          <MenuItem disabled value="">
+                            <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                              No server names available
+                            </Typography>
+                          </MenuItem>
+                        )
+                      ) : (
+                        [
+                          <MenuItem key="empty-placeholder" value="">
+                            <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                              Select Server Name
+                            </Typography>
+                          </MenuItem>,
+                          ...optionsWithCurrent.map((option) => {
+                            const optionName = String(option.name || option.Name || '').trim();
+                            const optionId = String(option.id || option.ID || optionName);
+                            return (
+                              <MenuItem key={optionId} value={optionName}>
+                                {optionName}
+                              </MenuItem>
+                            );
+                          })
+                        ]
+                      )}
+                    </Select>
+                  </FormControl>
+                );
+              })()}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <IconButton
                   onClick={(e) => {

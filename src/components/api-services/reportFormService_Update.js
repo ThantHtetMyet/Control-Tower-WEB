@@ -1,6 +1,15 @@
 
 import api from './api';
 
+// Helper function to validate if a string is a valid GUID format
+const isValidGuid = (value) => {
+  if (!value || typeof value !== 'string') return false;
+  const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const guidPatternNoDashes = /^[0-9a-f]{32}$/i;
+  const trimmed = value.trim();
+  return guidPattern.test(trimmed) || guidPatternNoDashes.test(trimmed);
+};
+
 // Update Server PM Report Form
 export const updateServerPMReportForm = async (id, formData, user) => {
   try {
@@ -46,6 +55,24 @@ export const updateServerPMReportForm = async (id, formData, user) => {
           if (transformedDetail.expectedResultId !== undefined) {
             transformedDetail.ASAFirewallStatusID = transformedDetail.expectedResultId;
             delete transformedDetail.expectedResultId;
+          }
+          
+          // Transform asaFirewallStatusID to ASAFirewallStatusID
+          if (transformedDetail.asaFirewallStatusID !== undefined) {
+            transformedDetail.ASAFirewallStatusID = transformedDetail.asaFirewallStatusID;
+            // Keep asaFirewallStatusID for compatibility
+          }
+          
+          // Transform commandInput to CommandInput
+          if (transformedDetail.commandInput !== undefined) {
+            transformedDetail.CommandInput = transformedDetail.commandInput;
+            // Keep commandInput for compatibility
+          }
+          
+          // Transform serialNumber to SerialNumber
+          if (transformedDetail.serialNumber !== undefined) {
+            transformedDetail.SerialNumber = transformedDetail.serialNumber;
+            // Keep serialNumber for compatibility
           }
           
           if (transformedDetail.doneId !== undefined) {
@@ -464,16 +491,38 @@ export const updateServerPMReportForm = async (id, formData, user) => {
       // Handle Review format for asaFirewallData
       if (componentData.pmServerASAFirewalls && Array.isArray(componentData.pmServerASAFirewalls) && componentData.pmServerASAFirewalls.length > 0) {
         const firstItem = componentData.pmServerASAFirewalls[0];
-        const details = firstItem.details || [];
-        const remarks = firstItem.remarks || componentData.remarks || '';
         
-        if (details.length === 0 && !remarks.trim()) {
+        // Check if it's a nested structure with details array
+        if (firstItem.details && Array.isArray(firstItem.details)) {
+          const details = firstItem.details;
+          const remarks = firstItem.remarks || componentData.remarks || '';
+          
+          if (details.length === 0 && !remarks.trim()) {
+            return null;
+          }
+          
+          return {
+            remarks: remarks,
+            details: transformDetailFields(details)
+          };
+        }
+        
+        // Handle flat array structure (pmServerASAFirewalls is the array of items directly)
+        // Filter out deleted items without IDs (new items that were deleted)
+        // But include deleted items with IDs (existing items to be soft-deleted)
+        const validItems = componentData.pmServerASAFirewalls.filter(item => 
+          item && (!item.isDeleted || item.id || item.ID)
+        );
+        
+        const remarks = componentData.remarks || '';
+        
+        if (validItems.length === 0 && !remarks.trim()) {
           return null;
         }
         
         return {
           remarks: remarks,
-          details: transformDetailFields(details)
+          details: transformDetailFields(validItems)
         };
       }
       
@@ -566,7 +615,13 @@ export const updateServerPMReportForm = async (id, formData, user) => {
       
       // Handle nested structure with remarks
       if (componentData.remarks !== undefined) {
-        const dataArray = componentData[componentName] || componentData.asaFirewallData || componentData.autoFailOverData || componentData.data || [];
+        // For asaFirewallData, check if it's an object with asaFirewallData array inside
+        let dataArray = componentData[componentName] || componentData.asaFirewallData || componentData.autoFailOverData || componentData.data || [];
+        
+        // If asaFirewallData is an object (not array), extract the array from it
+        if (componentName === 'asaFirewallData' && !Array.isArray(dataArray) && dataArray.asaFirewallData && Array.isArray(dataArray.asaFirewallData)) {
+          dataArray = dataArray.asaFirewallData;
+        }
         
         // Check if there's meaningful data
         const hasRemarks = componentData.remarks && componentData.remarks.trim() !== '';
@@ -1003,54 +1058,101 @@ export const updateServerPMReportForm = async (id, formData, user) => {
           );
           
           // Transform servers to match backend DTO structure
-          const transformedServers = serversToProcess.map(server => {
-            // Include ALL disks (including deleted ones with IDs) so backend can process deletions
-            // Only exclude new items (no ID) that are deleted
-            const disksToProcess = (server.disks || []).filter(disk => 
-              !disk.isDeleted || disk.id // Include if not deleted OR if it has an ID (needs to be marked as deleted)
-            );
-            
-            return {
-              Id: server.id || null,
-              ServerName: server.serverName,
-              Disks: disksToProcess.map(disk => {
-                // Map status name to ID if needed
-                let statusId = disk.status;
-                if (typeof disk.status === 'string' && componentData.serverDiskStatusOptions) {
-                  const statusOption = componentData.serverDiskStatusOptions.find(option => 
-                    option.name === disk.status || option.Name === disk.status
-                  );
-                  if (statusOption) {
-                    statusId = statusOption.id || statusOption.ID;
+          const transformedServers = serversToProcess
+            .map(server => {
+              // Include ALL disks (including deleted ones with IDs) so backend can process deletions
+              // Only exclude new items (no ID) that are deleted
+              const disksToProcess = (server.disks || []).filter(disk => 
+                !disk.isDeleted || disk.id // Include if not deleted OR if it has an ID (needs to be marked as deleted)
+              );
+              
+              return {
+                Id: server.id || null,
+                ServerName: server.serverName,
+                Disks: disksToProcess
+                .map(disk => {
+                  // Map status name to ID if needed
+                  // Status can be: GUID string (from dropdown), option name, or empty string
+                  let statusId = disk.status;
+                  if (statusId && typeof statusId === 'string' && statusId.trim() !== '') {
+                    // Check if it's already a GUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+                    const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                    if (!guidPattern.test(statusId) && componentData.serverDiskStatusOptions) {
+                      // Not a GUID, try to find by name
+                      const statusOption = componentData.serverDiskStatusOptions.find(option => 
+                        (option.name && option.name === statusId) || 
+                        (option.Name && option.Name === statusId)
+                      );
+                      if (statusOption) {
+                        statusId = statusOption.id || statusOption.ID || statusId;
+                      }
+                    }
+                    // If it's a valid GUID, keep it as is
+                  } else {
+                    statusId = null;
                   }
-                }
-                
-                // Map check name to ID if needed
-                let checkId = disk.check;
-                if (typeof disk.check === 'string' && componentData.resultStatusOptions) {
-                  const checkOption = componentData.resultStatusOptions.find(option => 
-                    option.name === disk.check || option.Name === disk.check
-                  );
-                  if (checkOption) {
-                    checkId = checkOption.id || checkOption.ID;
+                  
+                  // Map check name to ID if needed
+                  // Check can be: GUID string (from dropdown), option name, or empty string
+                  let checkId = disk.check;
+                  if (checkId && typeof checkId === 'string' && checkId.trim() !== '') {
+                    // Check if it's already a GUID
+                    const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                    if (!guidPattern.test(checkId) && componentData.resultStatusOptions) {
+                      // Not a GUID, try to find by name
+                      const checkOption = componentData.resultStatusOptions.find(option => 
+                        (option.name && option.name === checkId) || 
+                        (option.Name && option.Name === checkId)
+                      );
+                      if (checkOption) {
+                        checkId = checkOption.id || checkOption.ID || checkId;
+                      }
+                    }
+                    // If it's a valid GUID, keep it as is
+                  } else {
+                    checkId = null;
                   }
-                }
-                
-                const diskId = disk.id || null;
-                return {
-                  Id: diskId,
-                  Disk: disk.disk || '',
-                  Status: statusId || '',
-                  Capacity: disk.capacity || '',
-                  FreeSpace: disk.freeSpace || '',
-                  Usage: disk.usage || '', // Ensure Usage field is included
-                  Check: checkId || '',
-                  Remarks: disk.remarks || '',
-                  IsNew: !diskId, // Set IsNew based on ID presence
-                  IsModified: disk.isModified || false, // Preserve isModified flag
-                  IsDeleted: disk.isDeleted || false // Include IsDeleted flag - backend needs this to mark as deleted
-                };
-              }),
+                  
+                  const diskId = disk.id || null;
+                  const isNew = !diskId;
+                  
+                  // For new items, validate required fields (Status and Check must be valid GUIDs)
+                  // For existing items, include them even if fields are empty (for updates)
+                  if (isNew) {
+                    // Validate that Status and Check are valid GUIDs (not empty strings)
+                    const hasValidStatus = statusId && statusId.trim() !== '' && isValidGuid(statusId);
+                    const hasValidCheck = checkId && checkId.trim() !== '' && isValidGuid(checkId);
+                    
+                    // Skip new items that don't have required fields filled
+                    if (!hasValidStatus || !hasValidCheck) {
+                      return null; // Filter out incomplete new items
+                    }
+                  }
+                  
+                  // Convert empty strings to null for GUID fields (backend expects null or valid GUID)
+                  // For new items, we need valid GUIDs (not null, not empty string)
+                  // For existing items, we can use null or valid GUIDs
+                  const finalStatusId = (statusId && statusId.trim() !== '' && isValidGuid(statusId)) ? statusId : null;
+                  const finalCheckId = (checkId && checkId.trim() !== '' && isValidGuid(checkId)) ? checkId : null;
+                  
+                  // For new items, use the GUID value directly (already validated above)
+                  // Backend requires non-empty GUIDs for new items (line 1891: ResultStatusID != Guid.Empty && ServerDiskStatusID != Guid.Empty)
+                  // For existing items, send the GUID or empty string (backend will handle)
+                  return {
+                    Id: diskId,
+                    Disk: disk.disk || '',
+                    Status: finalStatusId || '', // Send GUID directly (for new items, this is guaranteed to be valid GUID)
+                    Capacity: disk.capacity || '',
+                    FreeSpace: disk.freeSpace || '',
+                    Usage: disk.usage || '', // Ensure Usage field is included
+                    Check: finalCheckId || '', // Send GUID directly (for new items, this is guaranteed to be valid GUID)
+                    Remarks: disk.remarks || '',
+                    IsNew: isNew, // Set IsNew based on ID presence (true when id is null)
+                    IsModified: disk.isModified || false, // Preserve isModified flag
+                    IsDeleted: disk.isDeleted || false // Include IsDeleted flag - backend needs this to mark as deleted
+                  };
+                })
+                .filter(disk => disk !== null), // Remove filtered out items
               IsNew: !server.id, // Set IsNew based on ID presence
               IsModified: server.isModified || false, // Preserve isModified flag
               IsDeleted: server.isDeleted || false // Include IsDeleted flag - backend needs this to mark as deleted
@@ -1198,21 +1300,73 @@ export const updateServerPMReportForm = async (id, formData, user) => {
             }
             
             // Transform field names to match backend DTO
-            const transformedDetails = dataArray.map((item, index) => ({
-              ID: (item.IsNew || item.isNew) ? null : (item.ID || item.id || null),
-              SerialNo: String(item.serialNo || (index + 1)),
-              ServerName: item.machineName || '',
-              PreviousPatch: item.previousPatch || '',
-              CurrentPatch: item.currentPatch || '',
-              Remarks: item.remarks || '',
-              IsNew: item.IsNew || item.isNew || false,
-              IsDeleted: item.IsDeleted || item.isDeleted || false,
-              IsModified: item.IsModified || item.isModified || false
-            }));
+            const transformedDetails = dataArray.map((item, index) => {
+              // Ensure ID is either a valid GUID string or null (not empty string)
+              let itemId = null;
+              let isNewItem = item.IsNew || item.isNew || false;
+              
+              if (!isNewItem) {
+                const idValue = item.ID || item.id;
+                // Only use ID if it's a valid GUID
+                if (idValue && String(idValue).trim() !== '') {
+                  const idStr = String(idValue).trim();
+                  if (isValidGuid(idStr)) {
+                    itemId = idStr;
+                  } else {
+                    // Invalid GUID format - treat as new item
+                    isNewItem = true;
+                    itemId = null;
+                  }
+                } else {
+                  // No ID or empty ID - treat as new item
+                  isNewItem = true;
+                }
+              }
+              
+              return {
+                ID: itemId,
+                SerialNo: String(item.serialNo || (index + 1)),
+                ServerName: item.machineName || '',
+                PreviousPatch: item.previousPatch || '',
+                CurrentPatch: item.currentPatch || '',
+                Remarks: item.remarks || '',
+                IsNew: isNewItem,
+                IsDeleted: item.IsDeleted || item.isDeleted || false,
+                IsModified: item.IsModified || item.isModified || false
+              };
+            });
+            
+            // Normalize IDs first (convert empty strings to null and validate GUIDs), then filter
+            const normalizedDetails = transformedDetails.map(item => {
+              // If IsNew is true, ensure ID is null
+              if (item.IsNew) {
+                return { ...item, ID: null };
+              }
+              // If IsNew is false, validate that ID is a valid GUID
+              if (item.ID && !isValidGuid(item.ID)) {
+                // Invalid GUID - treat as new item
+                return { ...item, ID: null, IsNew: true };
+              }
+              // If IsNew is false but ID is empty/invalid, treat as new
+              if (!item.ID || String(item.ID).trim() === '') {
+                return { ...item, ID: null, IsNew: true };
+              }
+              return item;
+            });
+            
+            // Filter out items with invalid IDs (only keep items where IsNew=true has ID=null, or IsNew=false has valid GUID)
+            const validDetails = normalizedDetails.filter(item => {
+              // If IsNew is true, ID must be null
+              if (item.IsNew) {
+                return item.ID === null || item.ID === undefined;
+              }
+              // If IsNew is false, ID must be a valid GUID
+              return item.ID !== null && item.ID !== undefined && isValidGuid(item.ID);
+            });
             
             const transformedData = {
               Remarks: remarks,
-              Details: transformedDetails
+              Details: validDetails
             };
             
             //console.log('transformComponentData - softwarePatchData (new structure) output:', transformedData);
@@ -1235,21 +1389,73 @@ export const updateServerPMReportForm = async (id, formData, user) => {
             }
             
             // Transform field names to match backend DTO
-            const transformedDetails = componentData.map((item, index) => ({
-              ID: (item.IsNew || item.isNew) ? null : (item.ID || item.id || null),
-              SerialNo: String(item.serialNo || (index + 1)),
-              ServerName: item.machineName || '',
-              PreviousPatch: item.previousPatch || '',
-              CurrentPatch: item.currentPatch || '',
-              Remarks: item.remarks || '',
-              IsNew: item.IsNew || item.isNew || false,
-              IsDeleted: item.IsDeleted || item.isDeleted || false,
-              IsModified: item.IsModified || item.isModified || false
-            }));
+            const transformedDetails = componentData.map((item, index) => {
+              // Ensure ID is either a valid GUID string or null (not empty string)
+              let itemId = null;
+              let isNewItem = item.IsNew || item.isNew || false;
+              
+              if (!isNewItem) {
+                const idValue = item.ID || item.id;
+                // Only use ID if it's a valid GUID
+                if (idValue && String(idValue).trim() !== '') {
+                  const idStr = String(idValue).trim();
+                  if (isValidGuid(idStr)) {
+                    itemId = idStr;
+                  } else {
+                    // Invalid GUID format - treat as new item
+                    isNewItem = true;
+                    itemId = null;
+                  }
+                } else {
+                  // No ID or empty ID - treat as new item
+                  isNewItem = true;
+                }
+              }
+              
+              return {
+                ID: itemId,
+                SerialNo: String(item.serialNo || (index + 1)),
+                ServerName: item.machineName || '',
+                PreviousPatch: item.previousPatch || '',
+                CurrentPatch: item.currentPatch || '',
+                Remarks: item.remarks || '',
+                IsNew: isNewItem,
+                IsDeleted: item.IsDeleted || item.isDeleted || false,
+                IsModified: item.IsModified || item.isModified || false
+              };
+            });
+            
+            // Normalize IDs first (convert empty strings to null and validate GUIDs), then filter
+            const normalizedDetails = transformedDetails.map(item => {
+              // If IsNew is true, ensure ID is null
+              if (item.IsNew) {
+                return { ...item, ID: null };
+              }
+              // If IsNew is false, validate that ID is a valid GUID
+              if (item.ID && !isValidGuid(item.ID)) {
+                // Invalid GUID - treat as new item
+                return { ...item, ID: null, IsNew: true };
+              }
+              // If IsNew is false but ID is empty/invalid, treat as new
+              if (!item.ID || String(item.ID).trim() === '') {
+                return { ...item, ID: null, IsNew: true };
+              }
+              return item;
+            });
+            
+            // Filter out items with invalid IDs (only keep items where IsNew=true has ID=null, or IsNew=false has valid GUID)
+            const validDetails = normalizedDetails.filter(item => {
+              // If IsNew is true, ID must be null
+              if (item.IsNew) {
+                return item.ID === null || item.ID === undefined;
+              }
+              // If IsNew is false, ID must be a valid GUID
+              return item.ID !== null && item.ID !== undefined && isValidGuid(item.ID);
+            });
             
             const transformedData = {
               Remarks: '', // No remarks in flattened array structure
-              Details: transformedDetails
+              Details: validDetails
             };
             
             //console.log('transformComponentData - softwarePatchData (flattened array) output:', transformedData);
@@ -1272,27 +1478,95 @@ export const updateServerPMReportForm = async (id, formData, user) => {
           }
           
           // Transform field names to match backend DTO
-          const transformedDetails = dataArray.map((item, index) => ({
-            ID: (item.IsNew || item.isNew) ? null : (item.ID || item.id || null),
-            SerialNo: String(item.serialNo || (index + 1)),
-            ServerName: item.machineName || '',
-            PreviousPatch: item.previousPatch || '',
-            CurrentPatch: item.currentPatch || '',
-            Remarks: item.remarks || '',
-            IsNew: item.IsNew || item.isNew || false,
-            IsDeleted: item.IsDeleted || item.isDeleted || false,
-            IsModified: item.IsModified || item.isModified || false
-          }));
+          const transformedDetails = dataArray.map((item, index) => {
+            // Ensure ID is either a valid GUID string or null (not empty string)
+            let itemId = null;
+            let isNewItem = item.IsNew || item.isNew || false;
+            
+            if (!isNewItem) {
+              const idValue = item.ID || item.id;
+              // Only use ID if it's a valid GUID
+              if (idValue && String(idValue).trim() !== '') {
+                const idStr = String(idValue).trim();
+                if (isValidGuid(idStr)) {
+                  itemId = idStr;
+                } else {
+                  // Invalid GUID format - treat as new item
+                  isNewItem = true;
+                  itemId = null;
+                }
+              } else {
+                // No ID or empty ID - treat as new item
+                isNewItem = true;
+              }
+            }
+            
+            return {
+              ID: itemId,
+              SerialNo: String(item.serialNo || (index + 1)),
+              ServerName: item.machineName || '',
+              PreviousPatch: item.previousPatch || '',
+              CurrentPatch: item.currentPatch || '',
+              Remarks: item.remarks || '',
+              IsNew: isNewItem,
+              IsDeleted: item.IsDeleted || item.isDeleted || false,
+              IsModified: item.IsModified || item.isModified || false
+            };
+          });
+          
+          // Normalize IDs first (convert empty strings to null and validate GUIDs), then filter
+          const normalizedDetails = transformedDetails.map(item => {
+            // If IsNew is true, ensure ID is null
+            if (item.IsNew) {
+              return { ...item, ID: null };
+            }
+            // If IsNew is false, validate that ID is a valid GUID
+            if (item.ID && !isValidGuid(item.ID)) {
+              // Invalid GUID - treat as new item
+              return { ...item, ID: null, IsNew: true };
+            }
+            // If IsNew is false but ID is empty/invalid, treat as new
+            if (!item.ID || String(item.ID).trim() === '') {
+              return { ...item, ID: null, IsNew: true };
+            }
+            return item;
+          });
+          
+          // Filter out items with invalid IDs (only keep items where IsNew=true has ID=null, or IsNew=false has valid GUID)
+          const validDetails = normalizedDetails.filter(item => {
+            // If IsNew is true, ID must be null
+            if (item.IsNew) {
+              return item.ID === null || item.ID === undefined;
+            }
+            // If IsNew is false, ID must be a valid GUID
+            return item.ID !== null && item.ID !== undefined && isValidGuid(item.ID);
+          });
           
           const transformedData = {
             Remarks: componentData.remarks || '',
-            Details: transformedDetails
+            Details: validDetails
           };
           
           //console.log('transformComponentData - softwarePatchData (old structure) output:', transformedData);
           return transformedData;
         }
 
+        // Special handling for asaFirewallData in Edit format (direct array)
+        if (componentName === 'asaFirewallData' && Array.isArray(dataArray) && dataArray.length > 0) {
+          // Filter out deleted items without IDs (new items that were deleted)
+          // But include deleted items with IDs (existing items to be soft-deleted)
+          const validItems = dataArray.filter(item => item && (!item.isDeleted || item.id || item.ID));
+          
+          if (validItems.length === 0 && !hasRemarks) {
+            return null;
+          }
+          
+          return {
+            remarks: componentData.remarks || '',
+            details: transformDetailFields(validItems)
+          };
+        }
+        
         // Fallback for other components - but NOT for Willowlynx components
         if (componentName.startsWith('willowlynx')) {
           // This should not happen if all Willowlynx components are handled above

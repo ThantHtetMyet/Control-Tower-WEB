@@ -24,12 +24,16 @@ import {
 // Import the hard drive health image
 import HardDriveHealthImage from '../../../resources/ServerPMReportForm/HardDriveHealth.png';
 import resultStatusService from '../../../api-services/resultStatusService';
+// Import the warehouse service
+import warehouseService from '../../../api-services/warehouseService';
 
-const HardDriveHealth = ({ data, onDataChange, onStatusChange }) => {
+const HardDriveHealth = ({ data, stationNameWarehouseID, onDataChange, onStatusChange }) => {
   const [hardDriveHealthData, setHardDriveHealthData] = useState([]);
   const [remarks, setRemarks] = useState('');
   const [resultStatusOptions, setResultStatusOptions] = useState([]);
+  const [serverHostNameOptions, setServerHostNameOptions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingServerHostNames, setLoadingServerHostNames] = useState(false);
   const isInitialized = useRef(false);
 
   // Initialize data from props only once
@@ -65,6 +69,29 @@ const HardDriveHealth = ({ data, onDataChange, onStatusChange }) => {
 
     fetchResultStatusOptions();
   }, []);
+
+  // Fetch Server Host Name options when stationNameWarehouseID is available
+  useEffect(() => {
+    const fetchServerHostNames = async () => {
+      if (!stationNameWarehouseID) {
+        setServerHostNameOptions([]);
+        return;
+      }
+
+      try {
+        setLoadingServerHostNames(true);
+        const response = await warehouseService.getServerHostNameWarehouses(stationNameWarehouseID);
+        setServerHostNameOptions(response || []);
+      } catch (error) {
+        console.error('Error fetching server host name options:', error);
+        setServerHostNameOptions([]);
+      } finally {
+        setLoadingServerHostNames(false);
+      }
+    };
+
+    fetchServerHostNames();
+  }, [stationNameWarehouseID]);
 
   // Update parent component when data changes (but not on initial load)
   useEffect(() => {
@@ -196,12 +223,39 @@ const HardDriveHealth = ({ data, onDataChange, onStatusChange }) => {
                   <TableCell>
                     <TextField
                       fullWidth
+                      select
                       variant="outlined"
-                      value={row.serverName}
+                      value={row.serverName || ''}
                       onChange={(e) => handleHardDriveHealthChange(index, 'serverName', e.target.value)}
-                      placeholder="Enter server name"
+                      placeholder="Select server name"
                       size="small"
-                    />
+                      disabled={loadingServerHostNames || !stationNameWarehouseID}
+                      sx={{
+                        minWidth: 200,
+                        '& .MuiSelect-select': {
+                          display: 'flex',
+                          alignItems: 'center',
+                        }
+                      }}
+                    >
+                      <MenuItem value="">
+                        {loadingServerHostNames ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CircularProgress size={16} />
+                            Loading...
+                          </Box>
+                        ) : !stationNameWarehouseID ? (
+                          'Please select Station Name first'
+                        ) : (
+                          'Select Server Name'
+                        )}
+                      </MenuItem>
+                      {serverHostNameOptions.map((option) => (
+                        <MenuItem key={option.id} value={option.name}>
+                          {option.name}
+                        </MenuItem>
+                      ))}
+                    </TextField>
                   </TableCell>
                   <TableCell>
                     <TextField

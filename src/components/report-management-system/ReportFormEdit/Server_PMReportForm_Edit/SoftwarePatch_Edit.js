@@ -176,7 +176,7 @@ const SoftwarePatch_Edit = ({ data, onDataChange, onStatusChange }) => {
     const nextSerialNo = (maxSerialNo + 1).toString();
     
     const newRow = { 
-      id: Date.now(),
+      id: null, // null for new rows that don't exist in database yet
       serialNo: nextSerialNo,
       machineName: '',
       previousPatch: '',
@@ -191,9 +191,23 @@ const SoftwarePatch_Edit = ({ data, onDataChange, onStatusChange }) => {
 
   const removeSoftwarePatchRow = (index) => {
     const updatedData = [...softwarePatchData];
-    updatedData[index] = { ...updatedData[index], isDeleted: true };
+    const itemToRemove = updatedData[index];
+    
+    // If item has an ID (existing record from database), mark as deleted instead of removing
+    if (itemToRemove.id) {
+      updatedData[index] = {
+        ...itemToRemove,
+        isDeleted: true,
+        isModified: true
+      };
+      setSnackbar({ open: true, message: 'Software patch item marked for deletion. Click undo to restore.', severity: 'warning' });
+    } else {
+      // If it's a new item (no ID), remove it completely since it doesn't exist in database
+      updatedData.splice(index, 1);
+      setSnackbar({ open: true, message: 'New software patch item removed', severity: 'success' });
+    }
+    
     setSoftwarePatchData(updatedData);
-    setSnackbar({ open: true, message: 'Software patch item marked for deletion. Click undo to restore.', severity: 'warning' });
   };
 
   const restoreSoftwarePatchRow = (index) => {

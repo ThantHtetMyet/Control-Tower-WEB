@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -31,16 +31,25 @@ import {
 import ServerHealthImage from '../../../resources/ServerPMReportForm/ServerHealth.png';
 // Import the result status service
 import resultStatusService from '../../../api-services/resultStatusService';
+// Import the warehouse service
+import warehouseService from '../../../api-services/warehouseService';
 
-const ServerHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
+const ServerHealth_Edit = ({ data, onDataChange, onStatusChange, stationNameWarehouseID }) => {
   const [serverHealthData, setServerHealthData] = useState([]);
   const [remarks, setRemarks] = useState('');
   const [resultStatusOptions, setResultStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [serverHostNameOptions, setServerHostNameOptions] = useState([]);
+  const [loadingServerHostNames, setLoadingServerHostNames] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const isInitialized = useRef(false);
   const onDataChangeRef = useRef(onDataChange);
   const lastDataRef = useRef(null);
+
+  // Debug: Log when stationNameWarehouseID prop changes
+  useEffect(() => {
+    console.log('ServerHealth_Edit - stationNameWarehouseID prop received:', stationNameWarehouseID);
+  }, [stationNameWarehouseID]);
 
   // Keep onDataChange ref updated
   useEffect(() => {
@@ -71,15 +80,25 @@ const ServerHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
     if (hasData) {
       if (data.serverHealthData && data.serverHealthData.length > 0) {
         // Map existing data and preserve all tracking flags including isDeleted
-        const mappedData = data.serverHealthData.map(item => ({
-          id: item.id || null, // preserve existing ID or null for new items
-          serverName: item.serverName || '',
-          result: item.result || '',
-          remarks: item.remarks || '',
-          isNew: !item.id, // mark as new if no ID exists
-          isModified: item.isModified || false, // preserve modification flag
-          isDeleted: item.isDeleted || false // preserve deletion flag
-        }));
+        const mappedData = data.serverHealthData.map(item => {
+          // Handle both lowercase and capitalized field names from API
+          const serverName = item.serverName || item.ServerName || '';
+          console.log('ServerHealth_Edit - Mapping item:', { 
+            original: item, 
+            serverName: serverName,
+            id: item.id || item.ID || null
+          });
+          return {
+            id: item.id || item.ID || null, // preserve existing ID or null for new items
+            serverName: serverName,
+            result: item.result || item.ResultStatusID || '',
+            remarks: item.remarks || item.Remarks || '',
+            isNew: !(item.id || item.ID), // mark as new if no ID exists
+            isModified: item.isModified || false, // preserve modification flag
+            isDeleted: item.isDeleted || false // preserve deletion flag
+          };
+        });
+        console.log('ServerHealth_Edit - Mapped server health data:', mappedData);
         setServerHealthData(mappedData);
       }
       if (data.remarks) {
@@ -113,6 +132,124 @@ const ServerHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
     fetchResultStatuses();
   }, []);
 
+  // Fetch Server Host Name options when stationNameWarehouseID changes
+  useEffect(() => {
+    console.log('ServerHealth_Edit - useEffect triggered, stationNameWarehouseID:', stationNameWarehouseID, 'type:', typeof stationNameWarehouseID);
+    
+    const fetchServerHostNames = async () => {
+      // Get existing server names from current data (always include these)
+      const existingServerNames = serverHealthData
+        .filter(row => row.serverName && row.serverName.trim() !== '' && !row.isDeleted)
+        .map(row => row.serverName);
+
+      // Check if stationNameWarehouseID is valid (not empty string, null, or undefined)
+      // Also check if it's a valid GUID format (basic check: has dashes and is 36 chars)
+      const hasStationID = stationNameWarehouseID && 
+                          typeof stationNameWarehouseID === 'string' &&
+                          stationNameWarehouseID.trim() !== '' && 
+                          stationNameWarehouseID !== null && 
+                          stationNameWarehouseID !== undefined;
+
+      console.log('ServerHealth_Edit - hasStationID check:', hasStationID, 'stationNameWarehouseID:', stationNameWarehouseID, 'trimmed:', stationNameWarehouseID?.trim());
+
+      if (!hasStationID) {
+        // Even if no stationNameWarehouseID, include existing server names
+        const existingOptions = existingServerNames.map(name => ({ id: `existing-${name}`, name }));
+        setServerHostNameOptions(existingOptions);
+        console.log('ServerHealth_Edit - No stationNameWarehouseID, using existing names only:', existingOptions);
+        return;
+      }
+
+      try {
+        setLoadingServerHostNames(true);
+        const stationID = stationNameWarehouseID.trim();
+        console.log('ServerHealth_Edit - Calling API: warehouseService.getServerHostNameWarehouses with stationNameWarehouseID:', stationID);
+        console.log('ServerHealth_Edit - API endpoint will be: /ServerHostNameWarehouse/ByStationName/' + stationID);
+        
+        const response = await warehouseService.getServerHostNameWarehouses(stationID);
+        // warehouseService.getServerHostNameWarehouses already returns an array
+        const fetchedOptions = Array.isArray(response) ? response : [];
+        
+        console.log('ServerHealth_Edit - API Response:', response);
+        console.log('ServerHealth_Edit - API Response type:', typeof response, 'isArray:', Array.isArray(response));
+        console.log('ServerHealth_Edit - Fetched server host names (count):', fetchedOptions.length);
+        console.log('ServerHealth_Edit - Fetched options:', fetchedOptions);
+        console.log('ServerHealth_Edit - Existing server names:', existingServerNames);
+        
+        // Create a map of existing options by name to avoid duplicates
+        const optionsMap = new Map();
+        
+        // First, add ALL fetched options from API (these are the available server names)
+        // For new rows, these will be shown in dropdown
+        fetchedOptions.forEach(option => {
+          // Handle both lowercase 'name' and capitalized 'Name' field names
+          const optionName = option.name || option.Name;
+          if (option && optionName) {
+            optionsMap.set(optionName, { id: option.id || option.ID || `api-${optionName}`, name: optionName });
+          }
+        });
+        
+        // Then, add existing server names that are not in the fetched options
+        // This ensures existing values are always visible even if not in the API response
+        // For existing rows, this ensures the current selected name is shown
+        existingServerNames.forEach(serverName => {
+          if (!optionsMap.has(serverName)) {
+            optionsMap.set(serverName, { id: `existing-${serverName}`, name: serverName });
+          }
+        });
+        
+        // Convert map back to array
+        const finalOptions = Array.from(optionsMap.values());
+        console.log('ServerHealth_Edit - Final options (API + existing, count):', finalOptions.length);
+        console.log('ServerHealth_Edit - Final options:', finalOptions);
+        setServerHostNameOptions(finalOptions);
+      } catch (error) {
+        console.error('ServerHealth_Edit - Error fetching server host name options:', error);
+        console.error('ServerHealth_Edit - Error details:', error.message);
+        console.error('ServerHealth_Edit - Error response:', error.response?.data);
+        console.error('ServerHealth_Edit - Error stack:', error.stack);
+        // Even on error, include existing server names so current values are visible
+        const existingOptions = existingServerNames.map(name => ({ id: `existing-${name}`, name }));
+        setServerHostNameOptions(existingOptions);
+      } finally {
+        setLoadingServerHostNames(false);
+      }
+    };
+
+    fetchServerHostNames();
+  }, [stationNameWarehouseID]); // Only fetch when stationNameWarehouseID changes, not when serverHealthData changes
+
+  // Merge existing server names into options when serverHealthData changes (without re-fetching)
+  useEffect(() => {
+    if (serverHealthData.length > 0) {
+      const existingServerNames = serverHealthData
+        .filter(row => row.serverName && row.serverName.trim() !== '' && !row.isDeleted)
+        .map(row => row.serverName.trim());
+      
+      if (existingServerNames.length > 0) {
+        // Create a map to avoid duplicates - use current serverHostNameOptions
+        setServerHostNameOptions(prevOptions => {
+          const optionsMap = new Map(prevOptions.map(opt => [
+            String(opt.name || opt.Name || '').trim(),
+            opt
+          ]));
+          
+          // Add existing server names that aren't already in options
+          let hasChanges = false;
+          existingServerNames.forEach(serverName => {
+            if (!optionsMap.has(serverName)) {
+              optionsMap.set(serverName, { id: `existing-${serverName}`, name: serverName });
+              hasChanges = true;
+            }
+          });
+          
+          // Only return new array if there are changes to avoid unnecessary re-renders
+          return hasChanges ? Array.from(optionsMap.values()) : prevOptions;
+        });
+      }
+    }
+  }, [serverHealthData]); // Only merge existing names when serverHealthData changes
+
   // Update parent component when data changes (but not on initial load)
   useEffect(() => {
     if (isInitialized.current && onDataChangeRef.current) {
@@ -141,17 +278,33 @@ const ServerHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
 
   // Server Health Check handlers
   const handleServerHealthChange = (index, field, value) => {
+    console.log('ServerHealth_Edit - handleServerHealthChange called:', { 
+      index, 
+      field, 
+      value, 
+      valueType: typeof value,
+      currentValue: serverHealthData[index]?.[field],
+      currentItem: serverHealthData[index],
+      allData: serverHealthData
+    });
     const updatedData = [...serverHealthData];
     const currentItem = updatedData[index];
+    
+    if (!currentItem) {
+      console.error('ServerHealth_Edit - No item at index:', index);
+      return;
+    }
     
     // Mark as modified if it's an existing item (has ID) and value changed
     const isModified = currentItem.id && currentItem[field] !== value;
     
     updatedData[index] = { 
       ...currentItem, 
-      [field]: value,
+      [field]: String(value || ''),
       isModified: isModified || currentItem.isModified
     };
+    console.log('ServerHealth_Edit - Updated data:', updatedData[index]);
+    console.log('ServerHealth_Edit - Full updated array:', updatedData);
     setServerHealthData(updatedData);
   };
 
@@ -296,7 +449,27 @@ const ServerHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
                 </TableCell>
               </TableRow>
             ) : (
-              serverHealthData.map((row, index) => (
+              serverHealthData.map((row, index) => {
+                // Compute complete options list including current value for this row
+                const currentValue = String(row.serverName || '').trim();
+                const optionsWithCurrent = [...serverHostNameOptions];
+                
+                // Always include current value in options if it exists and is not already there
+                if (currentValue && currentValue !== '' && !optionsWithCurrent.some(opt => {
+                  const optName = String(opt.name || opt.Name || '').trim();
+                  return optName === currentValue;
+                })) {
+                  optionsWithCurrent.push({ 
+                    id: `current-${currentValue}`, 
+                    name: currentValue 
+                  });
+                }
+                
+                // Since we always add currentValue to optionsWithCurrent if it exists,
+                // the value should always be valid if currentValue is not empty
+                const selectValue = currentValue && currentValue !== '' ? currentValue : '';
+                
+                return (
                 <TableRow 
                   key={index}
                   sx={{
@@ -317,49 +490,112 @@ const ServerHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
                   }}
                 >
                   <TableCell>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={row.serverName}
-                      onChange={(e) => handleServerHealthChange(index, 'serverName', e.target.value)}
-                      placeholder="Enter server name"
-                      size="small"
-                      disabled={row.isDeleted}
-                    />
+                    <FormControl fullWidth size="small">
+                      <InputLabel id={`server-health-server-name-label-${index}`} shrink>
+                        Server Name
+                      </InputLabel>
+                      <Select
+                        labelId={`server-health-server-name-label-${index}`}
+                        value={selectValue}
+                        onChange={(e) => {
+                          const newValue = String(e.target.value || '').trim();
+                          handleServerHealthChange(index, 'serverName', newValue);
+                        }}
+                        label="Server Name"
+                        disabled={row.isDeleted || loadingServerHostNames}
+                        sx={{
+                          '& .MuiSelect-select': {
+                            display: 'flex',
+                            alignItems: 'center',
+                          }
+                        }}
+                      >
+                            {loadingServerHostNames ? (
+                              <MenuItem disabled value="">
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <CircularProgress size={16} />
+                                  Loading server names...
+                                </Box>
+                              </MenuItem>
+                            ) : optionsWithCurrent.length === 0 ? (
+                              !stationNameWarehouseID ? (
+                                <MenuItem disabled value="">
+                                  <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                                    Please select Station Name first
+                                  </Typography>
+                                </MenuItem>
+                              ) : (
+                                <MenuItem disabled value="">
+                                  <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                                    No server names available
+                                  </Typography>
+                                </MenuItem>
+                              )
+                            ) : (
+                              [
+                                <MenuItem key="empty-placeholder" value="">
+                                  <Typography sx={{ color: '#999', fontStyle: 'italic' }}>
+                                    Select Server Name
+                                  </Typography>
+                                </MenuItem>,
+                                ...optionsWithCurrent.map((option) => {
+                                  const optionName = String(option.name || option.Name || '').trim();
+                                  const optionId = String(option.id || option.ID || optionName);
+                                  return (
+                                    <MenuItem key={optionId} value={optionName}>
+                                      {optionName}
+                                    </MenuItem>
+                                  );
+                                })
+                              ]
+                            )}
+                          </Select>
+                    </FormControl>
                   </TableCell>
                   <TableCell>
-                    <TextField
-                      fullWidth
-                      select
-                      variant="outlined"
-                      value={row.result}
-                      onChange={(e) => handleServerHealthChange(index, 'result', e.target.value)}
-                      size="small"
-                      disabled={loading || row.isDeleted}
-                      sx={{
-                        minWidth: 120,
-                        '& .MuiSelect-select': {
-                          display: 'flex',
-                          alignItems: 'center',
-                        }
-                      }}
-                    >
-                      <MenuItem value="">
-                        {loading ? (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <CircularProgress size={16} />
-                            Loading...
-                          </Box>
-                        ) : (
-                          'Select Result'
-                        )}
-                      </MenuItem>
-                      {resultStatusOptions.map((option) => (
-                        <MenuItem key={option.id} value={option.id}>
-                          {option.name}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                    {(() => {
+                      // Only use the value if it exists in the options to prevent MUI errors
+                      const currentResult = row.result || '';
+                      const isValidResult = currentResult && resultStatusOptions.some(opt => 
+                        String(opt.id) === String(currentResult)
+                      );
+                      const selectValue = isValidResult ? currentResult : '';
+                      
+                      return (
+                        <TextField
+                          fullWidth
+                          select
+                          variant="outlined"
+                          value={selectValue}
+                          onChange={(e) => handleServerHealthChange(index, 'result', e.target.value)}
+                          size="small"
+                          disabled={loading || row.isDeleted}
+                          sx={{
+                            minWidth: 120,
+                            '& .MuiSelect-select': {
+                              display: 'flex',
+                              alignItems: 'center',
+                            }
+                          }}
+                        >
+                          <MenuItem value="">
+                            {loading ? (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CircularProgress size={16} />
+                                Loading...
+                              </Box>
+                            ) : (
+                              'Select Result'
+                            )}
+                          </MenuItem>
+                          {resultStatusOptions.map((option) => (
+                            <MenuItem key={option.id} value={option.id}>
+                              {option.name}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     {!row.isDeleted ? (
@@ -429,7 +665,8 @@ const ServerHealth_Edit = ({ data, onDataChange, onStatusChange }) => {
                     )}
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
