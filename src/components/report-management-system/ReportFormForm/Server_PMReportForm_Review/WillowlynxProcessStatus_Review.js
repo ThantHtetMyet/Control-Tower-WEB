@@ -9,9 +9,6 @@ import {
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 
-// Import the Willowlynx Process Status image
-import WillowlynxProcessStatusImage from '../../../resources/ServerPMReportForm/WillowlynxProcessStatus.png';
-
 // Import the yes/no status service
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
 
@@ -19,6 +16,7 @@ const WillowlynxProcessStatus_Review = ({ data = {} }) => {
   const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
+  const [imagePreview, setImagePreview] = useState(null);
 
   // Initialize data from props
   useEffect(() => {
@@ -30,6 +28,20 @@ const WillowlynxProcessStatus_Review = ({ data = {} }) => {
       setRemarks(data.remarks);
     }
     
+    // Handle image preview from uploaded File object
+    if (data.image) {
+      if (data.image instanceof File) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result);
+        };
+        reader.readAsDataURL(data.image);
+      } else if (data.image.imageUrl) {
+        setImagePreview(data.image.imageUrl);
+      }
+    } else {
+      setImagePreview(null);
+    }
   }, [data]);
 
   // Fetch YesNo Status options on component mount
@@ -97,18 +109,20 @@ const WillowlynxProcessStatus_Review = ({ data = {} }) => {
       </Typography>
 
       {/* Screenshot */}
-      <Box sx={{ mb: 3, textAlign: 'center' }}>
-        <img
-          src={WillowlynxProcessStatusImage}
-          alt="Willowlynx Process Status Screenshot"
-          style={{
-            maxWidth: '100%',
-            height: 'auto',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-          }}
-        />
-      </Box>
+      {imagePreview && (
+        <Box sx={{ mb: 3, textAlign: 'center' }}>
+          <img
+            src={imagePreview}
+            alt="Uploaded Screenshot"
+            style={{
+              maxWidth: '100%',
+              height: 'auto',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+            }}
+          />
+        </Box>
+      )}
 
       {/* Result Section */}
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 2 }}>

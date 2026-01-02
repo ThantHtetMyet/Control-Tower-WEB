@@ -10,13 +10,13 @@ import {
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import WillowlynxNetworkStatusImage from '../../../resources/ServerPMReportForm/WillowlynxNetworkStatus.png';
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
 
 const WillowlynxNetworkStatus_Review = ({ data = {} }) => {
   const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
+  const [imagePreview, setImagePreview] = useState(null);
 
   // Initialize data from props
   useEffect(() => {
@@ -27,7 +27,20 @@ const WillowlynxNetworkStatus_Review = ({ data = {} }) => {
       setRemarks(data.remarks);
     }
     
-    
+    // Handle image preview from uploaded File object
+    if (data.image) {
+      if (data.image instanceof File) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result);
+        };
+        reader.readAsDataURL(data.image);
+      } else if (data.image.imageUrl) {
+        setImagePreview(data.image.imageUrl);
+      }
+    } else {
+      setImagePreview(null);
+    }
   }, [data]);
 
   // Fetch Yes/No status options
@@ -91,18 +104,20 @@ const WillowlynxNetworkStatus_Review = ({ data = {} }) => {
         </Typography>
 
         {/* Screenshot */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-          <img
-            src={WillowlynxNetworkStatusImage}
-            alt="Willowlynx Network Status Screenshot"
-            style={{
-              maxWidth: '100%',
-              height: 'auto',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-            }}
-          />
-        </Box>
+        {imagePreview && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+            <img
+              src={imagePreview}
+              alt="Uploaded Screenshot"
+              style={{
+                maxWidth: '100%',
+                height: 'auto',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+              }}
+            />
+          </Box>
+        )}
 
         {/* Result */}
         <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>

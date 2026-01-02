@@ -4,16 +4,20 @@ import {
   Typography,
   TextField,
   Chip,
-  Paper
+  Paper,
+  Modal,
+  IconButton,
 } from '@mui/material';
-import { NetworkCheck as NetworkCheckIcon } from '@mui/icons-material';
+import { NetworkCheck as NetworkCheckIcon, Close as CloseIcon } from '@mui/icons-material';
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
-import WillowlynxNetworkStatusImage from '../../../resources/ServerPMReportForm/WillowlynxNetworkStatus.png';
+import { API_BASE_URL } from '../../../../config/apiConfig';
 
-const WillowlynxNetworkStatus_Details = ({ data, disabled = false }) => {
+const WillowlynxNetworkStatus_Details = ({ data, disabled = false, images = [], reportFormId = null }) => {
   const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchYesNoStatusOptions = async () => {
@@ -72,6 +76,34 @@ const WillowlynxNetworkStatus_Details = ({ data, disabled = false }) => {
     }
   };
 
+  // Handle image double click to show in modal
+  const handleImageDoubleClick = (imageUrl) => {
+    setSelectedImage(imageUrl);
+    setModalOpen(true);
+  };
+
+  // Handle close modal
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setSelectedImage(null);
+  };
+
+  // Handle ESC key press to close modal
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === 'Escape' && modalOpen) {
+        handleCloseModal();
+      }
+    };
+
+    if (modalOpen) {
+      window.addEventListener('keydown', handleEscKey);
+      return () => {
+        window.removeEventListener('keydown', handleEscKey);
+      };
+    }
+  }, [modalOpen]);
+
   // Styling
   const sectionContainerStyle = {
     padding: 3,
@@ -125,18 +157,103 @@ const WillowlynxNetworkStatus_Details = ({ data, disabled = false }) => {
       </Typography>
 
       {/* Screenshot */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-        <img
-          src={WillowlynxNetworkStatusImage}
-          alt="Willowlynx Network Status Screenshot"
-          style={{
-            maxWidth: '100%',
-            height: 'auto',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
+      {images && images.length > 0 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+          {images.map((image, index) => {
+            const imageUrl = image.imageUrl || (image.imageName && reportFormId ? `${API_BASE_URL}/api/ReportFormImage/image/${reportFormId}/${image.imageName}` : null);
+            return (
+              <Box
+                key={image.id || image.ID || index}
+                sx={{
+                  display: 'inline-block',
+                  mb: index < images.length - 1 ? 2 : 0,
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer',
+                  border: '3px solid transparent',
+                  '&:hover': {
+                    border: '3px solid #1976d2',
+                    boxShadow: '0 0 20px rgba(25, 118, 210, 0.5), 0 4px 16px rgba(0,0,0,0.2)',
+                    transform: 'scale(1.05)',
+                  },
+                  '&:hover img': {
+                    filter: 'brightness(1.1)',
+                  }
+                }}
+              >
+                <img
+                  src={imageUrl}
+                  alt={`Uploaded Screenshot ${index + 1}`}
+                  onDoubleClick={() => handleImageDoubleClick(imageUrl)}
+                  style={{
+                    width: '600px',
+                    height: '400px',
+                    objectFit: 'contain',
+                    backgroundColor: '#f5f5f5',
+                    display: 'block',
+                    transition: 'filter 0.3s ease',
+                  }}
+                />
+              </Box>
+            );
+          })}
+        </Box>
+      )}
+
+      {/* Image Modal */}
+      <Modal
+        open={modalOpen}
+        onClose={handleCloseModal}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 2,
+        }}
+      >
+        <Box
+          sx={{
+            position: 'relative',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            outline: 'none',
           }}
-        />
-      </Box>
+          onClick={handleCloseModal}
+        >
+          <IconButton
+            onClick={handleCloseModal}
+            sx={{
+              position: 'absolute',
+              top: -40,
+              right: -40,
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              color: 'black',
+              zIndex: 1,
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 1)'
+              }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+          {selectedImage && (
+            <img
+              src={selectedImage}
+              alt="Full size view"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '90vh',
+                objectFit: 'contain',
+                borderRadius: '8px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+              }}
+            />
+          )}
+        </Box>
+      </Modal>
 
       {/* Result */}
       <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>

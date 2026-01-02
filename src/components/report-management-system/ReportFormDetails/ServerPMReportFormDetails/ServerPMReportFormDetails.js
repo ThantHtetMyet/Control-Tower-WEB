@@ -58,7 +58,8 @@ import ServerPMReportFormSignOff_Details from './ServerPMReportFormSignOff_Detai
 import FormStatus_Details from './FormStatus_Details';
 
 // Import the report form service
-import { getServerPMReportFormWithDetails, generateServerPMReportPdf, getFinalReportsByReportForm, downloadFinalReportAttachment } from '../../../api-services/reportFormService';
+import { getServerPMReportFormWithDetails, generateServerPMReportPdf, getFinalReportsByReportForm, downloadFinalReportAttachment, getReportFormImages } from '../../../api-services/reportFormService';
+import { API_BASE_URL } from '../../../../config/apiConfig';
 
 const ServerPMReportFormDetails = () => {
   const navigate = useNavigate();
@@ -67,6 +68,7 @@ const ServerPMReportFormDetails = () => {
   // State management
   const [formData, setFormData] = useState(null);
   const [serverPMData, setServerPMData] = useState({});
+  const [reportImages, setReportImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentStep, setCurrentStep] = useState('signOff');
@@ -181,6 +183,21 @@ const ServerPMReportFormDetails = () => {
         };
 
         setServerPMData(serverPMData);
+
+        // Fetch images for this report form
+        try {
+          const images = await getReportFormImages(id);
+          // Construct image URLs for each image
+          const imagesWithUrls = (images || []).map(image => ({
+            ...image,
+            imageUrl: image.imageName ? `${API_BASE_URL}/api/ReportFormImage/image/${id}/${image.imageName}` : null
+          }));
+          setReportImages(imagesWithUrls);
+        } catch (imageErr) {
+          console.error('Error fetching report form images:', imageErr);
+          // Don't fail the entire load if images fail
+          setReportImages([]);
+        }
       } catch (err) {
         console.error('Error fetching report form details:', err);
         setError('Error fetching report form details: ' + err.message);
@@ -350,6 +367,22 @@ const ServerPMReportFormDetails = () => {
                                               currentStep === 'signOff' ? 'signOffData' :
                                                 currentStep === 'formStatus' ? 'formStatusData' : 'serverHealthData';
 
+    // Get images for the current step based on imageTypeName
+    const getImagesForStep = (step) => {
+      const imageTypeMap = {
+        'willowlynxProcessStatus': 'WillowlynxProcessStatusCheck',
+        'willowlynxNetworkStatus': 'WillowlynxNetworkStatus',
+        'willowlynxRTUStatus': 'WillowlynxRTUStatusCheck',
+        'willowlynxSumpPitCCTVCamera': 'WillowlynxSumpPitCCTVCamera'
+      };
+      const imageTypeName = imageTypeMap[step];
+      if (!imageTypeName) return [];
+      const filtered = reportImages.filter(img => img.imageTypeName === imageTypeName);
+      return filtered;
+    };
+
+    const stepImages = getImagesForStep(currentStep);
+
     return (
       <Component
         data={
@@ -357,6 +390,8 @@ const ServerPMReportFormDetails = () => {
             currentStep === 'formStatus' ? { formStatusName: formData.formStatusName, formStatus: formData.formStatus } :
               (serverPMData[dataKey] || [])
         }
+        images={stepImages}
+        reportFormId={id}
       />
     );
   };

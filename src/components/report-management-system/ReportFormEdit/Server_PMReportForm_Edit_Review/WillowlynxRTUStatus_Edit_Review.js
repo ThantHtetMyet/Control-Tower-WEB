@@ -9,9 +9,6 @@ import {
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 
-// Import the Willowlynx RTU Status image
-import WillowlynxRTUStatusImage from '../../../resources/ServerPMReportForm/WillowlynxRTUStatus.png';
-
 // Import the yes/no status service
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
 
@@ -19,6 +16,7 @@ const WillowlynxRTUStatus_Edit_Review = ({ data = {}, formData = {} }) => {
   const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
+  const [imagePreview, setImagePreview] = useState(null);
 
   // Initialize data from props
   useEffect(() => {
@@ -52,6 +50,37 @@ const WillowlynxRTUStatus_Edit_Review = ({ data = {}, formData = {} }) => {
 
     setResult(resultValue);
     setRemarks(remarksValue);
+
+    // Handle image display - check formData first (from Edit mode)
+    let imageToShow = null;
+    if (formData.willowlynxRTUStatusData) {
+      const rtuData = formData.willowlynxRTUStatusData;
+      // Check for newly uploaded image (File object)
+      if (rtuData.image && rtuData.image instanceof File) {
+        imageToShow = rtuData.image;
+      }
+      // Check for existing image URL (if not deleted)
+      else if (rtuData.existingImageUrl && !rtuData.isImageDeleted) {
+        imageToShow = rtuData.existingImageUrl;
+      }
+    }
+    // Fallback to data (direct Review mode) - check for image URL
+    else if (data && data.imageUrl) {
+      imageToShow = data.imageUrl;
+    }
+
+    // Create preview for File object
+    if (imageToShow instanceof File) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(imageToShow);
+    } else if (imageToShow) {
+      setImagePreview(imageToShow);
+    } else {
+      setImagePreview(null);
+    }
   }, [data, formData]);
 
   // Fetch YesNo Status options on component mount
@@ -113,20 +142,24 @@ const WillowlynxRTUStatus_Edit_Review = ({ data = {}, formData = {} }) => {
         Check the RTU status page, see if all RTUs are online and functioning properly.
       </Typography>
 
-      {/* Screenshot */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-        <img
-          src={WillowlynxRTUStatusImage}
-          alt="Willowlynx RTU Status"
-          style={{
-            maxWidth: '100%',
-            height: 'auto',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}
-        />
-      </Box>
+      {/* Screenshot - Show uploaded image if available, otherwise show nothing */}
+      {imagePreview && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+          <img
+            src={imagePreview}
+            alt="RTU Status Screenshot"
+            style={{
+              width: '600px',
+              height: '400px',
+              objectFit: 'contain',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              backgroundColor: '#f5f5f5'
+            }}
+          />
+        </Box>
+      )}
 
       {/* Result Section */}
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 2 }}>

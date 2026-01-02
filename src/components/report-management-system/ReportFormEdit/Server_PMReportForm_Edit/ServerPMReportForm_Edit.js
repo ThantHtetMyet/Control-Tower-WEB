@@ -18,8 +18,9 @@ import {
   ArrowForwardIos as ArrowForwardIosIcon,
 } from '@mui/icons-material';
 import RMSTheme from '../../../theme-resource/RMSTheme';
-import { getPMReportFormTypes, getServerPMReportFormWithDetails } from '../../../api-services/reportFormService';
+import { getPMReportFormTypes, getServerPMReportFormWithDetails, getReportFormImages } from '../../../api-services/reportFormService';
 import warehouseService from '../../../api-services/warehouseService';
+import { API_BASE_URL } from '../../../../config/apiConfig';
 import WarningModal from '../../../common/WarningModal';
 
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
@@ -102,6 +103,14 @@ const ServerPMReportForm_Edit = () => {
     autoFailOverData: [],
     asaFirewallData: [],
     softwarePatchData: []
+  });
+
+  // State for images for each Willowlynx section
+  const [willowlynxImages, setWillowlynxImages] = useState({
+    processStatus: [],
+    networkStatus: [],
+    rtuStatus: [],
+    sumpPitCCTV: []
   });
 
   // Step configuration
@@ -403,6 +412,50 @@ const ServerPMReportForm_Edit = () => {
         //console.log('Mapped Server PM Data for Edit:', mappedServerPMData);
         setServerPMData(mappedServerPMData);
 
+        // Fetch images for Willowlynx sections
+        try {
+          const allImages = await getReportFormImages(id);
+          
+          // Filter images by image type name and construct URLs
+          const processStatusImages = allImages
+            .filter(img => img.imageTypeName === 'WillowlynxProcessStatusCheck')
+            .map(img => ({
+              ...img,
+              imageUrl: img.imageName ? `${API_BASE_URL}/api/ReportFormImage/image/${id}/${img.imageName}` : null
+            }));
+          
+          const networkStatusImages = allImages
+            .filter(img => img.imageTypeName === 'WillowlynxNetworkStatus')
+            .map(img => ({
+              ...img,
+              imageUrl: img.imageName ? `${API_BASE_URL}/api/ReportFormImage/image/${id}/${img.imageName}` : null
+            }));
+          
+          const rtuStatusImages = allImages
+            .filter(img => img.imageTypeName === 'WillowlynxRTUStatusCheck')
+            .map(img => ({
+              ...img,
+              imageUrl: img.imageName ? `${API_BASE_URL}/api/ReportFormImage/image/${id}/${img.imageName}` : null
+            }));
+          
+          const sumpPitCCTVImages = allImages
+            .filter(img => img.imageTypeName === 'WillowlynxSumpPitCCTVCamera')
+            .map(img => ({
+              ...img,
+              imageUrl: img.imageName ? `${API_BASE_URL}/api/ReportFormImage/image/${id}/${img.imageName}` : null
+            }));
+          
+          setWillowlynxImages({
+            processStatus: processStatusImages,
+            networkStatus: networkStatusImages,
+            rtuStatus: rtuStatusImages,
+            sumpPitCCTV: sumpPitCCTVImages
+          });
+        } catch (imageError) {
+          console.error('Error fetching images:', imageError);
+          // Don't fail the whole load if images fail
+        }
+
       } catch (error) {
         console.error('Error fetching report data:', error);
         setError('Failed to load report data');
@@ -490,6 +543,7 @@ const ServerPMReportForm_Edit = () => {
       console.log('ServerPMReportForm_Edit - serverPMData before navigation:', serverPMData);
       console.log('ServerPMReportForm_Edit - cpuAndRamUsageData:', serverPMData.cpuAndRamUsageData);
       
+      // Ensure image data is included in Willowlynx sections even if user didn't make changes
       const reviewData = {
         reportTitle: formData.reportTitle,
         systemDescription: formData.systemDescription,
@@ -511,12 +565,30 @@ const ServerPMReportForm_Edit = () => {
         diskUsageData: serverPMData.diskUsageData,
         cpuAndRamUsageData: serverPMData.cpuAndRamUsageData,
         networkHealthData: serverPMData.networkHealthData,
-        willowlynxProcessStatusData: serverPMData.willowlynxProcessStatusData,
-        willowlynxNetworkStatusData: serverPMData.willowlynxNetworkStatusData,
-        willowlynxRTUStatusData: serverPMData.willowlynxRTUStatusData,
+        // Include image data for Willowlynx sections - ensure existingImageUrl is set from willowlynxImages
+        willowlynxProcessStatusData: {
+          ...(serverPMData.willowlynxProcessStatusData || {}),
+          // If existingImageUrl is not already set, set it from willowlynxImages
+          existingImageUrl: serverPMData.willowlynxProcessStatusData?.existingImageUrl || 
+                           (willowlynxImages.processStatus?.[0]?.imageUrl)
+        },
+        willowlynxNetworkStatusData: {
+          ...(serverPMData.willowlynxNetworkStatusData || {}),
+          existingImageUrl: serverPMData.willowlynxNetworkStatusData?.existingImageUrl || 
+                           (willowlynxImages.networkStatus?.[0]?.imageUrl)
+        },
+        willowlynxRTUStatusData: {
+          ...(serverPMData.willowlynxRTUStatusData || {}),
+          existingImageUrl: serverPMData.willowlynxRTUStatusData?.existingImageUrl || 
+                           (willowlynxImages.rtuStatus?.[0]?.imageUrl)
+        },
         willowlynxHistorialTrendData: serverPMData.willowlynxHistorialTrendData,
         willowlynxHistoricalReportData: serverPMData.willowlynxHistoricalReportData,
-        willowlynxSumpPitCCTVCameraData: serverPMData.willowlynxSumpPitCCTVCameraData,
+        willowlynxSumpPitCCTVCameraData: {
+          ...(serverPMData.willowlynxSumpPitCCTVCameraData || {}),
+          existingImageUrl: serverPMData.willowlynxSumpPitCCTVCameraData?.existingImageUrl || 
+                           (willowlynxImages.sumpPitCCTV?.[0]?.imageUrl)
+        },
         monthlyDatabaseCreationData: serverPMData.monthlyDatabaseCreationData,
         databaseBackupData: serverPMData.databaseBackupData,
         timeSyncData: serverPMData.timeSyncData,
@@ -604,11 +676,19 @@ const ServerPMReportForm_Edit = () => {
                                       currentStep === 'asaFirewall' ? 'asaFirewallData' :
                                         currentStep === 'softwarePatch' ? 'softwarePatchData' : 'serverHealthData';
 
+    // Pass images prop for Willowlynx sections
+    const imagesProp = currentStep === 'willowlynxProcessStatus' ? willowlynxImages.processStatus :
+      currentStep === 'willowlynxNetworkStatus' ? willowlynxImages.networkStatus :
+        currentStep === 'willowlynxRTUStatus' ? willowlynxImages.rtuStatus :
+          currentStep === 'willowlynxSumpPitCCTVCamera' ? willowlynxImages.sumpPitCCTV :
+            null;
+
     return (
       <Component
-        data={serverPMData[dataKey] || {}}
+        data={{ ...(serverPMData[dataKey] || {}), reportFormId: id }}
         onDataChange={dataChangeHandlers[currentStep]}
         stationNameWarehouseID={formData.stationNameWarehouseID}
+        images={imagesProp}
       />
     );
   };

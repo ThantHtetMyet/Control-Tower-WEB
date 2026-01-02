@@ -1069,6 +1069,9 @@ export const updateServerPMReportForm = async (id, formData, user) => {
               return {
                 Id: server.id || null,
                 ServerName: server.serverName,
+                ServerEntryIndex: server.serverEntryIndex !== null && server.serverEntryIndex !== undefined 
+                  ? server.serverEntryIndex 
+                  : null, // Include ServerEntryIndex to distinguish duplicate server names
                 Disks: disksToProcess
                 .map(disk => {
                   // Map status name to ID if needed

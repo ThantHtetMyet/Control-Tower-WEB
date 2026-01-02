@@ -59,16 +59,33 @@ const DiskUsage_Details = ({ data = [] }) => {
           resultStatusName: detail.resultStatusName,
           remarks: detail.remarks,
           createdDate: detail.createdDate,
-          updatedDate: detail.updatedDate
+          updatedDate: detail.updatedDate,
+          pmServerDiskUsageHealthID: detail.pmServerDiskUsageHealthID || detail.PMServerDiskUsageHealthID || null,
+          serverEntryIndex: detail.serverEntryIndex !== null && detail.serverEntryIndex !== undefined 
+            ? detail.serverEntryIndex 
+            : (detail.ServerEntryIndex !== null && detail.ServerEntryIndex !== undefined ? detail.ServerEntryIndex : null)
         }));
         
-        // Group disks by server name
-        const groupedByServer = mappedData.reduce((acc, disk) => {
+        // Group disks by unique server key (serverName + ServerEntryIndex) to preserve duplicate server names as separate entries
+        // This allows multiple servers with the same name to be displayed as separate accordion sections
+        // Use ServerEntryIndex from database to distinguish duplicate server names
+        const groupedByServer = mappedData.reduce((acc, disk, index) => {
           const serverName = disk.serverName || 'Unknown Server';
-          if (!acc[serverName]) {
-            acc[serverName] = [];
+          // Use ServerEntryIndex + serverName as unique key to preserve duplicate server names
+          // ServerEntryIndex is set by backend when saving to distinguish duplicate server entries
+          const serverEntryIndex = disk.serverEntryIndex !== null && disk.serverEntryIndex !== undefined 
+            ? disk.serverEntryIndex 
+            : index; // Fallback to index if ServerEntryIndex is not set (for old data)
+          const serverKey = `${serverName}-entry-${serverEntryIndex}`;
+          
+          if (!acc[serverKey]) {
+            acc[serverKey] = {
+              serverName: serverName,
+              serverEntryIndex: serverEntryIndex,
+              disks: []
+            };
           }
-          acc[serverName].push(disk);
+          acc[serverKey].disks.push(disk);
           return acc;
         }, {});
         
@@ -175,63 +192,85 @@ const DiskUsage_Details = ({ data = [] }) => {
       {/* Disk Usage Data - Accordion by Server */}
       {Object.keys(diskUsageData).length > 0 ? (
         <Box sx={{ marginBottom: 3 }}>
-          {Object.entries(diskUsageData).map(([serverName, disks]) => (
-            <Accordion key={serverName} sx={{ marginBottom: 1 }}>
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                sx={{
-                  backgroundColor: '#f8f9fa',
-                  '&:hover': {
-                    backgroundColor: '#e9ecef'
-                  }
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <ComputerIcon sx={{ color: '#1976d2' }} />
-                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                    {serverName}
-                  </Typography>
-                  <Chip 
-                    label={`${disks.length} disk${disks.length !== 1 ? 's' : ''}`}
-                    size="small"
-                    color="primary"
-                    variant="outlined"
-                  />
-                </Box>
-              </AccordionSummary>
-              <AccordionDetails>
-                <TableContainer component={Paper}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Disk</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Capacity</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Free Space</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Usage</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Result Status</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {disks.map((disk, index) => (
-                        <TableRow key={disk.id || index}>
-                          <TableCell>{disk.diskName || 'N/A'}</TableCell>
-                          <TableCell>{disk.serverDiskStatusName || 'N/A'}</TableCell>
-                          <TableCell>{disk.capacity || 'N/A'}</TableCell>
-                          <TableCell>{disk.freeSpace || 'N/A'}</TableCell>
-                          <TableCell>{disk.usage || 'N/A'}</TableCell>
-                          <TableCell>
-                            {getStatusChip(disk.resultStatusName) || 
-                             disk.resultStatusName || 'N/A'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </AccordionDetails>
-            </Accordion>
-          ))}
+          {(() => {
+            // Count how many servers have the same name (for display purposes)
+            const serverNameCounts = {};
+            Object.values(diskUsageData).forEach(server => {
+              const name = server.serverName || 'Unknown Server';
+              serverNameCounts[name] = (serverNameCounts[name] || 0) + 1;
+            });
+            
+            let serverNameIndex = {};
+            
+            return Object.entries(diskUsageData).map(([serverKey, serverData]) => {
+              const serverName = serverData.serverName || 'Unknown Server';
+              const disks = serverData.disks || [];
+              const isDuplicate = serverNameCounts[serverName] > 1;
+              
+              // Track index for duplicate server names
+              if (isDuplicate) {
+                serverNameIndex[serverName] = (serverNameIndex[serverName] || 0) + 1;
+              }
+              
+              return (
+                <Accordion key={serverKey} sx={{ marginBottom: 1 }}>
+                  <AccordionSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{
+                      backgroundColor: '#f8f9fa',
+                      '&:hover': {
+                        backgroundColor: '#e9ecef'
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ComputerIcon sx={{ color: '#1976d2' }} />
+                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                        {serverName}
+                      </Typography>
+                      <Chip 
+                        label={`${disks.length} disk${disks.length !== 1 ? 's' : ''}`}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <TableContainer component={Paper}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Disk</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Capacity</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Free Space</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Usage</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Result Status</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {disks.map((disk, index) => (
+                            <TableRow key={disk.id || index}>
+                              <TableCell>{disk.diskName || 'N/A'}</TableCell>
+                              <TableCell>{disk.serverDiskStatusName || 'N/A'}</TableCell>
+                              <TableCell>{disk.capacity || 'N/A'}</TableCell>
+                              <TableCell>{disk.freeSpace || 'N/A'}</TableCell>
+                              <TableCell>{disk.usage || 'N/A'}</TableCell>
+                              <TableCell>
+                                {getStatusChip(disk.resultStatusName) || 
+                                 disk.resultStatusName || 'N/A'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </AccordionDetails>
+                </Accordion>
+              );
+            });
+          })()}
         </Box>
       ) : (
         <Box sx={{ textAlign: 'center', padding: 3, color: '#666' }}>

@@ -397,6 +397,47 @@ const ReportFormForm = () => {
             await createReportFormImage(newReportFormId, approvedBySignature, approvedByImageType.id, 'Signatures');
           }
 
+          // Upload Willowlynx section images if provided
+          // WillowlynxProcessStatusCheck
+          if (formData.willowlynxProcessStatusData?.image && formData.willowlynxProcessStatusData?.imageTypeId) {
+            await createReportFormImage(
+              newReportFormId, 
+              formData.willowlynxProcessStatusData.image, 
+              formData.willowlynxProcessStatusData.imageTypeId, 
+              'WillowlynxProcessStatus'
+            );
+          }
+
+          // WillowlynxNetworkStatus
+          if (formData.willowlynxNetworkStatusData?.image && formData.willowlynxNetworkStatusData?.imageTypeId) {
+            await createReportFormImage(
+              newReportFormId, 
+              formData.willowlynxNetworkStatusData.image, 
+              formData.willowlynxNetworkStatusData.imageTypeId, 
+              'WillowlynxNetworkStatus'
+            );
+          }
+
+          // WillowlynxRTUStatusCheck
+          if (formData.willowlynxRTUStatusData?.image && formData.willowlynxRTUStatusData?.imageTypeId) {
+            await createReportFormImage(
+              newReportFormId, 
+              formData.willowlynxRTUStatusData.image, 
+              formData.willowlynxRTUStatusData.imageTypeId, 
+              'WillowlynxRTUStatus'
+            );
+          }
+
+          // WillowlynxSumpPitCCTVCamera
+          if (formData.willowlynxSumpPitCCTVCameraData?.image && formData.willowlynxSumpPitCCTVCameraData?.imageTypeId) {
+            await createReportFormImage(
+              newReportFormId, 
+              formData.willowlynxSumpPitCCTVCameraData.image, 
+              formData.willowlynxSumpPitCCTVCameraData.imageTypeId, 
+              'WillowlynxSumpPitCCTVCamera'
+            );
+          }
+
           // If signatures were uploaded (instead of PDF), trigger final report PDF generation
           if (signaturesUploaded && !finalReportFile) {
             try {

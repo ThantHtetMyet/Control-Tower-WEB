@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Paper,
   Typography,
@@ -45,6 +45,7 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange, stationNameWarehou
   const [loadingServerHostNames, setLoadingServerHostNames] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const isInitialized = useRef(false);
+  const onDataChangeTimeoutRef = useRef(null);
 
   // Initialize data from props when meaningful data is available
   useEffect(() => {
@@ -74,11 +75,22 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange, stationNameWarehou
             console.log(`DiskUsage_Edit - Processing detail ${index}:`, detail); // Debug log
             const serverName = detail.serverName;
             
-            if (!serverMap.has(serverName)) {
-              console.log(`DiskUsage_Edit - Creating new server entry for: ${serverName}`); // Debug log
-              serverMap.set(serverName, {
+            // Use ServerEntryIndex from database to distinguish duplicate server names
+            // If ServerEntryIndex is not available, use a combination of serverName and index
+            const serverEntryIndex = detail.serverEntryIndex !== null && detail.serverEntryIndex !== undefined
+              ? detail.serverEntryIndex
+              : (detail.ServerEntryIndex !== null && detail.ServerEntryIndex !== undefined ? detail.ServerEntryIndex : index);
+            
+            // Allow duplicate server names by using ServerEntryIndex + serverName as unique key
+            // This ensures each server entry from API is treated separately
+            const serverKey = `${serverName}-entry-${serverEntryIndex}`;
+            if (!serverMap.has(serverKey)) {
+              console.log(`DiskUsage_Edit - Creating new server entry for: ${serverName} (key: ${serverKey}, entryIndex: ${serverEntryIndex})`); // Debug log
+              serverMap.set(serverKey, {
                 id: detail.pmServerDiskUsageHealthID, // Use the parent ID
+                tempId: `api-${detail.pmServerDiskUsageHealthID || index}-entry-${serverEntryIndex}`, // Generate unique temp ID with entry index
                 serverName: serverName,
+                serverEntryIndex: serverEntryIndex, // Preserve ServerEntryIndex from database
                 disks: [],
                 isNew: false,
                 isModified: false,
@@ -100,8 +112,8 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange, stationNameWarehou
               isModified: false,
               isDeleted: false
             };
-            console.log(`DiskUsage_Edit - Adding disk to ${serverName}:`, diskEntry); // Debug log
-            serverMap.get(serverName).disks.push(diskEntry);
+            console.log(`DiskUsage_Edit - Adding disk to ${serverName} (key: ${serverKey}):`, diskEntry); // Debug log
+            serverMap.get(serverKey).disks.push(diskEntry);
           });
         }
         
@@ -120,9 +132,13 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange, stationNameWarehou
       else if (data.servers && data.servers.length > 0) {
         console.log('DiskUsage_Edit - Processing legacy/direct data'); // Debug log
         // Map existing data and preserve all tracking flags including isDeleted
-        const mappedServers = data.servers.map(server => ({
+        const mappedServers = data.servers.map((server, index) => ({
           id: server.id || null, // preserve existing ID or null for new items - following HardDriveHealth_Edit pattern
+          tempId: server.tempId || (server.id ? `existing-${server.id}` : `temp-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`), // Generate unique temp ID for tracking
           serverName: server.serverName || '',
+          serverEntryIndex: server.serverEntryIndex !== null && server.serverEntryIndex !== undefined 
+            ? server.serverEntryIndex 
+            : index, // Preserve ServerEntryIndex or use array index as fallback
           disks: server.disks ? server.disks.map(disk => ({
             id: disk.id || null,
             disk: disk.disk || '',
@@ -257,33 +273,38 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange, stationNameWarehou
   }, [stationNameWarehouseID]); // Only fetch when stationNameWarehouseID changes, not when data changes
 
   // Merge existing server names into options when data changes (without re-fetching)
+  // Debounced to reduce unnecessary updates
   useEffect(() => {
     if (servers.length > 0) {
-      const existingServerNames = servers
-        .filter(server => server.serverName && server.serverName.trim() !== '' && !server.isDeleted)
-        .map(server => server.serverName.trim());
-      
-      if (existingServerNames.length > 0) {
-        // Use functional setState to avoid dependency on serverHostNameOptions
-        setServerHostNameOptions(prevOptions => {
-          const optionsMap = new Map(prevOptions.map(opt => [
-            String(opt.name || opt.Name || '').trim(),
-            opt
-          ]));
-          
-          // Add existing server names that aren't already in options
-          let hasChanges = false;
-          existingServerNames.forEach(serverName => {
-            if (!optionsMap.has(serverName)) {
-              optionsMap.set(serverName, { id: `existing-${serverName}`, name: serverName });
-              hasChanges = true;
-            }
+      const timeoutId = setTimeout(() => {
+        const existingServerNames = servers
+          .filter(server => server.serverName && server.serverName.trim() !== '' && !server.isDeleted)
+          .map(server => server.serverName.trim());
+        
+        if (existingServerNames.length > 0) {
+          // Use functional setState to avoid dependency on serverHostNameOptions
+          setServerHostNameOptions(prevOptions => {
+            const optionsMap = new Map(prevOptions.map(opt => [
+              String(opt.name || opt.Name || '').trim(),
+              opt
+            ]));
+            
+            // Add existing server names that aren't already in options
+            let hasChanges = false;
+            existingServerNames.forEach(serverName => {
+              if (!optionsMap.has(serverName)) {
+                optionsMap.set(serverName, { id: `existing-${serverName}`, name: serverName });
+                hasChanges = true;
+              }
+            });
+            
+            // Only return new array if there are changes to avoid unnecessary re-renders
+            return hasChanges ? Array.from(optionsMap.values()) : prevOptions;
           });
-          
-          // Only return new array if there are changes to avoid unnecessary re-renders
-          return hasChanges ? Array.from(optionsMap.values()) : prevOptions;
-        });
-      }
+        }
+      }, 200); // Debounce to reduce updates while typing
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [servers]); // Only merge existing names when data changes
 
@@ -300,17 +321,33 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange, stationNameWarehou
   };
 
   // Update parent component when data changes (but not on initial load)
+  // Debounced to prevent excessive re-renders while typing
   useEffect(() => {
     if (isInitialized.current && onDataChange) {
-      const dataToSend = {
-        servers,
-        remarks,
-        resultStatusOptions,
-        serverDiskStatusOptions
-      };
-      console.log('DiskUsage_Edit - Sending data to parent:', dataToSend);
-      onDataChange(dataToSend);
+      // Clear any pending timeout
+      if (onDataChangeTimeoutRef.current) {
+        clearTimeout(onDataChangeTimeoutRef.current);
+      }
+      
+      // Debounce the onDataChange call to reduce parent re-renders
+      onDataChangeTimeoutRef.current = setTimeout(() => {
+        const dataToSend = {
+          servers,
+          remarks,
+          resultStatusOptions,
+          serverDiskStatusOptions
+        };
+        console.log('DiskUsage_Edit - Sending data to parent (debounced):', dataToSend);
+        onDataChange(dataToSend);
+      }, 300); // 300ms debounce delay
     }
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (onDataChangeTimeoutRef.current) {
+        clearTimeout(onDataChangeTimeoutRef.current);
+      }
+    };
   }, [servers, remarks, resultStatusOptions, serverDiskStatusOptions, onDataChange]);
 
   // Calculate completion status
@@ -359,116 +396,139 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange, stationNameWarehou
     });
   };
 
-  const addServer = () => {
-    const newServer = {
-      id: null, // null indicates new server
-      serverName: '',
-      disks: [],
-      isNew: true // flag to track new servers
-    };
-    setServers([...servers, newServer]);
-    showSnackbar('Server added successfully', 'success');
-  };
+  // Memoize addServer to prevent unnecessary re-renders
+  const addServer = useCallback(() => {
+    setServers(prevServers => {
+      // Generate a unique temporary ID for this server entry
+      // This allows duplicate server names to be treated as separate entries
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // Assign serverEntryIndex based on the current number of servers
+      // This ensures duplicate server names can be distinguished
+      // Use functional update to get the current servers length
+      const serverEntryIndex = prevServers.length;
+      const newServer = {
+        id: null, // null indicates new server (will be set by backend on save)
+        tempId: tempId, // Unique identifier for frontend tracking
+        serverName: '',
+        serverEntryIndex: serverEntryIndex, // Track server entry index for duplicate server names
+        disks: [],
+        isNew: true // flag to track new servers
+      };
+      showSnackbar('Server added successfully', 'success');
+      return [...prevServers, newServer];
+    });
+  }, []);
 
   const removeServer = (serverIndex) => {
-    const updatedServers = [...servers];
-    const server = updatedServers[serverIndex];
-    
-    if (server.id) {
-      // Mark existing server as deleted and cascade to all disks
-      const updatedDisks = cascadeOperationToDisks(server, 'delete');
+    setServers(prevServers => {
+      const updatedServers = [...prevServers];
+      const server = updatedServers[serverIndex];
       
-      updatedServers[serverIndex] = {
-        ...server,
-        isDeleted: true,
-        isModified: true,
-        disks: updatedDisks
-      };
-      showSnackbar('Server and all its disks deleted. Click undo to restore.', 'warning');
-    } else {
-      // Remove new server completely
-      updatedServers.splice(serverIndex, 1);
-      showSnackbar('New server removed');
-    }
-    
-    setServers(updatedServers);
+      if (server.id) {
+        // Mark existing server as deleted and cascade to all disks
+        const updatedDisks = cascadeOperationToDisks(server, 'delete');
+        
+        updatedServers[serverIndex] = {
+          ...server,
+          isDeleted: true,
+          isModified: true,
+          disks: updatedDisks
+        };
+        showSnackbar('Server and all its disks deleted. Click undo to restore.', 'warning');
+      } else {
+        // Remove new server completely
+        updatedServers.splice(serverIndex, 1);
+        showSnackbar('New server removed');
+      }
+      
+      return updatedServers;
+    });
   };
 
   const restoreServer = (serverIndex) => {
-    const updatedServers = [...servers];
-    const server = updatedServers[serverIndex];
-    
-    // Only restore if server is currently deleted
-    if (server.isDeleted) {
-      // Restore server and cascade to all disks
-      const updatedDisks = cascadeOperationToDisks(server, 'restore');
+    setServers(prevServers => {
+      const updatedServers = [...prevServers];
+      const server = updatedServers[serverIndex];
+      
+      // Only restore if server is currently deleted
+      if (server.isDeleted) {
+        // Restore server and cascade to all disks
+        const updatedDisks = cascadeOperationToDisks(server, 'restore');
+        
+        updatedServers[serverIndex] = {
+          ...server,
+          isDeleted: false,
+          isModified: true, // Keep as modified since we're changing the delete status
+          disks: updatedDisks
+        };
+        showSnackbar('Server and all its disks restored successfully', 'success');
+        return updatedServers;
+      }
+      return prevServers;
+    });
+  };
+
+  // Memoize updateServerName to prevent unnecessary re-renders
+  const updateServerName = useCallback((serverIndex, serverName) => {
+    setServers(prevServers => {
+      const updatedServers = [...prevServers];
+      const server = updatedServers[serverIndex];
+      
+      // Prevent updates to deleted servers
+      if (server.isDeleted) {
+        showSnackbar('Cannot modify a deleted server. Please restore the server first.', 'error');
+        return prevServers; // Return unchanged state
+      }
+      
+      // Mark as modified if it's an existing server (has ID) and value changed
+      const isModified = server.id && server.serverName !== serverName;
       
       updatedServers[serverIndex] = {
         ...server,
-        isDeleted: false,
-        isModified: true, // Keep as modified since we're changing the delete status
-        disks: updatedDisks
+        serverName,
+        isModified: isModified || server.isModified
       };
-      setServers(updatedServers);
-      showSnackbar('Server and all its disks restored successfully', 'success');
-    }
-  };
-
-  const updateServerName = (serverIndex, serverName) => {
-    const updatedServers = [...servers];
-    const server = updatedServers[serverIndex];
-    
-    // Prevent updates to deleted servers
-    if (server.isDeleted) {
-      showSnackbar('Cannot modify a deleted server. Please restore the server first.', 'error');
-      return;
-    }
-    
-    // Mark as modified if it's an existing server (has ID) and value changed
-    const isModified = server.id && server.serverName !== serverName;
-    
-    updatedServers[serverIndex] = {
-      ...server,
-      serverName,
-      isModified: isModified || server.isModified
-    };
-    
-    setServers(updatedServers);
-  };
+      
+      return updatedServers;
+    });
+  }, []);
 
   // Disk management handlers
-  const addDisk = (serverIndex) => {
-    const updatedServers = [...servers];
-    const server = updatedServers[serverIndex];
-    
-    // Prevent adding disks to deleted servers
-    if (server.isDeleted) {
-      showSnackbar('Cannot add disk to a deleted server. Please restore the server first.', 'error');
-      return;
-    }
-    
-    const newDisk = {
-      id: null, // null indicates new disk
-      disk: '',
-      status: '',
-      capacity: '',
-      freeSpace: '',
-      usage: '',
-      check: '',
-      remarks: '', // Add remarks field for new disks
-      isNew: true, // Always true for new disks (id is null)
-      isModified: false,
-      isDeleted: false
-    };
-    
-    updatedServers[serverIndex] = {
-      ...updatedServers[serverIndex],
-      disks: [...updatedServers[serverIndex].disks, newDisk]
-    };
-    
-    setServers(updatedServers);
-    showSnackbar('Disk added successfully', 'success');
-  };
+  // Memoize addDisk to prevent unnecessary re-renders
+  const addDisk = useCallback((serverIndex) => {
+    setServers(prevServers => {
+      const updatedServers = [...prevServers];
+      const server = updatedServers[serverIndex];
+      
+      // Prevent adding disks to deleted servers
+      if (server.isDeleted) {
+        showSnackbar('Cannot add disk to a deleted server. Please restore the server first.', 'error');
+        return prevServers; // Return unchanged state
+      }
+      
+      const newDisk = {
+        id: null, // null indicates new disk
+        disk: '',
+        status: '',
+        capacity: '',
+        freeSpace: '',
+        usage: '',
+        check: '',
+        remarks: '', // Add remarks field for new disks
+        isNew: true, // Always true for new disks (id is null)
+        isModified: false,
+        isDeleted: false
+      };
+      
+      updatedServers[serverIndex] = {
+        ...updatedServers[serverIndex],
+        disks: [...updatedServers[serverIndex].disks, newDisk]
+      };
+      
+      showSnackbar('Disk added successfully', 'success');
+      return updatedServers;
+    });
+  }, []);
 
   const removeDisk = (serverIndex, diskIndex) => {
     const updatedServers = [...servers];
@@ -535,39 +595,42 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange, stationNameWarehou
     }
   };
 
-  const updateDiskField = (serverIndex, diskIndex, field, value) => {
-    const updatedServers = [...servers];
-    const server = updatedServers[serverIndex];
-    const disk = server.disks[diskIndex];
-    
-    // Prevent field updates on deleted servers or deleted disks
-    if (server.isDeleted) {
-      showSnackbar('Cannot modify disks of a deleted server. Please restore the server first.', 'error');
-      return;
-    }
-    
-    if (disk.isDeleted) {
-      showSnackbar('Cannot modify a deleted disk. Please restore the disk first.', 'error');
-      return;
-    }
-    
-    // Mark as modified if it's an existing disk (has ID) and value changed
-    const isModified = disk.id && disk[field] !== value;
-    
-    const updatedDisks = [...server.disks];
-    updatedDisks[diskIndex] = {
-      ...disk,
-      [field]: value,
-      isModified: isModified || disk.isModified
-    };
-    
-    updatedServers[serverIndex] = {
-      ...server,
-      disks: updatedDisks
-    };
-    
-    setServers(updatedServers);
-  };
+  // Memoize updateDiskField to prevent unnecessary re-renders
+  const updateDiskField = useCallback((serverIndex, diskIndex, field, value) => {
+    setServers(prevServers => {
+      const updatedServers = [...prevServers];
+      const server = updatedServers[serverIndex];
+      const disk = server.disks[diskIndex];
+      
+      // Prevent field updates on deleted servers or deleted disks
+      if (server.isDeleted) {
+        showSnackbar('Cannot modify disks of a deleted server. Please restore the server first.', 'error');
+        return prevServers; // Return unchanged state
+      }
+      
+      if (disk.isDeleted) {
+        showSnackbar('Cannot modify a deleted disk. Please restore the disk first.', 'error');
+        return prevServers; // Return unchanged state
+      }
+      
+      // Mark as modified if it's an existing disk (has ID) and value changed
+      const isModified = disk.id && disk[field] !== value;
+      
+      const updatedDisks = [...server.disks];
+      updatedDisks[diskIndex] = {
+        ...disk,
+        [field]: value,
+        isModified: isModified || disk.isModified
+      };
+      
+      updatedServers[serverIndex] = {
+        ...server,
+        disks: updatedDisks
+      };
+      
+      return updatedServers;
+    });
+  }, []);
 
   // Styling
   const sectionContainerStyle = {
@@ -646,9 +709,31 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange, stationNameWarehou
       </Button>
 
       {/* Servers */}
-      {servers.map((server, serverIndex) => (
+      {(() => {
+        // Pre-calculate duplicate counts once instead of in each map iteration
+        // This is moved outside the map to avoid recalculating on every render
+        const serverNameCounts = {};
+        servers.forEach(s => {
+          if (!s.isDeleted && s.serverName) {
+            serverNameCounts[s.serverName] = (serverNameCounts[s.serverName] || 0) + 1;
+          }
+        });
+        
+        return servers.map((server, serverIndex) => {
+          // Use tempId + serverEntryIndex or id + serverEntryIndex for unique key to ensure separate entries for duplicate server names
+          // This ensures that even if two servers have the same name, they have different keys
+          const uniqueKey = server.tempId 
+            ? `${server.tempId}-entry-${server.serverEntryIndex ?? serverIndex}` 
+            : (server.id 
+              ? `${server.id}-entry-${server.serverEntryIndex ?? serverIndex}` 
+              : `server-${serverIndex}-entry-${server.serverEntryIndex ?? serverIndex}`);
+          // Use pre-calculated count instead of filtering on each render
+          const duplicateCount = serverNameCounts[server.serverName] || 0;
+          const isDuplicate = duplicateCount > 1;
+        
+        return (
         <Accordion 
-          key={serverIndex} 
+          key={uniqueKey} 
           defaultExpanded 
           sx={{ 
             marginBottom: 2,
@@ -1094,7 +1179,9 @@ const DiskUsage_Edit = ({ data, onDataChange, onStatusChange, stationNameWarehou
             </TableContainer>
           </AccordionDetails>
         </Accordion>
-      ))}
+        );
+        });
+      })()}
 
       {/* Remarks Section */}
       <Box sx={{ marginTop: 3 }}>

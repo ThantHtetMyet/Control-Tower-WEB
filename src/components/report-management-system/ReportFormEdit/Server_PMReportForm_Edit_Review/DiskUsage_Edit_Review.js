@@ -32,24 +32,159 @@ const DiskUsage_Edit_Review = ({ data, disabled = true, formData }) => {
   const [loading, setLoading] = useState(false);
   const isInitialized = useRef(false);
 
-  // Initialize data from props only once - matching DiskUsage_Edit pattern
+  // Initialize data from props - allow re-initialization when data changes
   useEffect(() => {
-    if (!isInitialized.current) {
-      // Handle API response format (pmServerDiskUsageHealths)
-      if (data && data.pmServerDiskUsageHealths && data.pmServerDiskUsageHealths.length > 0) {
+    console.log('DiskUsage_Edit_Review - useEffect triggered, isInitialized:', isInitialized.current);
+    console.log('DiskUsage_Edit_Review - Initializing with data:', data);
+    console.log('DiskUsage_Edit_Review - formData:', formData);
+    
+    // Process data whenever it changes (not just once)
+    // This ensures that when navigating from Edit to Review, the data is processed correctly
+      
+      // PRIORITY 1: Handle servers array from Edit component (preserves duplicate server names as separate entries)
+      // This should be checked FIRST to preserve the hierarchical structure from Edit component
+      if (data && data.servers && Array.isArray(data.servers) && data.servers.length > 0) {
+        console.log('DiskUsage_Edit_Review - Using data.servers array, count:', data.servers.length);
+        console.log('DiskUsage_Edit_Review - Original servers data:', JSON.stringify(data.servers, null, 2));
+        
+        const mappedServers = data.servers.map((server, index) => {
+          // CRITICAL: Generate unique tempId for each server entry using INDEX to ensure separate rendering
+          // Even if two servers have the same name and same id, they must have different tempIds
+          // Use index in the tempId to guarantee uniqueness
+          const uniqueTempId = server.tempId || 
+            (server.id ? `existing-${server.id}-idx${index}` : `temp-${Date.now()}-idx${index}-${Math.random().toString(36).substr(2, 9)}`);
+          
+          const mappedServer = {
+            id: server.id || null,
+            tempId: uniqueTempId, // Always ensure unique tempId with index
+            serverName: server.serverName || '',
+            serverEntryIndex: server.serverEntryIndex !== null && server.serverEntryIndex !== undefined 
+              ? server.serverEntryIndex 
+              : index, // Preserve ServerEntryIndex or use array index as fallback
+            disks: server.disks ? server.disks.map(disk => ({
+              id: disk.id || null,
+              disk: disk.disk || '',
+              status: disk.status || '',
+              capacity: disk.capacity || '',
+              freeSpace: disk.freeSpace || '',
+              usage: disk.usage || '',
+              check: disk.check || '',
+              remarks: disk.remarks || '',
+              isDeleted: disk.isDeleted || false
+            })) : [],
+            isDeleted: server.isDeleted || false
+          };
+          
+          console.log(`DiskUsage_Edit_Review - Mapped server ${index}:`, {
+            originalId: server.id,
+            originalTempId: server.tempId,
+            newTempId: uniqueTempId,
+            serverName: server.serverName,
+            disksCount: mappedServer.disks.length
+          });
+          
+          return mappedServer;
+        });
+        
+        console.log('DiskUsage_Edit_Review - Final mapped servers:', JSON.stringify(mappedServers, null, 2));
+        setServers(mappedServers);
+        
+        if (data.remarks) {
+          setRemarks(data.remarks);
+        }
+        isInitialized.current = true;
+        return; // Exit early to prevent further processing
+      }
+      // PRIORITY 2: Handle formData.diskUsageData.servers (alternative path)
+      if (formData && formData.diskUsageData && formData.diskUsageData.servers && Array.isArray(formData.diskUsageData.servers) && formData.diskUsageData.servers.length > 0) {
+        console.log('DiskUsage_Edit_Review - Using formData.diskUsageData.servers array, count:', formData.diskUsageData.servers.length);
+        console.log('DiskUsage_Edit_Review - Original formData servers:', JSON.stringify(formData.diskUsageData.servers, null, 2));
+        
+        const mappedServers = formData.diskUsageData.servers.map((server, index) => {
+          // CRITICAL: Generate unique tempId for each server entry using INDEX to ensure separate rendering
+          // Even if two servers have the same name and same id, they must have different tempIds
+          // Use index in the tempId to guarantee uniqueness
+          const uniqueTempId = server.tempId || 
+            (server.id ? `existing-${server.id}-idx${index}` : `temp-${Date.now()}-idx${index}-${Math.random().toString(36).substr(2, 9)}`);
+          
+          const mappedServer = {
+            id: server.id || null,
+            tempId: uniqueTempId, // Always ensure unique tempId with index
+            serverName: server.serverName || '',
+            serverEntryIndex: server.serverEntryIndex !== null && server.serverEntryIndex !== undefined 
+              ? server.serverEntryIndex 
+              : index, // Preserve ServerEntryIndex or use array index as fallback
+            disks: server.disks ? server.disks.map(disk => ({
+              id: disk.id || null,
+              disk: disk.disk || '',
+              status: disk.status || '',
+              capacity: disk.capacity || '',
+              freeSpace: disk.freeSpace || '',
+              usage: disk.usage || '',
+              check: disk.check || '',
+              remarks: disk.remarks || '',
+              isDeleted: disk.isDeleted || false
+            })) : [],
+            isDeleted: server.isDeleted || false
+          };
+          
+          console.log(`DiskUsage_Edit_Review - Mapped server ${index} from formData:`, {
+            originalId: server.id,
+            originalTempId: server.tempId,
+            newTempId: uniqueTempId,
+            serverName: server.serverName,
+            disksCount: mappedServer.disks.length
+          });
+          
+          return mappedServer;
+        });
+        
+        console.log('DiskUsage_Edit_Review - Final mapped servers from formData:', JSON.stringify(mappedServers, null, 2));
+        setServers(mappedServers);
+        if (formData.diskUsageData.remarks) {
+          setRemarks(formData.diskUsageData.remarks);
+        }
+        // Get options from formData if available
+        if (formData.diskUsageData.resultStatusOptions) {
+          setResultStatusOptions(formData.diskUsageData.resultStatusOptions);
+        }
+        if (formData.diskUsageData.serverDiskStatusOptions) {
+          setServerDiskStatusOptions(formData.diskUsageData.serverDiskStatusOptions);
+        }
+        isInitialized.current = true;
+        return; // Exit early to prevent further processing
+      }
+      // PRIORITY 3: Handle API response format (pmServerDiskUsageHealths) - only if servers array not available
+      // NOTE: This path will merge duplicate server names, so it should only be used when servers array is not available
+      // IMPORTANT: Check that servers array doesn't exist before using this path
+      else if (data && data.pmServerDiskUsageHealths && data.pmServerDiskUsageHealths.length > 0 && 
+               (!data.servers || !Array.isArray(data.servers) || data.servers.length === 0)) {
+        console.log('DiskUsage_Edit_Review - Using pmServerDiskUsageHealths (API format) - WARNING: May merge duplicate server names');
         const apiData = data.pmServerDiskUsageHealths[0];
         
-        // Group details by serverName to create server structure
+        // Group details by unique server key (serverName + serverId) to preserve duplicate server names as separate entries
+        // This allows multiple servers with the same name to be displayed as separate accordion sections
         const serverMap = new Map();
         
         if (apiData.details && apiData.details.length > 0) {
-          apiData.details.forEach((detail) => {
+          apiData.details.forEach((detail, detailIndex) => {
             const serverName = detail.serverName;
+            if (!serverName) return;
             
-            if (!serverMap.has(serverName)) {
-              serverMap.set(serverName, {
-                id: detail.pmServerDiskUsageHealthID,
+            // Use ServerEntryIndex from database to distinguish duplicate server names
+            const serverEntryIndex = detail.serverEntryIndex !== null && detail.serverEntryIndex !== undefined
+              ? detail.serverEntryIndex
+              : (detail.ServerEntryIndex !== null && detail.ServerEntryIndex !== undefined ? detail.ServerEntryIndex : detailIndex);
+            
+            // Use ServerEntryIndex + serverName as unique key to preserve duplicate server names as separate entries
+            const serverKey = `${serverName}-entry-${serverEntryIndex}`;
+            
+            if (!serverMap.has(serverKey)) {
+              serverMap.set(serverKey, {
+                id: detail.pmServerDiskUsageHealthID || detail.PMServerDiskUsageHealthID || null,
+                tempId: `existing-${detail.pmServerDiskUsageHealthID || detailIndex}-entry-${serverEntryIndex}`,
                 serverName: serverName,
+                serverEntryIndex: serverEntryIndex, // Preserve ServerEntryIndex from database
                 disks: [],
                 isDeleted: false
               });
@@ -67,59 +202,27 @@ const DiskUsage_Edit_Review = ({ data, disabled = true, formData }) => {
               remarks: detail.remarks || detail.Remarks || '',
               isDeleted: detail.isDeleted || detail.IsDeleted || false
             };
-            serverMap.get(serverName).disks.push(diskEntry);
+            serverMap.get(serverKey).disks.push(diskEntry);
           });
         }
         
         const mappedServers = Array.from(serverMap.values());
+        console.log('DiskUsage_Edit_Review - Mapped servers from API:', mappedServers);
         setServers(mappedServers);
         
         // Set remarks from API data
         if (apiData.remarks) {
           setRemarks(apiData.remarks);
         }
-      }
-      // Handle formData from Edit component (preferred for Review)
-      else if (formData && formData.servers && formData.servers.length > 0) {
-        setServers(formData.servers);
-        if (formData.remarks) {
-          setRemarks(formData.remarks);
-        }
-        // Get options from formData if available
-        if (formData.resultStatusOptions) {
-          setResultStatusOptions(formData.resultStatusOptions);
-        }
-        if (formData.serverDiskStatusOptions) {
-          setServerDiskStatusOptions(formData.serverDiskStatusOptions);
-        }
-      }
-      // Handle legacy/direct data format (servers array)
-      else if (data && data.servers && data.servers.length > 0) {
-        const mappedServers = data.servers.map(server => ({
-          id: server.id || null,
-          serverName: server.serverName || '',
-          disks: server.disks ? server.disks.map(disk => ({
-            id: disk.id || null,
-            disk: disk.disk || '',
-            status: disk.status || '',
-            capacity: disk.capacity || '',
-            freeSpace: disk.freeSpace || '',
-            usage: disk.usage || '',
-            check: disk.check || '',
-            remarks: disk.remarks || '',
-            isDeleted: disk.isDeleted || false
-          })) : [],
-          isDeleted: server.isDeleted || false
-        }));
-        setServers(mappedServers);
-        
-        if (data.remarks) {
-          setRemarks(data.remarks);
-        }
+        isInitialized.current = true;
+        return; // Exit early to prevent further processing
       }
       
+      // No data found - initialize empty
+      console.log('DiskUsage_Edit_Review - No data found, initializing empty');
+      setServers([]);
+      setRemarks('');
       isInitialized.current = true;
-    }
   }, [data, formData]);
 
   // Fetch Server Disk Status options - needed for Review mode
@@ -266,12 +369,47 @@ const DiskUsage_Edit_Review = ({ data, disabled = true, formData }) => {
             No disk usage data recorded during maintenance.
           </Typography>
         </Box>
-      ) : (
-        servers
-          .filter(server => !server.isDeleted)
-          .map((server, serverIndex) => (
+      ) : (() => {
+        // Count how many servers have the same name (for display purposes)
+        const activeServers = servers.filter(server => !server.isDeleted);
+        const serverNameCounts = {};
+        activeServers.forEach(server => {
+          const name = server.serverName || 'Unknown Server';
+          serverNameCounts[name] = (serverNameCounts[name] || 0) + 1;
+        });
+        
+        let serverNameIndex = {};
+        
+        console.log('DiskUsage_Edit_Review - Rendering servers:', activeServers);
+        
+        return activeServers.map((server, serverIndex) => {
+          const serverName = server.serverName || `Server ${serverIndex + 1}`;
+          const isDuplicate = serverNameCounts[serverName] > 1;
+          
+          // CRITICAL: Ensure truly unique key - MUST use tempId which includes index
+          // This ensures React treats each server entry as a separate component
+          // Even if two servers have the same name and id, they have different tempIds
+          const uniqueKey = server.tempId || 
+            (server.id ? `server-id-${server.id}-idx${serverIndex}` : `server-index-${serverIndex}-${serverName}`);
+          
+          console.log(`DiskUsage_Edit_Review - Rendering server ${serverIndex}:`, {
+            serverName,
+            id: server.id,
+            tempId: server.tempId,
+            uniqueKey,
+            disksCount: server.disks?.length || 0,
+            isDuplicate,
+            disks: server.disks
+          });
+          
+          // Track index for duplicate server names
+          if (isDuplicate) {
+            serverNameIndex[serverName] = (serverNameIndex[serverName] || 0) + 1;
+          }
+          
+          return (
           <Accordion 
-            key={server.id || serverIndex} 
+            key={uniqueKey} 
             sx={{
               marginBottom: 2,
               border: '1px solid #e0e0e0',
@@ -295,7 +433,7 @@ const DiskUsage_Edit_Review = ({ data, disabled = true, formData }) => {
             >
               <ComputerIcon color="primary" />
               <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                {server.serverName || `Server ${serverIndex + 1}`}
+                {serverName}
               </Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -430,8 +568,9 @@ const DiskUsage_Edit_Review = ({ data, disabled = true, formData }) => {
               </TableContainer>
             </AccordionDetails>
           </Accordion>
-        ))
-      )}
+          );
+        });
+      })()}
 
       {/* General Remarks */}
       <Box sx={{ marginTop: 3 }}>

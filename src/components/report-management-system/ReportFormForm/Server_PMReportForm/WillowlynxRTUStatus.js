@@ -6,13 +6,14 @@ import {
   TextField,
   MenuItem,
   CircularProgress,
+  Button,
+  IconButton,
 } from '@mui/material';
-import { Router as RouterIcon } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { Router as RouterIcon, CloudUpload as CloudUploadIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
-import WillowlynxRTUStatusImage from '../../../resources/ServerPMReportForm/WillowlynxRTUStatus.png';
+import { getReportFormImageTypes } from '../../../api-services/reportFormService';
 
 const WillowlynxRTUStatus = ({ data, onDataChange, onStatusChange }) => {
   const [dateChecked, setDateChecked] = useState(null);
@@ -20,6 +21,9 @@ const WillowlynxRTUStatus = ({ data, onDataChange, onStatusChange }) => {
   const [remarks, setRemarks] = useState('');
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageTypeId, setImageTypeId] = useState(null);
   const isInitialized = useRef(false);
 
   // Initialize data once
@@ -28,32 +32,81 @@ const WillowlynxRTUStatus = ({ data, onDataChange, onStatusChange }) => {
       if (data.dateChecked) setDateChecked(new Date(data.dateChecked));
       if (data.result) setResult(data.result);
       if (data.remarks) setRemarks(data.remarks);
+      if (data.image) {
+        setUploadedImage(data.image);
+        if (data.image instanceof File) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreview(reader.result);
+          };
+          reader.readAsDataURL(data.image);
+        } else if (data.image.imageUrl) {
+          setImagePreview(data.image.imageUrl);
+        }
+      }
       isInitialized.current = true;
     }
   }, [data]);
 
-  // Fetch Yes/No options
+  // Fetch Yes/No options and Image Types
   useEffect(() => {
-    const fetchYesNoStatuses = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await yesNoStatusService.getYesNoStatuses();
-        setYesNoStatusOptions(response || []);
+        
+        // Fetch Yes/No status options
+        const statusResponse = await yesNoStatusService.getYesNoStatuses();
+        setYesNoStatusOptions(statusResponse || []);
+        
+        // Fetch Image Types and find the specific type
+        const imageTypes = await getReportFormImageTypes();
+        const rtuStatusImageType = imageTypes?.find(
+          type => type.imageTypeName === 'WillowlynxRTUStatusCheck'
+        );
+        if (rtuStatusImageType) {
+          setImageTypeId(rtuStatusImageType.id || rtuStatusImageType.ID);
+        }
       } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchYesNoStatuses();
+    fetchData();
   }, []);
+
+  // Handle image upload
+  const handleImageUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setUploadedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      event.target.value = '';
+    }
+  };
+
+  // Handle image removal
+  const handleImageRemove = () => {
+    setUploadedImage(null);
+    setImagePreview(null);
+  };
 
   // Notify parent of data change
   useEffect(() => {
     if (isInitialized.current && onDataChange) {
-      onDataChange({ dateChecked, result, remarks });
+      onDataChange({ 
+        dateChecked, 
+        result, 
+        remarks,
+        image: uploadedImage,
+        imageTypeId: imageTypeId
+      });
     }
-  }, [dateChecked, result, remarks, onDataChange]);
+  }, [dateChecked, result, remarks, uploadedImage, imageTypeId, onDataChange]);
 
   // Check completion status
   useEffect(() => {
@@ -80,14 +133,6 @@ const WillowlynxRTUStatus = ({ data, onDataChange, onStatusChange }) => {
     gap: 1
   };
 
-  const labelBox = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    marginBottom: 2,
-  };
-
   const inlineField = {
     minWidth: 200,
     '& .MuiOutlinedInput-root': { backgroundColor: 'white' },
@@ -109,18 +154,67 @@ const WillowlynxRTUStatus = ({ data, onDataChange, onStatusChange }) => {
           Check the RTU Device Status page. RTU status and PLC status shall be green.
         </Typography>
 
-        {/* Screenshot */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-          <img
-            src={WillowlynxRTUStatusImage}
-            alt="Willowlynx RTU Status Screenshot"
-            style={{
-              maxWidth: '100%',
-              height: 'auto',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-            }}
-          />
+        {/* Image Upload Section */}
+        <Box sx={{ mb: 3 }}>
+          {imagePreview ? (
+            <Box sx={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+              <img
+                src={imagePreview}
+                alt="Uploaded Screenshot"
+                style={{
+                  maxWidth: '100%',
+                  height: 'auto',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  display: 'block',
+                  margin: '0 auto'
+                }}
+              />
+              <IconButton
+                onClick={handleImageRemove}
+                sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 1)',
+                  }
+                }}
+              >
+                <DeleteIcon color="error" />
+              </IconButton>
+            </Box>
+          ) : (
+            <Box sx={{ 
+              border: '2px dashed #ccc', 
+              borderRadius: '4px', 
+              p: 3, 
+              textAlign: 'center',
+              backgroundColor: '#f9f9f9'
+            }}>
+              <input
+                accept="image/*"
+                style={{ display: 'none' }}
+                id="willowlynx-rtu-status-image-upload"
+                type="file"
+                onChange={handleImageUpload}
+              />
+              <label htmlFor="willowlynx-rtu-status-image-upload">
+                <Button
+                  variant="outlined"
+                  component="span"
+                  startIcon={<CloudUploadIcon />}
+                  sx={{ mb: 1 }}
+                >
+                  Upload Screenshot
+                </Button>
+              </label>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Upload a screenshot of the RTU Device Status page
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Result */}
@@ -151,8 +245,8 @@ const WillowlynxRTUStatus = ({ data, onDataChange, onStatusChange }) => {
             </MenuItem>
             {yesNoStatusOptions.map((option) => (
               <MenuItem key={option.id} value={option.id}>
-                          {option.name}
-                        </MenuItem>
+                {option.name}
+              </MenuItem>
             ))}
           </TextField>
         </Box>

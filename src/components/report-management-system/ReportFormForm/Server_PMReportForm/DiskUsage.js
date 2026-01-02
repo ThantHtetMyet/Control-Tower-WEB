@@ -105,8 +105,17 @@ const DiskUsage = ({ data = {}, stationNameWarehouseID, onDataChange }) => {
   // Update parent component when data changes
   useEffect(() => {
     if (onDataChange) {
+      // Ensure all servers have serverEntryIndex set based on their position
+      // This ensures duplicate server names can be distinguished
+      const serversWithIndex = servers.map((server, index) => ({
+        ...server,
+        serverEntryIndex: server.serverEntryIndex !== null && server.serverEntryIndex !== undefined 
+          ? server.serverEntryIndex 
+          : index // Use array index as fallback if not set
+      }));
+      
       onDataChange({
-        servers,
+        servers: serversWithIndex,
         remarks,
         serverDiskStatusOptions,
         resultStatusOptions
@@ -116,16 +125,27 @@ const DiskUsage = ({ data = {}, stationNameWarehouseID, onDataChange }) => {
 
   // Server management handlers
   const addServer = () => {
+    // Assign serverEntryIndex based on the position in the array
+    // This ensures duplicate server names can be distinguished
+    const serverEntryIndex = servers.length;
     const newServer = {
       id: Date.now(),
       serverName: '',
+      serverEntryIndex: serverEntryIndex, // Track server entry index for duplicate server names
       disks: []
     };
     setServers([...servers, newServer]);
   };
 
   const removeServer = (serverId) => {
-    setServers(servers.filter(server => server.id !== serverId));
+    // Remove server and recalculate serverEntryIndex for remaining servers
+    const updatedServers = servers.filter(server => server.id !== serverId);
+    // Recalculate serverEntryIndex based on new positions
+    const serversWithUpdatedIndex = updatedServers.map((server, index) => ({
+      ...server,
+      serverEntryIndex: index // Update index based on new position
+    }));
+    setServers(serversWithUpdatedIndex);
   };
 
   const updateServerName = (serverId, serverName) => {

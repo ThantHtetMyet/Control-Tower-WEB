@@ -8,7 +8,6 @@ import {
 import {
   Videocam as VideocamIcon,
 } from '@mui/icons-material';
-import WillowlynxSumpPitCCTVCameraImage from '../../../resources/ServerPMReportForm/WillowlynxSumpPitCCTVCamera.png';
 
 // Import the yes/no status service
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
@@ -17,6 +16,7 @@ const WillowlynxSumpPitCCTVCamera_Review = ({ data = {} }) => {
   const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
+  const [imagePreview, setImagePreview] = useState(null);
 
   // Initialize data from props
   useEffect(() => {
@@ -26,7 +26,20 @@ const WillowlynxSumpPitCCTVCamera_Review = ({ data = {} }) => {
       setRemarks(data.remarks || '');
     }
     
-    console.log('Final sump pit CCTV camera data:', { result: data?.result, remarks: data?.remarks });
+    // Handle image preview from uploaded File object
+    if (data.image) {
+      if (data.image instanceof File) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result);
+        };
+        reader.readAsDataURL(data.image);
+      } else if (data.image.imageUrl) {
+        setImagePreview(data.image.imageUrl);
+      }
+    } else {
+      setImagePreview(null);
+    }
   }, [data]);
 
   // Fetch Yes/No status options
@@ -89,18 +102,20 @@ const WillowlynxSumpPitCCTVCamera_Review = ({ data = {} }) => {
       </Typography>
 
       {/* Screenshot */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-        <img 
-          src={WillowlynxSumpPitCCTVCameraImage} 
-          alt="Willowlynx Sump Pit CCTV Camera" 
-          style={{ 
-            maxWidth: '100%', 
-            height: 'auto',
-            border: '1px solid #ddd',
-            borderRadius: '8px'
-          }} 
-        />
-      </Box>
+      {imagePreview && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+          <img 
+            src={imagePreview} 
+            alt="Uploaded Screenshot" 
+            style={{ 
+              maxWidth: '100%', 
+              height: 'auto',
+              border: '1px solid #ddd',
+              borderRadius: '8px'
+            }} 
+          />
+        </Box>
+      )}
 
       {/* Result */}
       <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>

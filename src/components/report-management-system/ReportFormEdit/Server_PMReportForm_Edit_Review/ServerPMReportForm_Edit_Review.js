@@ -58,7 +58,7 @@ import {
 } from '@mui/icons-material';
 import RMSTheme from '../../../theme-resource/RMSTheme';
 import DownloadConfirmationModal from '../../../common/DownloadConfirmationModal';
-import { getPMReportFormTypes, getServerPMReportFormWithDetails, uploadFinalReportAttachment, generateServerPMReportPdf, generateServerPMFinalReportPdf, getFinalReportsByReportForm, downloadFinalReportAttachment, createReportFormImage, getReportFormImageTypes } from '../../../api-services/reportFormService';
+import { getPMReportFormTypes, getServerPMReportFormWithDetails, uploadFinalReportAttachment, generateServerPMReportPdf, generateServerPMFinalReportPdf, getFinalReportsByReportForm, downloadFinalReportAttachment, createReportFormImage, getReportFormImageTypes, deleteReportFormImage } from '../../../api-services/reportFormService';
 import { updateServerPMReportForm } from '../../../api-services/reportFormService_Update';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -266,7 +266,7 @@ const ServerPMReportForm_Edit_Review = () => {
                     remarks: item.remarks || '',
                     isDeleted: item.isDeleted || false // Preserve isDeleted flag
                   }));
-                
+
                 if (details.length > 0 || (passedData.serverHealthData.remarks && passedData.serverHealthData.remarks.trim() !== '')) {
                   return {
                     pmServerHealths: [{
@@ -280,7 +280,7 @@ const ServerPMReportForm_Edit_Review = () => {
               // Return empty structure if no data
               return { pmServerHealths: [], remarks: passedData.serverHealthData.remarks || '' };
             })() : { pmServerHealths: [], remarks: '' },
-            
+
             // Transform hardDriveHealthData from Edit format to Review format
             hardDriveHealthData: passedData.hardDriveHealthData ? (() => {
               // Check if it's already in Review format
@@ -301,7 +301,7 @@ const ServerPMReportForm_Edit_Review = () => {
                     remarks: item.remarks || '',
                     isDeleted: item.isDeleted || false // Preserve isDeleted flag
                   }));
-                
+
                 if (details.length > 0 || (passedData.hardDriveHealthData.remarks && passedData.hardDriveHealthData.remarks.trim() !== '')) {
                   return {
                     pmServerHardDriveHealths: [{
@@ -315,12 +315,12 @@ const ServerPMReportForm_Edit_Review = () => {
               // Return empty structure if no data
               return { pmServerHardDriveHealths: [], remarks: passedData.hardDriveHealthData.remarks || '' };
             })() : { pmServerHardDriveHealths: [], remarks: '' },
-            
+
             // Transform cpuAndRamUsageData from Edit format to Review format
             cpuAndRamUsageData: passedData.cpuAndRamUsageData ? (() => {
               // Priority 1: Check if it has Edit format data (memoryUsageData, cpuUsageData) - this is what user filled in
               if ((passedData.cpuAndRamUsageData.memoryUsageData && Array.isArray(passedData.cpuAndRamUsageData.memoryUsageData)) ||
-                  (passedData.cpuAndRamUsageData.cpuUsageData && Array.isArray(passedData.cpuAndRamUsageData.cpuUsageData))) {
+                (passedData.cpuAndRamUsageData.cpuUsageData && Array.isArray(passedData.cpuAndRamUsageData.cpuUsageData))) {
                 // Transform from Edit format (memoryUsageData, cpuUsageData, remarks)
                 // Include deleted items with IDs (so backend can mark them as deleted)
                 // Only exclude new items (no ID) that are deleted (can't delete what doesn't exist)
@@ -336,7 +336,7 @@ const ServerPMReportForm_Edit_Review = () => {
                     remarks: item.remarks || '',
                     isDeleted: item.isDeleted || false // Preserve isDeleted flag
                   }));
-                
+
                 const cpuDetails = (passedData.cpuAndRamUsageData.cpuUsageData || [])
                   .filter(item => item && (!item.isDeleted || item.id))
                   .map((item, index) => ({
@@ -348,7 +348,7 @@ const ServerPMReportForm_Edit_Review = () => {
                     remarks: item.remarks || '',
                     isDeleted: item.isDeleted || false // Preserve isDeleted flag
                   }));
-                
+
                 // Always create array structure, even if empty, to maintain format consistency
                 return {
                   pmServerCPUAndMemoryUsages: [{
@@ -369,7 +369,7 @@ const ServerPMReportForm_Edit_Review = () => {
               // Fallback: return empty structure
               return { pmServerCPUAndMemoryUsages: [] };
             })() : { pmServerCPUAndMemoryUsages: [] },
-            
+
             // Transform timeSyncData from Edit format to Review format
             timeSyncData: passedData.timeSyncData ? (() => {
               // Check if it's already in Review format (pmServerTimeSyncs)
@@ -388,7 +388,7 @@ const ServerPMReportForm_Edit_Review = () => {
                   remarks: item.remarks || '',
                   isDeleted: item.isDeleted || false // Preserve isDeleted flag
                 }));
-              
+
               if (details.length > 0 || (passedData.timeSyncData.remarks && passedData.timeSyncData.remarks.trim() !== '')) {
                 return {
                   pmServerTimeSyncs: [{
@@ -400,7 +400,7 @@ const ServerPMReportForm_Edit_Review = () => {
               }
               return { pmServerTimeSyncs: [], remarks: '' };
             })() : { pmServerTimeSyncs: [], remarks: '' },
-            
+
             // Transform hotFixesData from Edit format to Review format
             hotFixesData: passedData.hotFixesData ? (() => {
               // Check if it's already in Review format (pmServerHotFixes)
@@ -420,7 +420,7 @@ const ServerPMReportForm_Edit_Review = () => {
                   remarks: item.remarks || '',
                   isDeleted: item.isDeleted || false // Preserve isDeleted flag
                 }));
-              
+
               if (details.length > 0 || (passedData.hotFixesData.remarks && passedData.hotFixesData.remarks.trim() !== '')) {
                 return {
                   pmServerHotFixes: [{
@@ -432,7 +432,7 @@ const ServerPMReportForm_Edit_Review = () => {
               }
               return { pmServerHotFixes: [], remarks: '' };
             })() : { pmServerHotFixes: [], remarks: '' },
-            
+
             // Transform monthlyDatabaseCreationData from Edit format to Review format
             monthlyDatabaseCreationData: passedData.monthlyDatabaseCreationData ? (() => {
               // Check if it's already in Review format (pmServerMonthlyDatabaseCreations)
@@ -451,7 +451,7 @@ const ServerPMReportForm_Edit_Review = () => {
                   remarks: item.remarks || '',
                   isDeleted: item.isDeleted || false // Preserve isDeleted flag
                 }));
-              
+
               if (details.length > 0 || (passedData.monthlyDatabaseCreationData.remarks && passedData.monthlyDatabaseCreationData.remarks.trim() !== '')) {
                 return {
                   pmServerMonthlyDatabaseCreations: [{
@@ -463,7 +463,7 @@ const ServerPMReportForm_Edit_Review = () => {
               }
               return { pmServerMonthlyDatabaseCreations: [], remarks: '' };
             })() : { pmServerMonthlyDatabaseCreations: [], remarks: '' },
-            
+
             // Transform autoFailOverData from Edit format to Review format
             autoFailOverData: passedData.autoFailOverData ? (() => {
               // Check if it's already in Review format (pmServerFailOvers)
@@ -481,7 +481,7 @@ const ServerPMReportForm_Edit_Review = () => {
                   remarks: item.remarks || '',
                   isDeleted: item.isDeleted || false // Preserve isDeleted flag
                 }));
-              
+
               if (details.length > 0 || (passedData.autoFailOverData.remarks && passedData.autoFailOverData.remarks.trim() !== '')) {
                 return {
                   pmServerFailOvers: [{
@@ -494,7 +494,7 @@ const ServerPMReportForm_Edit_Review = () => {
               }
               return { pmServerFailOvers: [], autoFailOverData: [], remarks: '' };
             })() : { pmServerFailOvers: [], autoFailOverData: [], remarks: '' },
-            
+
             // Transform asaFirewallData from Edit format to Review format
             asaFirewallData: passedData.asaFirewallData ? (() => {
               // Check if it's already in Review format (pmServerASAFirewalls)
@@ -519,7 +519,7 @@ const ServerPMReportForm_Edit_Review = () => {
                   isModified: item.isModified || false,
                   isDeleted: item.isDeleted || false // Preserve isDeleted flag
                 }));
-              
+
               if (transformedItems.length > 0 || (passedData.asaFirewallData.remarks && passedData.asaFirewallData.remarks.trim() !== '')) {
                 return {
                   pmServerASAFirewalls: transformedItems, // Flat array structure
@@ -529,7 +529,7 @@ const ServerPMReportForm_Edit_Review = () => {
               }
               return { pmServerASAFirewalls: [], asaFirewallData: [], remarks: '' };
             })() : { pmServerASAFirewalls: [], asaFirewallData: [], remarks: '' },
-            
+
             // Transform softwarePatchData from Edit format to Review format
             softwarePatchData: passedData.softwarePatchData ? (() => {
               // Check if it's already in Review format (array)
@@ -554,9 +554,9 @@ const ServerPMReportForm_Edit_Review = () => {
               }
               return [];
             })() : [],
-            
+
             softwarePatchRemarks: passedData.softwarePatchData?.remarks || passedData.softwarePatchRemarks || '',
-            
+
             // Transform diskUsageData from Edit format to Review format
             diskUsageData: passedData.diskUsageData ? (() => {
               // Check if it's already in Review format (pmServerDiskUsageHealths)
@@ -569,7 +569,7 @@ const ServerPMReportForm_Edit_Review = () => {
                 // Only exclude new items (no ID) that are deleted (can't delete what doesn't exist)
                 const servers = passedData.diskUsageData.servers.filter(server => !server.isDeleted || server.id);
                 const allDetails = [];
-                
+
                 servers.forEach(server => {
                   if (server.disks && Array.isArray(server.disks)) {
                     const disksToProcess = server.disks.filter(disk => !disk.isDeleted || disk.id);
@@ -589,21 +589,29 @@ const ServerPMReportForm_Edit_Review = () => {
                     });
                   }
                 });
-                
+
                 if (allDetails.length > 0 || (passedData.diskUsageData.remarks && passedData.diskUsageData.remarks.trim() !== '')) {
                   return {
                     pmServerDiskUsageHealths: [{
                       details: allDetails,
                       remarks: passedData.diskUsageData.remarks || ''
                     }],
-                    servers: passedData.diskUsageData.servers || [], // Keep for Review component compatibility
-                    remarks: passedData.diskUsageData.remarks || ''
+                    servers: passedData.diskUsageData.servers || [], // Keep for Review component compatibility (includes serverEntryIndex)
+                    remarks: passedData.diskUsageData.remarks || '',
+                    resultStatusOptions: passedData.diskUsageData.resultStatusOptions, // Preserve for backward conversion
+                    serverDiskStatusOptions: passedData.diskUsageData.serverDiskStatusOptions // Preserve for backward conversion
                   };
                 }
               }
-              return { pmServerDiskUsageHealths: [], servers: [], remarks: '' };
+              return {
+                pmServerDiskUsageHealths: [],
+                servers: [],
+                remarks: '',
+                resultStatusOptions: passedData.diskUsageData?.resultStatusOptions,
+                serverDiskStatusOptions: passedData.diskUsageData?.serverDiskStatusOptions
+              };
             })() : { pmServerDiskUsageHealths: [], servers: [], remarks: '' },
-            
+
             // Transform databaseBackupData from Edit format to Review format
             databaseBackupData: passedData.databaseBackupData ? (() => {
               // Check if it's already in Review format (pmServerDatabaseBackups)
@@ -622,7 +630,7 @@ const ServerPMReportForm_Edit_Review = () => {
                   remarks: item.remarks || '',
                   isDeleted: item.isDeleted || false // Preserve isDeleted flag
                 }));
-              
+
               const scadaDetails = (passedData.databaseBackupData.scadaBackupData || [])
                 .filter(item => item && (!item.isDeleted || item.id))
                 .map((item, index) => ({
@@ -633,10 +641,10 @@ const ServerPMReportForm_Edit_Review = () => {
                   remarks: item.remarks || '',
                   isDeleted: item.isDeleted || false // Preserve isDeleted flag
                 }));
-              
-              if (mssqlDetails.length > 0 || scadaDetails.length > 0 || 
-                  (passedData.databaseBackupData.remarks && passedData.databaseBackupData.remarks.trim() !== '') ||
-                  (passedData.databaseBackupData.latestBackupFileName && passedData.databaseBackupData.latestBackupFileName.trim() !== '')) {
+
+              if (mssqlDetails.length > 0 || scadaDetails.length > 0 ||
+                (passedData.databaseBackupData.remarks && passedData.databaseBackupData.remarks.trim() !== '') ||
+                (passedData.databaseBackupData.latestBackupFileName && passedData.databaseBackupData.latestBackupFileName.trim() !== '')) {
                 return {
                   pmServerDatabaseBackups: [{
                     mssqlDetails: mssqlDetails,
@@ -652,22 +660,55 @@ const ServerPMReportForm_Edit_Review = () => {
               }
               return { pmServerDatabaseBackups: [], mssqlBackupData: [], scadaBackupData: [], remarks: '', latestBackupFileName: '' };
             })() : { pmServerDatabaseBackups: [], mssqlBackupData: [], scadaBackupData: [], remarks: '', latestBackupFileName: '' },
-            
+
             // networkHealthData, willowlynx components are already in correct format, but ensure they're preserved
+            // IMPORTANT: Preserve image-related fields (image, imageTypeId, existingImageId, isImageDeleted, existingImageUrl) when passing from Edit to Review
             networkHealthData: passedData.networkHealthData || { pmServerNetworkHealths: [], remarks: '' },
-            willowlynxProcessStatusData: passedData.willowlynxProcessStatusData || { pmServerWillowlynxProcessStatuses: [], remarks: '' },
-            willowlynxNetworkStatusData: passedData.willowlynxNetworkStatusData || { pmServerWillowlynxNetworkStatuses: [], remarks: '' },
-            willowlynxRTUStatusData: passedData.willowlynxRTUStatusData || { pmServerWillowlynxRTUStatuses: [], remarks: '' },
+            willowlynxProcessStatusData: passedData.willowlynxProcessStatusData ? {
+              ...(passedData.willowlynxProcessStatusData.pmServerWillowlynxProcessStatuses ? passedData.willowlynxProcessStatusData : { pmServerWillowlynxProcessStatuses: [], remarks: '' }),
+              // Preserve image fields
+              image: passedData.willowlynxProcessStatusData.image,
+              imageTypeId: passedData.willowlynxProcessStatusData.imageTypeId,
+              existingImageId: passedData.willowlynxProcessStatusData.existingImageId,
+              existingImageUrl: passedData.willowlynxProcessStatusData.existingImageUrl,
+              isImageDeleted: passedData.willowlynxProcessStatusData.isImageDeleted
+            } : { pmServerWillowlynxProcessStatuses: [], remarks: '' },
+            willowlynxNetworkStatusData: passedData.willowlynxNetworkStatusData ? {
+              ...(passedData.willowlynxNetworkStatusData.pmServerWillowlynxNetworkStatuses ? passedData.willowlynxNetworkStatusData : { pmServerWillowlynxNetworkStatuses: [], remarks: '' }),
+              // Preserve image fields
+              image: passedData.willowlynxNetworkStatusData.image,
+              imageTypeId: passedData.willowlynxNetworkStatusData.imageTypeId,
+              existingImageId: passedData.willowlynxNetworkStatusData.existingImageId,
+              existingImageUrl: passedData.willowlynxNetworkStatusData.existingImageUrl,
+              isImageDeleted: passedData.willowlynxNetworkStatusData.isImageDeleted
+            } : { pmServerWillowlynxNetworkStatuses: [], remarks: '' },
+            willowlynxRTUStatusData: passedData.willowlynxRTUStatusData ? {
+              ...(passedData.willowlynxRTUStatusData.pmServerWillowlynxRTUStatuses ? passedData.willowlynxRTUStatusData : { pmServerWillowlynxRTUStatuses: [], remarks: '' }),
+              // Preserve image fields
+              image: passedData.willowlynxRTUStatusData.image,
+              imageTypeId: passedData.willowlynxRTUStatusData.imageTypeId,
+              existingImageId: passedData.willowlynxRTUStatusData.existingImageId,
+              existingImageUrl: passedData.willowlynxRTUStatusData.existingImageUrl,
+              isImageDeleted: passedData.willowlynxRTUStatusData.isImageDeleted
+            } : { pmServerWillowlynxRTUStatuses: [], remarks: '' },
             willowlynxHistorialTrendData: passedData.willowlynxHistorialTrendData || { pmServerWillowlynxHistoricalTrends: [], remarks: '' },
             willowlynxHistoricalReportData: passedData.willowlynxHistoricalReportData || { pmServerWillowlynxHistoricalReports: [], remarks: '' },
-            willowlynxSumpPitCCTVCameraData: passedData.willowlynxSumpPitCCTVCameraData || { pmServerWillowlynxCCTVCameras: [], remarks: '' }
+            willowlynxSumpPitCCTVCameraData: passedData.willowlynxSumpPitCCTVCameraData ? {
+              ...(passedData.willowlynxSumpPitCCTVCameraData.pmServerWillowlynxCCTVCameras ? passedData.willowlynxSumpPitCCTVCameraData : { pmServerWillowlynxCCTVCameras: [], remarks: '' }),
+              // Preserve image fields
+              image: passedData.willowlynxSumpPitCCTVCameraData.image,
+              imageTypeId: passedData.willowlynxSumpPitCCTVCameraData.imageTypeId,
+              existingImageId: passedData.willowlynxSumpPitCCTVCameraData.existingImageId,
+              existingImageUrl: passedData.willowlynxSumpPitCCTVCameraData.existingImageUrl,
+              isImageDeleted: passedData.willowlynxSumpPitCCTVCameraData.isImageDeleted
+            } : { pmServerWillowlynxCCTVCameras: [], remarks: '' }
           };
 
           // Debug: Log transformed data to help troubleshoot
           console.log('=== ServerPMReportForm_Edit_Review - Data Transformation ===');
           console.log('Original passedData:', passedData);
           console.log('Transformed data:', transformedData);
-          
+
           // Use the transformed form data
           setFormData(transformedData);
           isDataLoaded.current = true;
@@ -818,9 +859,9 @@ const ServerPMReportForm_Edit_Review = () => {
   // Convert Review format back to Edit format for API update
   const convertReviewToEditFormat = (reviewData) => {
     if (!reviewData) return reviewData;
-    
+
     const converted = { ...reviewData };
-    
+
     // Convert serverHealthData from Review format to Edit format
     if (converted.serverHealthData && converted.serverHealthData.pmServerHealths) {
       const pmServerHealths = converted.serverHealthData.pmServerHealths;
@@ -842,7 +883,7 @@ const ServerPMReportForm_Edit_Review = () => {
         converted.serverHealthData = { serverHealthData: [], remarks: converted.serverHealthData.remarks || '' };
       }
     }
-    
+
     // Convert hardDriveHealthData from Review format to Edit format
     if (converted.hardDriveHealthData && converted.hardDriveHealthData.pmServerHardDriveHealths) {
       const pmServerHardDriveHealths = converted.hardDriveHealthData.pmServerHardDriveHealths;
@@ -864,7 +905,7 @@ const ServerPMReportForm_Edit_Review = () => {
         converted.hardDriveHealthData = { hardDriveHealthData: [], remarks: converted.hardDriveHealthData.remarks || '' };
       }
     }
-    
+
     // Convert cpuAndRamUsageData from Review format to Edit format
     if (converted.cpuAndRamUsageData && converted.cpuAndRamUsageData.pmServerCPUAndMemoryUsages) {
       const pmServerCPUAndMemoryUsages = converted.cpuAndRamUsageData.pmServerCPUAndMemoryUsages;
@@ -898,7 +939,7 @@ const ServerPMReportForm_Edit_Review = () => {
         converted.cpuAndRamUsageData = { memoryUsageData: [], cpuUsageData: [], remarks: converted.cpuAndRamUsageData?.remarks || '' };
       }
     }
-    
+
     // Convert diskUsageData from Review format to Edit format
     // But if data already has servers structure (from Edit component), preserve it with flags
     if (converted.diskUsageData) {
@@ -914,19 +955,25 @@ const ServerPMReportForm_Edit_Review = () => {
         };
       } else if (converted.diskUsageData.pmServerDiskUsageHealths) {
         // Convert from Review format (pmServerDiskUsageHealths) to Edit format (servers)
+        // IMPORTANT: Preserve separate server entries even if they have the same server name
+        // Use a unique key (serverName + serverId + index) to allow duplicate server names
         const pmServerDiskUsageHealths = converted.diskUsageData.pmServerDiskUsageHealths;
         if (Array.isArray(pmServerDiskUsageHealths) && pmServerDiskUsageHealths.length > 0) {
           const firstItem = pmServerDiskUsageHealths[0];
-          // Group details by serverName
+          // Group details by unique server key (serverName + serverId) to preserve duplicates
           const serverMap = new Map();
-          (firstItem.pmServerDiskUsageHealthDetails || firstItem.details || []).forEach(detail => {
+          (firstItem.pmServerDiskUsageHealthDetails || firstItem.details || []).forEach((detail, detailIndex) => {
             const serverName = detail.ServerName || detail.serverName || '';
             if (!serverName) return;
-            
-            if (!serverMap.has(serverName)) {
-              const serverId = detail.PMServerDiskUsageHealthID || detail.pmServerDiskUsageHealthID || null;
-              serverMap.set(serverName, {
+
+            // Use serverId + serverName as unique key to preserve duplicate server names as separate entries
+            const serverId = detail.PMServerDiskUsageHealthID || detail.pmServerDiskUsageHealthID || null;
+            const serverKey = serverId ? `${serverName}-${serverId}` : `${serverName}-new-${detailIndex}`;
+
+            if (!serverMap.has(serverKey)) {
+              serverMap.set(serverKey, {
                 id: serverId,
+                tempId: serverId ? `existing-${serverId}` : `temp-${Date.now()}-${detailIndex}-${Math.random().toString(36).substr(2, 9)}`,
                 serverName: serverName,
                 disks: [],
                 isNew: !serverId,
@@ -934,9 +981,9 @@ const ServerPMReportForm_Edit_Review = () => {
                 isDeleted: false
               });
             }
-            
+
             const diskId = detail.ID || detail.id || null;
-            serverMap.get(serverName).disks.push({
+            serverMap.get(serverKey).disks.push({
               id: diskId,
               disk: detail.DiskName || detail.diskName || '',
               status: detail.ServerDiskStatusID || detail.serverDiskStatusID || '',
@@ -957,8 +1004,8 @@ const ServerPMReportForm_Edit_Review = () => {
             serverDiskStatusOptions: converted.diskUsageData.serverDiskStatusOptions
           };
         } else {
-          converted.diskUsageData = { 
-            servers: [], 
+          converted.diskUsageData = {
+            servers: [],
             remarks: converted.diskUsageData?.remarks || '',
             resultStatusOptions: converted.diskUsageData?.resultStatusOptions,
             serverDiskStatusOptions: converted.diskUsageData?.serverDiskStatusOptions
@@ -966,7 +1013,7 @@ const ServerPMReportForm_Edit_Review = () => {
         }
       }
     }
-    
+
     // Convert timeSyncData from Review format to Edit format
     if (converted.timeSyncData && converted.timeSyncData.pmServerTimeSyncs) {
       const pmServerTimeSyncs = converted.timeSyncData.pmServerTimeSyncs;
@@ -989,7 +1036,7 @@ const ServerPMReportForm_Edit_Review = () => {
         converted.timeSyncData = { timeSyncData: [], remarks: converted.timeSyncData?.remarks || '' };
       }
     }
-    
+
     // Convert hotFixesData from Review format to Edit format
     if (converted.hotFixesData && converted.hotFixesData.pmServerHotFixes) {
       const pmServerHotFixes = converted.hotFixesData.pmServerHotFixes;
@@ -1013,7 +1060,7 @@ const ServerPMReportForm_Edit_Review = () => {
         converted.hotFixesData = { hotFixesData: [], remarks: converted.hotFixesData?.remarks || '' };
       }
     }
-    
+
     // Convert monthlyDatabaseCreationData from Review format to Edit format
     if (converted.monthlyDatabaseCreationData && converted.monthlyDatabaseCreationData.pmServerMonthlyDatabaseCreations) {
       const pmServerMonthlyDatabaseCreations = converted.monthlyDatabaseCreationData.pmServerMonthlyDatabaseCreations;
@@ -1036,7 +1083,7 @@ const ServerPMReportForm_Edit_Review = () => {
         converted.monthlyDatabaseCreationData = { monthlyDatabaseData: [], remarks: converted.monthlyDatabaseCreationData?.remarks || '' };
       }
     }
-    
+
     // Convert autoFailOverData from Review format to Edit format
     if (converted.autoFailOverData && converted.autoFailOverData.pmServerFailOvers) {
       const pmServerFailOvers = converted.autoFailOverData.pmServerFailOvers;
@@ -1060,7 +1107,7 @@ const ServerPMReportForm_Edit_Review = () => {
         converted.autoFailOverData = { autoFailOverData: [], remarks: converted.autoFailOverData?.remarks || '' };
       }
     }
-    
+
     // Convert asaFirewallData from Review format to Edit format
     if (converted.asaFirewallData) {
       // Check if data is already in Edit format (has asaFirewallData array)
@@ -1074,7 +1121,7 @@ const ServerPMReportForm_Edit_Review = () => {
         const pmServerASAFirewalls = converted.asaFirewallData.pmServerASAFirewalls;
         if (Array.isArray(pmServerASAFirewalls) && pmServerASAFirewalls.length > 0) {
           const firstItem = pmServerASAFirewalls[0];
-          
+
           // Check if it's a nested structure with details array
           if (firstItem.details && Array.isArray(firstItem.details)) {
             // Nested structure: pmServerASAFirewalls[0].details
@@ -1119,7 +1166,7 @@ const ServerPMReportForm_Edit_Review = () => {
         converted.asaFirewallData = { asaFirewallData: [], remarks: converted.asaFirewallData?.remarks || '' };
       }
     }
-    
+
     // Convert databaseBackupData from Review format to Edit format
     if (converted.databaseBackupData && converted.databaseBackupData.pmServerDatabaseBackups) {
       const pmServerDatabaseBackups = converted.databaseBackupData.pmServerDatabaseBackups;
@@ -1153,7 +1200,7 @@ const ServerPMReportForm_Edit_Review = () => {
         converted.databaseBackupData = { mssqlBackupData: [], scadaBackupData: [], remarks: converted.databaseBackupData?.remarks || '', latestBackupFileName: converted.databaseBackupData?.latestBackupFileName || '' };
       }
     }
-    
+
     // Convert softwarePatchData - handle both array format and nested object format
     // Helper function to validate if a string is a valid GUID format
     const isValidGuid = (value) => {
@@ -1163,7 +1210,7 @@ const ServerPMReportForm_Edit_Review = () => {
       const trimmed = value.trim();
       return guidPattern.test(trimmed) || guidPatternNoDashes.test(trimmed);
     };
-    
+
     if (converted.softwarePatchData) {
       // Check if data is already in Edit format (has softwarePatchData array inside)
       if (converted.softwarePatchData.softwarePatchData && Array.isArray(converted.softwarePatchData.softwarePatchData)) {
@@ -1181,10 +1228,10 @@ const ServerPMReportForm_Edit_Review = () => {
               }
               // If not a valid GUID, itemId remains null (treat as new item)
             }
-            
+
             // Determine if item is new based on ID presence and validity
             const isItemNew = !itemId;
-            
+
             return {
               id: itemId, // null for new items, valid GUID string for existing items
               serialNo: item.serialNo || item.SerialNo || '',
@@ -1214,10 +1261,10 @@ const ServerPMReportForm_Edit_Review = () => {
               }
               // If not a valid GUID, itemId remains null (treat as new item)
             }
-            
+
             // Determine if item is new based on ID presence and validity
             const isItemNew = !itemId;
-            
+
             return {
               id: itemId, // null for new items, valid GUID string for existing items
               serialNo: item.serialNo || item.SerialNo || '',
@@ -1240,7 +1287,7 @@ const ServerPMReportForm_Edit_Review = () => {
         };
       }
     }
-    
+
     // Convert networkHealthData and willowlynx components - they're simple structures
     if (converted.networkHealthData && converted.networkHealthData.pmServerNetworkHealths && Array.isArray(converted.networkHealthData.pmServerNetworkHealths) && converted.networkHealthData.pmServerNetworkHealths.length > 0) {
       const firstItem = converted.networkHealthData.pmServerNetworkHealths[0];
@@ -1250,33 +1297,81 @@ const ServerPMReportForm_Edit_Review = () => {
         remarks: firstItem.remarks || converted.networkHealthData.remarks || ''
       };
     }
-    
+
     if (converted.willowlynxProcessStatusData && converted.willowlynxProcessStatusData.pmServerWillowlynxProcessStatuses && Array.isArray(converted.willowlynxProcessStatusData.pmServerWillowlynxProcessStatuses) && converted.willowlynxProcessStatusData.pmServerWillowlynxProcessStatuses.length > 0) {
       const firstItem = converted.willowlynxProcessStatusData.pmServerWillowlynxProcessStatuses[0];
       converted.willowlynxProcessStatusData = {
         result: firstItem.yesNoStatusID || firstItem.result,
-        remarks: firstItem.remarks || converted.willowlynxProcessStatusData.remarks || ''
+        remarks: firstItem.remarks || converted.willowlynxProcessStatusData.remarks || '',
+        // Preserve image-related fields
+        image: converted.willowlynxProcessStatusData.image,
+        imageTypeId: converted.willowlynxProcessStatusData.imageTypeId,
+        existingImageId: converted.willowlynxProcessStatusData.existingImageId,
+        existingImageUrl: converted.willowlynxProcessStatusData.existingImageUrl,
+        isImageDeleted: converted.willowlynxProcessStatusData.isImageDeleted
+      };
+    } else if (converted.willowlynxProcessStatusData) {
+      // Preserve image fields even if no pmServerWillowlynxProcessStatuses
+      converted.willowlynxProcessStatusData = {
+        ...converted.willowlynxProcessStatusData,
+        image: converted.willowlynxProcessStatusData.image,
+        imageTypeId: converted.willowlynxProcessStatusData.imageTypeId,
+        existingImageId: converted.willowlynxProcessStatusData.existingImageId,
+        existingImageUrl: converted.willowlynxProcessStatusData.existingImageUrl,
+        isImageDeleted: converted.willowlynxProcessStatusData.isImageDeleted
       };
     }
-    
+
     if (converted.willowlynxNetworkStatusData && converted.willowlynxNetworkStatusData.pmServerWillowlynxNetworkStatuses && Array.isArray(converted.willowlynxNetworkStatusData.pmServerWillowlynxNetworkStatuses) && converted.willowlynxNetworkStatusData.pmServerWillowlynxNetworkStatuses.length > 0) {
       const firstItem = converted.willowlynxNetworkStatusData.pmServerWillowlynxNetworkStatuses[0];
       converted.willowlynxNetworkStatusData = {
         dateChecked: firstItem.dateChecked,
         result: firstItem.yesNoStatusID || firstItem.result,
-        remarks: firstItem.remarks || converted.willowlynxNetworkStatusData.remarks || ''
+        remarks: firstItem.remarks || converted.willowlynxNetworkStatusData.remarks || '',
+        // Preserve image-related fields
+        image: converted.willowlynxNetworkStatusData.image,
+        imageTypeId: converted.willowlynxNetworkStatusData.imageTypeId,
+        existingImageId: converted.willowlynxNetworkStatusData.existingImageId,
+        existingImageUrl: converted.willowlynxNetworkStatusData.existingImageUrl,
+        isImageDeleted: converted.willowlynxNetworkStatusData.isImageDeleted
+      };
+    } else if (converted.willowlynxNetworkStatusData) {
+      // Preserve image fields even if no pmServerWillowlynxNetworkStatuses
+      converted.willowlynxNetworkStatusData = {
+        ...converted.willowlynxNetworkStatusData,
+        image: converted.willowlynxNetworkStatusData.image,
+        imageTypeId: converted.willowlynxNetworkStatusData.imageTypeId,
+        existingImageId: converted.willowlynxNetworkStatusData.existingImageId,
+        existingImageUrl: converted.willowlynxNetworkStatusData.existingImageUrl,
+        isImageDeleted: converted.willowlynxNetworkStatusData.isImageDeleted
       };
     }
-    
+
     if (converted.willowlynxRTUStatusData && converted.willowlynxRTUStatusData.pmServerWillowlynxRTUStatuses && Array.isArray(converted.willowlynxRTUStatusData.pmServerWillowlynxRTUStatuses) && converted.willowlynxRTUStatusData.pmServerWillowlynxRTUStatuses.length > 0) {
       const firstItem = converted.willowlynxRTUStatusData.pmServerWillowlynxRTUStatuses[0];
       converted.willowlynxRTUStatusData = {
         dateChecked: firstItem.dateChecked,
         result: firstItem.yesNoStatusID || firstItem.result,
-        remarks: firstItem.remarks || converted.willowlynxRTUStatusData.remarks || ''
+        remarks: firstItem.remarks || converted.willowlynxRTUStatusData.remarks || '',
+        // Preserve image-related fields
+        image: converted.willowlynxRTUStatusData.image,
+        imageTypeId: converted.willowlynxRTUStatusData.imageTypeId,
+        existingImageId: converted.willowlynxRTUStatusData.existingImageId,
+        existingImageUrl: converted.willowlynxRTUStatusData.existingImageUrl,
+        isImageDeleted: converted.willowlynxRTUStatusData.isImageDeleted
+      };
+    } else if (converted.willowlynxRTUStatusData) {
+      // Preserve image fields even if no pmServerWillowlynxRTUStatuses
+      converted.willowlynxRTUStatusData = {
+        ...converted.willowlynxRTUStatusData,
+        image: converted.willowlynxRTUStatusData.image,
+        imageTypeId: converted.willowlynxRTUStatusData.imageTypeId,
+        existingImageId: converted.willowlynxRTUStatusData.existingImageId,
+        existingImageUrl: converted.willowlynxRTUStatusData.existingImageUrl,
+        isImageDeleted: converted.willowlynxRTUStatusData.isImageDeleted
       };
     }
-    
+
     if (converted.willowlynxHistorialTrendData && converted.willowlynxHistorialTrendData.pmServerWillowlynxHistoricalTrends && Array.isArray(converted.willowlynxHistorialTrendData.pmServerWillowlynxHistoricalTrends) && converted.willowlynxHistorialTrendData.pmServerWillowlynxHistoricalTrends.length > 0) {
       const firstItem = converted.willowlynxHistorialTrendData.pmServerWillowlynxHistoricalTrends[0];
       converted.willowlynxHistorialTrendData = {
@@ -1285,7 +1380,7 @@ const ServerPMReportForm_Edit_Review = () => {
         remarks: firstItem.remarks || converted.willowlynxHistorialTrendData.remarks || ''
       };
     }
-    
+
     if (converted.willowlynxHistoricalReportData && converted.willowlynxHistoricalReportData.pmServerWillowlynxHistoricalReports && Array.isArray(converted.willowlynxHistoricalReportData.pmServerWillowlynxHistoricalReports) && converted.willowlynxHistoricalReportData.pmServerWillowlynxHistoricalReports.length > 0) {
       const firstItem = converted.willowlynxHistoricalReportData.pmServerWillowlynxHistoricalReports[0];
       converted.willowlynxHistoricalReportData = {
@@ -1293,15 +1388,31 @@ const ServerPMReportForm_Edit_Review = () => {
         remarks: firstItem.remarks || converted.willowlynxHistoricalReportData.remarks || ''
       };
     }
-    
+
     if (converted.willowlynxSumpPitCCTVCameraData && converted.willowlynxSumpPitCCTVCameraData.pmServerWillowlynxCCTVCameras && Array.isArray(converted.willowlynxSumpPitCCTVCameraData.pmServerWillowlynxCCTVCameras) && converted.willowlynxSumpPitCCTVCameraData.pmServerWillowlynxCCTVCameras.length > 0) {
       const firstItem = converted.willowlynxSumpPitCCTVCameraData.pmServerWillowlynxCCTVCameras[0];
       converted.willowlynxSumpPitCCTVCameraData = {
         result: firstItem.yesNoStatusID || firstItem.result,
-        remarks: firstItem.remarks || converted.willowlynxSumpPitCCTVCameraData.remarks || ''
+        remarks: firstItem.remarks || converted.willowlynxSumpPitCCTVCameraData.remarks || '',
+        // Preserve image-related fields
+        image: converted.willowlynxSumpPitCCTVCameraData.image,
+        imageTypeId: converted.willowlynxSumpPitCCTVCameraData.imageTypeId,
+        existingImageId: converted.willowlynxSumpPitCCTVCameraData.existingImageId,
+        existingImageUrl: converted.willowlynxSumpPitCCTVCameraData.existingImageUrl,
+        isImageDeleted: converted.willowlynxSumpPitCCTVCameraData.isImageDeleted
+      };
+    } else if (converted.willowlynxSumpPitCCTVCameraData) {
+      // Preserve image fields even if no pmServerWillowlynxCCTVCameras
+      converted.willowlynxSumpPitCCTVCameraData = {
+        ...converted.willowlynxSumpPitCCTVCameraData,
+        image: converted.willowlynxSumpPitCCTVCameraData.image,
+        imageTypeId: converted.willowlynxSumpPitCCTVCameraData.imageTypeId,
+        existingImageId: converted.willowlynxSumpPitCCTVCameraData.existingImageId,
+        existingImageUrl: converted.willowlynxSumpPitCCTVCameraData.existingImageUrl,
+        isImageDeleted: converted.willowlynxSumpPitCCTVCameraData.isImageDeleted
       };
     }
-    
+
     return converted;
   };
 
@@ -1312,13 +1423,18 @@ const ServerPMReportForm_Edit_Review = () => {
 
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       let dataToUpdate = formDataOverride || formData;
-      
+
       // Convert Review format to Edit format if needed
       dataToUpdate = convertReviewToEditFormat(dataToUpdate);
-      
+
       console.log('=== Sending data to updateServerPMReportForm ===');
-      console.log('Converted data structure:', JSON.stringify(dataToUpdate, null, 2));
-      
+      console.log('Converted data structure:', dataToUpdate);
+      console.log('Willowlynx image data check:');
+      console.log('willowlynxProcessStatusData:', dataToUpdate.willowlynxProcessStatusData);
+      console.log('willowlynxNetworkStatusData:', dataToUpdate.willowlynxNetworkStatusData);
+      console.log('willowlynxRTUStatusData:', dataToUpdate.willowlynxRTUStatusData);
+      console.log('willowlynxSumpPitCCTVCameraData:', dataToUpdate.willowlynxSumpPitCCTVCameraData);
+
       const result = await updateServerPMReportForm(id, dataToUpdate, user);
 
       const reportFormId =
@@ -1326,7 +1442,113 @@ const ServerPMReportForm_Edit_Review = () => {
         formData?.reportFormId ||
         result?.data?.reportFormID ||
         result?.data?.reportFormId ||
+        id ||
         null;
+
+      // Handle image deletion and new uploads for Willowlynx sections
+      if (reportFormId) {
+        try {
+          // Get image types
+          const imageTypes = await getReportFormImageTypes();
+          
+          // Helper function to handle image operations for a section
+          const handleSectionImages = async (sectionData, imageTypeName, sectionName) => {
+            if (!sectionData) {
+              console.log(`No sectionData for ${sectionName}`);
+              return;
+            }
+            
+            console.log(`=== Handling images for ${sectionName} ===`);
+            console.log(`Section data:`, sectionData);
+            console.log(`isImageDeleted:`, sectionData.isImageDeleted);
+            console.log(`existingImageId:`, sectionData.existingImageId);
+            console.log(`image (File):`, sectionData.image);
+            console.log(`imageTypeId:`, sectionData.imageTypeId);
+            
+            // Find the image type
+            const imageType = imageTypes?.find(type => type.imageTypeName === imageTypeName);
+            if (!imageType) {
+              console.warn(`Image type ${imageTypeName} not found`);
+              return;
+            }
+            
+            // Delete existing image if marked for deletion
+            if (sectionData.isImageDeleted && sectionData.existingImageId) {
+              try {
+                console.log(`Attempting to delete image ${sectionData.existingImageId} for ${sectionName}`);
+                await deleteReportFormImage(sectionData.existingImageId);
+                console.log(`✓ Successfully deleted image ${sectionData.existingImageId} for ${sectionName}`);
+              } catch (deleteError) {
+                console.error(`✗ Error deleting image for ${sectionName}:`, deleteError);
+                throw deleteError; // Re-throw to see the actual error
+              }
+            } else {
+              if (sectionData.isImageDeleted) {
+                console.log(`isImageDeleted is true but no existingImageId for ${sectionName}`);
+              }
+            }
+            
+            // Upload new image if provided
+            if (sectionData.image && sectionData.imageTypeId) {
+              try {
+                console.log(`Attempting to upload new image for ${sectionName}`);
+                await createReportFormImage(
+                  reportFormId,
+                  sectionData.image,
+                  sectionData.imageTypeId,
+                  sectionName
+                );
+                console.log(`✓ Successfully uploaded new image for ${sectionName}`);
+              } catch (uploadError) {
+                console.error(`✗ Error uploading image for ${sectionName}:`, uploadError);
+                throw uploadError; // Re-throw to see the actual error
+              }
+            } else {
+              if (sectionData.image && !sectionData.imageTypeId) {
+                console.log(`Image file exists but no imageTypeId for ${sectionName}`);
+              } else if (!sectionData.image && sectionData.imageTypeId) {
+                console.log(`imageTypeId exists but no image file for ${sectionName}`);
+              }
+            }
+          };
+          
+          // Handle images for each Willowlynx section
+          if (dataToUpdate.willowlynxProcessStatusData) {
+            await handleSectionImages(
+              dataToUpdate.willowlynxProcessStatusData,
+              'WillowlynxProcessStatusCheck',
+              'WillowlynxProcessStatus'
+            );
+          }
+          
+          if (dataToUpdate.willowlynxNetworkStatusData) {
+            await handleSectionImages(
+              dataToUpdate.willowlynxNetworkStatusData,
+              'WillowlynxNetworkStatus',
+              'WillowlynxNetworkStatus'
+            );
+          }
+          
+          if (dataToUpdate.willowlynxRTUStatusData) {
+            await handleSectionImages(
+              dataToUpdate.willowlynxRTUStatusData,
+              'WillowlynxRTUStatusCheck',
+              'WillowlynxRTUStatus'
+            );
+          }
+          
+          if (dataToUpdate.willowlynxSumpPitCCTVCameraData) {
+            await handleSectionImages(
+              dataToUpdate.willowlynxSumpPitCCTVCameraData,
+              'WillowlynxSumpPitCCTVCamera',
+              'WillowlynxSumpPitCCTVCamera'
+            );
+          }
+        } catch (imageError) {
+          console.error('Error handling images:', imageError);
+          // Don't fail the whole update if image handling fails
+        }
+      }
 
       if (finalReportFileParam) {
         if (!reportFormId) {
@@ -1402,35 +1624,35 @@ const ServerPMReportForm_Edit_Review = () => {
       setDownloadConfirmModalOpen(false);
 
       console.log('=== Starting Server PM report update and download ===');
-      
+
       // Update the report first - pass null for finalReportFileParam, then options object
       const updateResult = await performUpdate(null, { skipNavigation: true, suppressSuccessToast: true });
-      
+
       if (!updateResult.success) {
         console.error('Update failed');
         setIsDownloading(false);
         return;
       }
-      
+
       // Wait a moment to ensure backend has processed the update
       console.log('Waiting 2 seconds before downloading...');
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       // Download the report
       await handleDownloadReport(id);
-      
+
       // Show success notification
       setNotification({
         open: true,
         message: 'Report updated and downloaded successfully!',
         severity: 'success'
       });
-      
+
       // Navigate after download
       setTimeout(() => {
         navigate('/report-management-system');
       }, 1500);
-      
+
     } catch (error) {
       console.error('Error during update and download:', error);
       setNotification({
@@ -1557,14 +1779,14 @@ const ServerPMReportForm_Edit_Review = () => {
     try {
       // Wait a bit for the final report to be created in the database
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       // Fetch the final reports for this report form
       const finalReports = await getFinalReportsByReportForm(reportFormId);
-      
+
       if (finalReports && finalReports.length > 0) {
         // Get the most recent final report (first one)
         const latestReport = finalReports[0];
-        
+
         // Download the final report
         const response = await downloadFinalReportAttachment(latestReport.id);
         const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
@@ -1577,7 +1799,7 @@ const ServerPMReportForm_Edit_Review = () => {
         link.click();
         link.remove();
         window.URL.revokeObjectURL(downloadUrl);
-        
+
         console.log('Final report downloaded successfully:', fileName);
       } else {
         console.log('No final reports found for download');
@@ -1610,7 +1832,7 @@ const ServerPMReportForm_Edit_Review = () => {
     try {
       setFinalReportUploading(true);
       setFinalReportUploadError('');
-      
+
       const reportFormId = id;
       if (!reportFormId) {
         setFinalReportUploadError('Report Form ID is missing. Unable to proceed.');
@@ -1627,7 +1849,7 @@ const ServerPMReportForm_Edit_Review = () => {
         const ctx = canvas.getContext('2d');
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const hasDrawing = imageData.data.some(channel => channel !== 0);
-        
+
         if (hasDrawing) {
           const blob = await canvasToBlob(canvas);
           attendedBySignatureToUpload = new File([blob], 'attended-by-signature.png', { type: 'image/png' });
@@ -1639,7 +1861,7 @@ const ServerPMReportForm_Edit_Review = () => {
         const ctx = canvas.getContext('2d');
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const hasDrawing = imageData.data.some(channel => channel !== 0);
-        
+
         if (hasDrawing) {
           const blob = await canvasToBlob(canvas);
           approvedBySignatureToUpload = new File([blob], 'approved-by-signature.png', { type: 'image/png' });
@@ -1657,7 +1879,7 @@ const ServerPMReportForm_Edit_Review = () => {
       } else {
         // Signatures tab - validate both signatures
         const hasBothSignatures = !!attendedBySignatureToUpload && !!approvedBySignatureToUpload;
-        
+
         if (!hasBothSignatures) {
           if (!attendedBySignatureToUpload && !approvedBySignatureToUpload) {
             setFinalReportUploadError('Please provide both signatures.');
@@ -1720,8 +1942,8 @@ const ServerPMReportForm_Edit_Review = () => {
       // Show success notification
       setNotification({
         open: true,
-        message: activeTab === 0 
-          ? 'Final report uploaded successfully! Report closed.' 
+        message: activeTab === 0
+          ? 'Final report uploaded successfully! Report closed.'
           : 'Signatures submitted and final report generated successfully! Report closed.',
         severity: 'success'
       });
@@ -1742,7 +1964,7 @@ const ServerPMReportForm_Edit_Review = () => {
           navigate('/report-management-system');
         }, 2000);
       }
-      
+
     } catch (error) {
       const message = error?.response?.data?.message || error?.message || 'Failed to submit report.';
       setFinalReportUploadError(message);
@@ -1940,7 +2162,7 @@ const ServerPMReportForm_Edit_Review = () => {
                 if (dataKey === 'cpuAndRamUsageData') {
                   // Priority 1: Check for Edit format (memoryUsageData, cpuUsageData) - user filled data
                   if (data.memoryUsageData !== undefined || data.cpuUsageData !== undefined) {
-                    const hasMemoryData = Array.isArray(data.memoryUsageData) && data.memoryUsageData.length > 0 && 
+                    const hasMemoryData = Array.isArray(data.memoryUsageData) && data.memoryUsageData.length > 0 &&
                       data.memoryUsageData.some(item => item && !item.isDeleted && (
                         (item.machineName && item.machineName.trim() !== '') ||
                         (item.memorySize && item.memorySize.trim() !== '') ||
@@ -1972,17 +2194,17 @@ const ServerPMReportForm_Edit_Review = () => {
                   if (data.pmServerDiskUsageHealths && Array.isArray(data.pmServerDiskUsageHealths) && data.pmServerDiskUsageHealths.length > 0) {
                     const apiData = data.pmServerDiskUsageHealths[0];
                     const hasDetails = (apiData.details && Array.isArray(apiData.details) && apiData.details.length > 0) ||
-                                      (apiData.pmServerDiskUsageHealthDetails && Array.isArray(apiData.pmServerDiskUsageHealthDetails) && apiData.pmServerDiskUsageHealthDetails.length > 0);
+                      (apiData.pmServerDiskUsageHealthDetails && Array.isArray(apiData.pmServerDiskUsageHealthDetails) && apiData.pmServerDiskUsageHealthDetails.length > 0);
                     const hasRemarks = apiData.remarks && apiData.remarks.trim() !== '';
                     return hasDetails || hasRemarks;
                   }
                   // Fallback: check for servers array (hierarchical structure from Edit format)
                   if (data.servers && Array.isArray(data.servers) && data.servers.length > 0) {
-                    return data.servers.some(server => 
+                    return data.servers.some(server =>
                       !server.isDeleted &&
-                      server.serverName && 
-                      server.disks && 
-                      Array.isArray(server.disks) && 
+                      server.serverName &&
+                      server.disks &&
+                      Array.isArray(server.disks) &&
                       server.disks.some(disk => !disk.isDeleted && (disk.disk || disk.status || disk.check))
                     );
                   }
@@ -2400,7 +2622,7 @@ const ServerPMReportForm_Edit_Review = () => {
         >
           Close Report
         </DialogTitle>
-        
+
         {/* Tabs */}
         <Tabs
           value={activeTab}
@@ -2427,15 +2649,15 @@ const ServerPMReportForm_Edit_Review = () => {
             }
           }}
         >
-          <Tab 
-            icon={<UploadFileIcon sx={{ fontSize: 20 }} />} 
+          <Tab
+            icon={<UploadFileIcon sx={{ fontSize: 20 }} />}
             iconPosition="start"
-            label="Upload PDF Report" 
+            label="Upload PDF Report"
           />
-          <Tab 
-            icon={<BrushIcon sx={{ fontSize: 20 }} />} 
+          <Tab
+            icon={<BrushIcon sx={{ fontSize: 20 }} />}
             iconPosition="start"
-            label="Provide Signatures" 
+            label="Provide Signatures"
           />
         </Tabs>
 
@@ -2478,13 +2700,13 @@ const ServerPMReportForm_Edit_Review = () => {
                 />
               </Button>
               {finalReportFile && (
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    display: 'block', 
-                    mt: 1, 
-                    textAlign: 'center', 
-                    color: '#4ade80' 
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: 'block',
+                    mt: 1,
+                    textAlign: 'center',
+                    color: '#4ade80'
                   }}
                 >
                   ✓ File selected: {finalReportFile.name}
@@ -2496,244 +2718,244 @@ const ServerPMReportForm_Edit_Review = () => {
           {/* Tab Panel 1: Signature Uploads or Drawing */}
           {activeTab === 1 && (
             <Box>
-            {/* Attended By Signature */}
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" sx={{ color: 'rgba(241,245,249,0.85)', fontWeight: 600 }}>
-                  Attended By Signature
-                  {formData?.signOffData?.attendedBy && (
-                    <Typography component="span" sx={{ ml: 1, color: '#4ade80', fontSize: '13px' }}>
-                      ({formData.signOffData.attendedBy})
-                    </Typography>
-                  )}
-                </Typography>
-                <ToggleButtonGroup
-                  value={attendedByMode}
-                  exclusive
-                  onChange={(e, newMode) => newMode && setAttendedByMode(newMode)}
-                  size="small"
-                  sx={{
-                    '& .MuiToggleButton-root': {
-                      color: 'rgba(226,232,240,0.7)',
-                      borderColor: 'rgba(226,232,240,0.3)',
-                      py: 0.5,
-                      px: 1.5,
-                      fontSize: '12px',
-                      '&.Mui-selected': {
-                        backgroundColor: 'rgba(74,222,128,0.2)',
-                        color: '#4ade80',
-                        borderColor: '#4ade80',
-                        '&:hover': {
-                          backgroundColor: 'rgba(74,222,128,0.3)',
+              {/* Attended By Signature */}
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(241,245,249,0.85)', fontWeight: 600 }}>
+                    Attended By Signature
+                    {formData?.signOffData?.attendedBy && (
+                      <Typography component="span" sx={{ ml: 1, color: '#4ade80', fontSize: '13px' }}>
+                        ({formData.signOffData.attendedBy})
+                      </Typography>
+                    )}
+                  </Typography>
+                  <ToggleButtonGroup
+                    value={attendedByMode}
+                    exclusive
+                    onChange={(e, newMode) => newMode && setAttendedByMode(newMode)}
+                    size="small"
+                    sx={{
+                      '& .MuiToggleButton-root': {
+                        color: 'rgba(226,232,240,0.7)',
+                        borderColor: 'rgba(226,232,240,0.3)',
+                        py: 0.5,
+                        px: 1.5,
+                        fontSize: '12px',
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(74,222,128,0.2)',
+                          color: '#4ade80',
+                          borderColor: '#4ade80',
+                          '&:hover': {
+                            backgroundColor: 'rgba(74,222,128,0.3)',
+                          }
                         }
                       }
-                    }
-                  }}
-                >
-                  <ToggleButton value="draw">
-                    <BrushIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                    Draw
-                  </ToggleButton>
-                  <ToggleButton value="upload">
-                    <PhotoCamera sx={{ fontSize: 16, mr: 0.5 }} />
-                    Upload
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
-
-              {attendedByMode === 'draw' ? (
-                <Box>
-                  <Box sx={{ 
-                    border: '2px solid rgba(226,232,240,0.3)', 
-                    borderRadius: 2, 
-                    backgroundColor: 'white',
-                    cursor: 'crosshair'
-                  }}>
-                    <canvas
-                      ref={attendedByCanvasRef}
-                      width={400}
-                      height={150}
-                      onMouseDown={startDrawing(attendedByCanvasRef, setIsDrawingAttended)}
-                      onMouseMove={draw(attendedByCanvasRef, isDrawingAttended)}
-                      onMouseUp={stopDrawing(setIsDrawingAttended)}
-                      onMouseLeave={stopDrawing(setIsDrawingAttended)}
-                      style={{ display: 'block', width: '100%', height: '150px' }}
-                    />
-                  </Box>
-                  <Button
-                    size="small"
-                    startIcon={<ClearIcon />}
-                    onClick={() => clearCanvas(attendedByCanvasRef)}
-                    sx={{ 
-                      mt: 1, 
-                      color: 'rgba(226,232,240,0.7)',
-                      textTransform: 'none',
-                      fontSize: '12px'
                     }}
                   >
-                    Clear
-                  </Button>
+                    <ToggleButton value="draw">
+                      <BrushIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                      Draw
+                    </ToggleButton>
+                    <ToggleButton value="upload">
+                      <PhotoCamera sx={{ fontSize: 16, mr: 0.5 }} />
+                      Upload
+                    </ToggleButton>
+                  </ToggleButtonGroup>
                 </Box>
-              ) : (
-                <Box>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<PhotoCamera />}
-                    sx={{
+
+                {attendedByMode === 'draw' ? (
+                  <Box>
+                    <Box sx={{
+                      border: '2px solid rgba(226,232,240,0.3)',
                       borderRadius: 2,
-                      textTransform: 'none',
-                      width: '100%',
-                      py: 1.5,
-                      borderColor: attendedBySignature ? '#4ade80' : 'rgba(226,232,240,0.5)',
-                      color: attendedBySignature ? '#4ade80' : '#e2e8f0',
-                      fontWeight: 600,
-                      '&:hover': {
-                        borderColor: '#cbd5f5',
-                        backgroundColor: 'rgba(148,163,184,0.15)'
-                      }
-                    }}
-                  >
-                    {attendedBySignature ? attendedBySignature.name : 'Select Signature Image'}
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*"
-                      onChange={handleAttendedBySignatureChange}
-                    />
-                  </Button>
-                  {attendedBySignaturePreview && (
-                    <Box sx={{ mt: 1, textAlign: 'center' }}>
-                      <img 
-                        src={attendedBySignaturePreview} 
-                        alt="Attended By Signature" 
-                        style={{ maxWidth: '200px', maxHeight: '100px', border: '1px solid rgba(226,232,240,0.3)', borderRadius: '4px' }}
+                      backgroundColor: 'white',
+                      cursor: 'crosshair'
+                    }}>
+                      <canvas
+                        ref={attendedByCanvasRef}
+                        width={400}
+                        height={150}
+                        onMouseDown={startDrawing(attendedByCanvasRef, setIsDrawingAttended)}
+                        onMouseMove={draw(attendedByCanvasRef, isDrawingAttended)}
+                        onMouseUp={stopDrawing(setIsDrawingAttended)}
+                        onMouseLeave={stopDrawing(setIsDrawingAttended)}
+                        style={{ display: 'block', width: '100%', height: '150px' }}
                       />
                     </Box>
-                  )}
-                </Box>
-              )}
-            </Box>
-
-            {/* Approved By Signature */}
-            <Box sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" sx={{ color: 'rgba(241,245,249,0.85)', fontWeight: 600 }}>
-                  Approved By Signature
-                  {formData?.signOffData?.witnessedBy && (
-                    <Typography component="span" sx={{ ml: 1, color: '#4ade80', fontSize: '13px' }}>
-                      ({formData.signOffData.witnessedBy})
-                    </Typography>
-                  )}
-                </Typography>
-                <ToggleButtonGroup
-                  value={approvedByMode}
-                  exclusive
-                  onChange={(e, newMode) => newMode && setApprovedByMode(newMode)}
-                  size="small"
-                  sx={{
-                    '& .MuiToggleButton-root': {
-                      color: 'rgba(226,232,240,0.7)',
-                      borderColor: 'rgba(226,232,240,0.3)',
-                      py: 0.5,
-                      px: 1.5,
-                      fontSize: '12px',
-                      '&.Mui-selected': {
-                        backgroundColor: 'rgba(74,222,128,0.2)',
-                        color: '#4ade80',
-                        borderColor: '#4ade80',
+                    <Button
+                      size="small"
+                      startIcon={<ClearIcon />}
+                      onClick={() => clearCanvas(attendedByCanvasRef)}
+                      sx={{
+                        mt: 1,
+                        color: 'rgba(226,232,240,0.7)',
+                        textTransform: 'none',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  </Box>
+                ) : (
+                  <Box>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<PhotoCamera />}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        width: '100%',
+                        py: 1.5,
+                        borderColor: attendedBySignature ? '#4ade80' : 'rgba(226,232,240,0.5)',
+                        color: attendedBySignature ? '#4ade80' : '#e2e8f0',
+                        fontWeight: 600,
                         '&:hover': {
-                          backgroundColor: 'rgba(74,222,128,0.3)',
+                          borderColor: '#cbd5f5',
+                          backgroundColor: 'rgba(148,163,184,0.15)'
+                        }
+                      }}
+                    >
+                      {attendedBySignature ? attendedBySignature.name : 'Select Signature Image'}
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={handleAttendedBySignatureChange}
+                      />
+                    </Button>
+                    {attendedBySignaturePreview && (
+                      <Box sx={{ mt: 1, textAlign: 'center' }}>
+                        <img
+                          src={attendedBySignaturePreview}
+                          alt="Attended By Signature"
+                          style={{ maxWidth: '200px', maxHeight: '100px', border: '1px solid rgba(226,232,240,0.3)', borderRadius: '4px' }}
+                        />
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
+
+              {/* Approved By Signature */}
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(241,245,249,0.85)', fontWeight: 600 }}>
+                    Approved By Signature
+                    {formData?.signOffData?.witnessedBy && (
+                      <Typography component="span" sx={{ ml: 1, color: '#4ade80', fontSize: '13px' }}>
+                        ({formData.signOffData.witnessedBy})
+                      </Typography>
+                    )}
+                  </Typography>
+                  <ToggleButtonGroup
+                    value={approvedByMode}
+                    exclusive
+                    onChange={(e, newMode) => newMode && setApprovedByMode(newMode)}
+                    size="small"
+                    sx={{
+                      '& .MuiToggleButton-root': {
+                        color: 'rgba(226,232,240,0.7)',
+                        borderColor: 'rgba(226,232,240,0.3)',
+                        py: 0.5,
+                        px: 1.5,
+                        fontSize: '12px',
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(74,222,128,0.2)',
+                          color: '#4ade80',
+                          borderColor: '#4ade80',
+                          '&:hover': {
+                            backgroundColor: 'rgba(74,222,128,0.3)',
+                          }
                         }
                       }
-                    }
-                  }}
-                >
-                  <ToggleButton value="draw">
-                    <BrushIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                    Draw
-                  </ToggleButton>
-                  <ToggleButton value="upload">
-                    <PhotoCamera sx={{ fontSize: 16, mr: 0.5 }} />
-                    Upload
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
-
-              {approvedByMode === 'draw' ? (
-                <Box>
-                  <Box sx={{ 
-                    border: '2px solid rgba(226,232,240,0.3)', 
-                    borderRadius: 2, 
-                    backgroundColor: 'white',
-                    cursor: 'crosshair'
-                  }}>
-                    <canvas
-                      ref={approvedByCanvasRef}
-                      width={400}
-                      height={150}
-                      onMouseDown={startDrawing(approvedByCanvasRef, setIsDrawingApproved)}
-                      onMouseMove={draw(approvedByCanvasRef, isDrawingApproved)}
-                      onMouseUp={stopDrawing(setIsDrawingApproved)}
-                      onMouseLeave={stopDrawing(setIsDrawingApproved)}
-                      style={{ display: 'block', width: '100%', height: '150px' }}
-                    />
-                  </Box>
-                  <Button
-                    size="small"
-                    startIcon={<ClearIcon />}
-                    onClick={() => clearCanvas(approvedByCanvasRef)}
-                    sx={{ 
-                      mt: 1, 
-                      color: 'rgba(226,232,240,0.7)',
-                      textTransform: 'none',
-                      fontSize: '12px'
                     }}
                   >
-                    Clear
-                  </Button>
+                    <ToggleButton value="draw">
+                      <BrushIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                      Draw
+                    </ToggleButton>
+                    <ToggleButton value="upload">
+                      <PhotoCamera sx={{ fontSize: 16, mr: 0.5 }} />
+                      Upload
+                    </ToggleButton>
+                  </ToggleButtonGroup>
                 </Box>
-              ) : (
-                <Box>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<PhotoCamera />}
-                    sx={{
+
+                {approvedByMode === 'draw' ? (
+                  <Box>
+                    <Box sx={{
+                      border: '2px solid rgba(226,232,240,0.3)',
                       borderRadius: 2,
-                      textTransform: 'none',
-                      width: '100%',
-                      py: 1.5,
-                      borderColor: approvedBySignature ? '#4ade80' : 'rgba(226,232,240,0.5)',
-                      color: approvedBySignature ? '#4ade80' : '#e2e8f0',
-                      fontWeight: 600,
-                      '&:hover': {
-                        borderColor: '#cbd5f5',
-                        backgroundColor: 'rgba(148,163,184,0.15)'
-                      }
-                    }}
-                  >
-                    {approvedBySignature ? approvedBySignature.name : 'Select Signature Image'}
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*"
-                      onChange={handleApprovedBySignatureChange}
-                    />
-                  </Button>
-                  {approvedBySignaturePreview && (
-                    <Box sx={{ mt: 1, textAlign: 'center' }}>
-                      <img 
-                        src={approvedBySignaturePreview} 
-                        alt="Approved By Signature" 
-                        style={{ maxWidth: '200px', maxHeight: '100px', border: '1px solid rgba(226,232,240,0.3)', borderRadius: '4px' }}
+                      backgroundColor: 'white',
+                      cursor: 'crosshair'
+                    }}>
+                      <canvas
+                        ref={approvedByCanvasRef}
+                        width={400}
+                        height={150}
+                        onMouseDown={startDrawing(approvedByCanvasRef, setIsDrawingApproved)}
+                        onMouseMove={draw(approvedByCanvasRef, isDrawingApproved)}
+                        onMouseUp={stopDrawing(setIsDrawingApproved)}
+                        onMouseLeave={stopDrawing(setIsDrawingApproved)}
+                        style={{ display: 'block', width: '100%', height: '150px' }}
                       />
                     </Box>
-                  )}
-                </Box>
-              )}
+                    <Button
+                      size="small"
+                      startIcon={<ClearIcon />}
+                      onClick={() => clearCanvas(approvedByCanvasRef)}
+                      sx={{
+                        mt: 1,
+                        color: 'rgba(226,232,240,0.7)',
+                        textTransform: 'none',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  </Box>
+                ) : (
+                  <Box>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<PhotoCamera />}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        width: '100%',
+                        py: 1.5,
+                        borderColor: approvedBySignature ? '#4ade80' : 'rgba(226,232,240,0.5)',
+                        color: approvedBySignature ? '#4ade80' : '#e2e8f0',
+                        fontWeight: 600,
+                        '&:hover': {
+                          borderColor: '#cbd5f5',
+                          backgroundColor: 'rgba(148,163,184,0.15)'
+                        }
+                      }}
+                    >
+                      {approvedBySignature ? approvedBySignature.name : 'Select Signature Image'}
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={handleApprovedBySignatureChange}
+                      />
+                    </Button>
+                    {approvedBySignaturePreview && (
+                      <Box sx={{ mt: 1, textAlign: 'center' }}>
+                        <img
+                          src={approvedBySignaturePreview}
+                          alt="Approved By Signature"
+                          style={{ maxWidth: '200px', maxHeight: '100px', border: '1px solid rgba(226,232,240,0.3)', borderRadius: '4px' }}
+                        />
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
             </Box>
-          </Box>
           )}
 
           {/* Error Message */}

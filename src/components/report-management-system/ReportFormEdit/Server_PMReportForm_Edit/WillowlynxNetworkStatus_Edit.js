@@ -6,20 +6,29 @@ import {
   TextField,
   MenuItem,
   CircularProgress,
+  Button,
+  IconButton,
 } from '@mui/material';
-import { NetworkCheck as NetworkCheckIcon } from '@mui/icons-material';
+import { NetworkCheck as NetworkCheckIcon, CloudUpload as CloudUploadIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
-import WillowlynxNetworkStatusImage from '../../../resources/ServerPMReportForm/WillowlynxNetworkStatus.png';
+import { getReportFormImageTypes } from '../../../api-services/reportFormService';
+import { API_BASE_URL } from '../../../../config/apiConfig';
 
-const WillowlynxNetworkStatus_Edit = ({ data, onDataChange, onStatusChange }) => {
+const WillowlynxNetworkStatus_Edit = ({ data, onDataChange, onStatusChange, images = [] }) => {
   const [dateChecked, setDateChecked] = useState(null);
   const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageTypeId, setImageTypeId] = useState(null);
+  const [existingImage, setExistingImage] = useState(null);
+  const [existingImageId, setExistingImageId] = useState(null); // Preserve ID even after clearing existingImage
+  const [isImageDeleted, setIsImageDeleted] = useState(false);
   const isInitialized = useRef(false);
 
   // Initialize data when meaningful data is available
@@ -54,26 +63,102 @@ const WillowlynxNetworkStatus_Edit = ({ data, onDataChange, onStatusChange }) =>
       }
     }
     
+    // Initialize existing image from props (only first image, limit to one)
+    // Only initialize if we haven't already set an image and it's not deleted
+    if (images && images.length > 0 && !existingImage && !isImageDeleted && !uploadedImage) {
+      const firstImage = images[0];
+      setExistingImage(firstImage);
+      setExistingImageId(firstImage.id || firstImage.ID || null); // Preserve the ID
+      const reportFormId = data?.reportFormId || data?.reportFormID;
+      const imageUrl = firstImage.imageUrl || 
+        (firstImage.imageName && reportFormId ? 
+          `${API_BASE_URL}/api/ReportFormImage/image/${reportFormId}/${firstImage.imageName}` : 
+          null);
+      if (imageUrl) {
+        setImagePreview(imageUrl);
+      }
+    }
+    
     // Always mark as initialized after first render, even if no data
     // This ensures onDataChange will be called when user fills in data
     isInitialized.current = true;
-  }, [data]);
+  }, [data, images]);
 
-  // Fetch Yes/No options
+  // Fetch Yes/No options and Image Types
   useEffect(() => {
-    const fetchYesNoStatuses = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await yesNoStatusService.getYesNoStatuses();
-        setYesNoStatusOptions(response || []);
+        
+        // Fetch Yes/No status options
+        const statusResponse = await yesNoStatusService.getYesNoStatuses();
+        setYesNoStatusOptions(statusResponse || []);
+        
+        // Fetch Image Types and find the specific type
+        const imageTypes = await getReportFormImageTypes();
+        const networkStatusImageType = imageTypes?.find(
+          type => type.imageTypeName === 'WillowlynxNetworkStatus'
+        );
+        if (networkStatusImageType) {
+          setImageTypeId(networkStatusImageType.id || networkStatusImageType.ID);
+        }
       } catch (error) {
-        console.error('Error fetching yes/no status options:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchYesNoStatuses();
+    fetchData();
   }, []);
+
+  // Handle image upload
+  const handleImageUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // If there's an existing image, mark it for deletion
+      if (existingImage && !isImageDeleted) {
+        setIsImageDeleted(true);
+      }
+      setUploadedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      event.target.value = '';
+    }
+  };
+
+  // Handle image removal
+  const handleImageRemove = () => {
+    if (existingImage && !uploadedImage) {
+      // Remove existing image - mark for deletion
+      // IMPORTANT: Preserve existingImageId before clearing existingImage
+      setIsImageDeleted(true);
+      setExistingImage(null);
+      setImagePreview(null);
+      // Keep existingImageId so we can delete it later
+    } else {
+      // Remove newly uploaded image
+      setUploadedImage(null);
+      setImagePreview(null);
+      // If there was an existing image that was marked for deletion, restore it
+      if (isImageDeleted && images && images.length > 0) {
+        setIsImageDeleted(false);
+        const firstImage = images[0];
+        setExistingImage(firstImage);
+        setExistingImageId(firstImage.id || firstImage.ID || null);
+        const reportFormId = data?.reportFormId || data?.reportFormID;
+        const imageUrl = firstImage.imageUrl || 
+          (firstImage.imageName && reportFormId ? 
+            `${API_BASE_URL}/api/ReportFormImage/image/${reportFormId}/${firstImage.imageName}` : 
+            null);
+        if (imageUrl) {
+          setImagePreview(imageUrl);
+        }
+      }
+    }
+  };
 
   // Notify parent of data change
   useEffect(() => {
@@ -87,12 +172,17 @@ const WillowlynxNetworkStatus_Edit = ({ data, onDataChange, onStatusChange }) =>
         // Legacy format for backward compatibility
         dateChecked: dateChecked ? dateChecked.toISOString() : null,
         result: result,
-        remarks: remarks
+        remarks: remarks,
+        image: uploadedImage,
+        imageTypeId: imageTypeId,
+        existingImageId: existingImageId || existingImage?.id || existingImage?.ID || null, // Use preserved ID first
+        existingImageUrl: existingImage?.imageUrl || null,
+        isImageDeleted: isImageDeleted
       };
       
       onDataChange(dataToSend);
     }
-  }, [dateChecked, result, remarks, onDataChange]);
+  }, [dateChecked, result, remarks, uploadedImage, imageTypeId, existingImage, existingImageId, isImageDeleted, onDataChange]);
 
   // Check completion status
   useEffect(() => {
@@ -146,18 +236,68 @@ const WillowlynxNetworkStatus_Edit = ({ data, onDataChange, onStatusChange }) =>
           Check the system overview page, see if all servers, switches, RTUs are green.
         </Typography>
 
-        {/* Screenshot */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-          <img
-            src={WillowlynxNetworkStatusImage}
-            alt="Willowlynx Network Status Screenshot"
-            style={{
-              maxWidth: '100%',
-              height: 'auto',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-            }}
-          />
+        {/* Image Upload Section - Only one image allowed */}
+        <Box sx={{ mb: 3, textAlign: 'center' }}>
+          {imagePreview ? (
+            <Box sx={{ position: 'relative', display: 'inline-block' }}>
+              <img
+                src={imagePreview}
+                alt="Screenshot"
+                style={{
+                  width: '600px',
+                  height: '400px',
+                  objectFit: 'contain',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  display: 'block',
+                  backgroundColor: '#f5f5f5',
+                }}
+              />
+              <IconButton
+                onClick={handleImageRemove}
+                sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 1)',
+                  }
+                }}
+              >
+                <DeleteIcon color="error" />
+              </IconButton>
+            </Box>
+          ) : (
+            <Box sx={{ 
+              border: '2px dashed #ccc', 
+              borderRadius: '4px', 
+              p: 3, 
+              textAlign: 'center',
+              backgroundColor: '#f9f9f9'
+            }}>
+              <input
+                accept="image/*"
+                style={{ display: 'none' }}
+                id="willowlynx-network-status-image-upload-edit"
+                type="file"
+                onChange={handleImageUpload}
+              />
+              <label htmlFor="willowlynx-network-status-image-upload-edit">
+                <Button
+                  variant="outlined"
+                  component="span"
+                  startIcon={<CloudUploadIcon />}
+                  sx={{ mb: 1 }}
+                >
+                  Upload Screenshot
+                </Button>
+              </label>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Upload a screenshot of the system overview page (One image only)
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Result */}

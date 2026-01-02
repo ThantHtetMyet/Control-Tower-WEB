@@ -5,21 +5,30 @@ import {
   TextField,
   MenuItem,
   Paper,
-  CircularProgress
+  CircularProgress,
+  Button,
+  IconButton,
 } from '@mui/material';
 import {
   Videocam as VideocamIcon,
+  CloudUpload as CloudUploadIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
-
-// Import the yes/no status service
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
-import WillowlynxSumpPitCCTVCameraImage from '../../../resources/ServerPMReportForm/WillowlynxSumpPitCCTVCamera.png';
+import { getReportFormImageTypes } from '../../../api-services/reportFormService';
+import { API_BASE_URL } from '../../../../config/apiConfig';
 
-const WillowlynxSumpPitCCTVCamera_Edit = ({ data, onDataChange, onStatusChange }) => {
+const WillowlynxSumpPitCCTVCamera_Edit = ({ data, onDataChange, onStatusChange, images = [] }) => {
   const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageTypeId, setImageTypeId] = useState(null);
+  const [existingImage, setExistingImage] = useState(null);
+  const [existingImageId, setExistingImageId] = useState(null); // Preserve ID even after clearing existingImage
+  const [isImageDeleted, setIsImageDeleted] = useState(false);
   const isInitialized = useRef(false);
 
   // Initialize data when meaningful data is available
@@ -49,27 +58,102 @@ const WillowlynxSumpPitCCTVCamera_Edit = ({ data, onDataChange, onStatusChange }
       }
     }
     
+    // Initialize existing image from props (only first image, limit to one)
+    // Only initialize if we haven't already set an image and it's not deleted
+    if (images && images.length > 0 && !existingImage && !isImageDeleted && !uploadedImage) {
+      const firstImage = images[0];
+      setExistingImage(firstImage);
+      setExistingImageId(firstImage.id || firstImage.ID || null); // Preserve the ID
+      const reportFormId = data?.reportFormId || data?.reportFormID;
+      const imageUrl = firstImage.imageUrl || 
+        (firstImage.imageName && reportFormId ? 
+          `${API_BASE_URL}/api/ReportFormImage/image/${reportFormId}/${firstImage.imageName}` : 
+          null);
+      if (imageUrl) {
+        setImagePreview(imageUrl);
+      }
+    }
+    
     // Always mark as initialized after first render, even if no data
     // This ensures onDataChange will be called when user fills in data
     isInitialized.current = true;
-  }, [data]);
+  }, [data, images]);
 
-  // Fetch YesNoStatus options on component mount
+  // Fetch YesNoStatus options and Image Types
   useEffect(() => {
-    const fetchYesNoStatuses = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await yesNoStatusService.getYesNoStatuses();
-        setYesNoStatusOptions(response || []);
+        
+        // Fetch Yes/No status options
+        const statusResponse = await yesNoStatusService.getYesNoStatuses();
+        setYesNoStatusOptions(statusResponse || []);
+        
+        // Fetch Image Types and find the specific type
+        const imageTypes = await getReportFormImageTypes();
+        const cctvCameraImageType = imageTypes?.find(
+          type => type.imageTypeName === 'WillowlynxSumpPitCCTVCamera'
+        );
+        if (cctvCameraImageType) {
+          setImageTypeId(cctvCameraImageType.id || cctvCameraImageType.ID);
+        }
       } catch (error) {
-        // console.error('Error fetching yes/no status options:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchYesNoStatuses();
+    fetchData();
   }, []);
+
+  // Handle image upload
+  const handleImageUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // If there's an existing image, mark it for deletion
+      if (existingImage && !isImageDeleted) {
+        setIsImageDeleted(true);
+      }
+      setUploadedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      event.target.value = '';
+    }
+  };
+
+  // Handle image removal
+  const handleImageRemove = () => {
+    if (existingImage && !uploadedImage) {
+      // Remove existing image - mark for deletion
+      // IMPORTANT: Preserve existingImageId before clearing existingImage
+      setIsImageDeleted(true);
+      setExistingImage(null);
+      setImagePreview(null);
+      // Keep existingImageId so we can delete it later
+    } else {
+      // Remove newly uploaded image
+      setUploadedImage(null);
+      setImagePreview(null);
+      // If there was an existing image that was marked for deletion, restore it
+      if (isImageDeleted && images && images.length > 0) {
+        setIsImageDeleted(false);
+        const firstImage = images[0];
+        setExistingImage(firstImage);
+        setExistingImageId(firstImage.id || firstImage.ID || null);
+        const reportFormId = data?.reportFormId || data?.reportFormID;
+        const imageUrl = firstImage.imageUrl || 
+          (firstImage.imageName && reportFormId ? 
+            `${API_BASE_URL}/api/ReportFormImage/image/${reportFormId}/${firstImage.imageName}` : 
+            null);
+        if (imageUrl) {
+          setImagePreview(imageUrl);
+        }
+      }
+    }
+  };
 
   // Notify parent of data change
   useEffect(() => {
@@ -81,12 +165,17 @@ const WillowlynxSumpPitCCTVCamera_Edit = ({ data, onDataChange, onStatusChange }
         }],
         // Legacy format for backward compatibility
         result: result,
-        remarks: remarks
+        remarks: remarks,
+        image: uploadedImage,
+        imageTypeId: imageTypeId,
+        existingImageId: existingImageId || existingImage?.id || existingImage?.ID || null, // Use preserved ID first
+        existingImageUrl: existingImage?.imageUrl || null,
+        isImageDeleted: isImageDeleted
       };
       
       onDataChange(dataToSend);
     }
-  }, [result, remarks, onDataChange]);
+  }, [result, remarks, uploadedImage, imageTypeId, existingImage, existingImageId, isImageDeleted, onDataChange]);
 
   // Calculate completion status
   useEffect(() => {
@@ -132,18 +221,68 @@ const WillowlynxSumpPitCCTVCamera_Edit = ({ data, onDataChange, onStatusChange }
         each camera can be played.
       </Typography>
 
-      {/* Screenshot */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-        <img 
-          src={WillowlynxSumpPitCCTVCameraImage} 
-          alt="Willowlynx Sump Pit CCTV Camera" 
-          style={{ 
-            maxWidth: '100%', 
-            height: 'auto',
-            border: '1px solid #ddd',
-            borderRadius: '8px'
-          }} 
-        />
+      {/* Image Upload Section - Only one image allowed */}
+      <Box sx={{ mb: 3, textAlign: 'center' }}>
+        {imagePreview ? (
+          <Box sx={{ position: 'relative', display: 'inline-block' }}>
+            <img
+              src={imagePreview}
+              alt="Screenshot"
+              style={{
+                width: '600px',
+                height: '400px',
+                objectFit: 'contain',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                display: 'block',
+                backgroundColor: '#f5f5f5',
+              }}
+            />
+            <IconButton
+              onClick={handleImageRemove}
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 1)',
+                }
+              }}
+            >
+              <DeleteIcon color="error" />
+            </IconButton>
+          </Box>
+        ) : (
+          <Box sx={{ 
+            border: '2px dashed #ccc', 
+            borderRadius: '8px', 
+            p: 3, 
+            textAlign: 'center',
+            backgroundColor: '#f9f9f9'
+          }}>
+            <input
+              accept="image/*"
+              style={{ display: 'none' }}
+              id="willowlynx-sump-pit-cctv-image-upload-edit"
+              type="file"
+              onChange={handleImageUpload}
+            />
+            <label htmlFor="willowlynx-sump-pit-cctv-image-upload-edit">
+              <Button
+                variant="outlined"
+                component="span"
+                startIcon={<CloudUploadIcon />}
+                sx={{ mb: 1 }}
+              >
+                Upload Screenshot
+              </Button>
+            </label>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Upload a screenshot of the CCTV camera player window (One image only)
+            </Typography>
+          </Box>
+        )}
       </Box>
 
       {/* Result */}

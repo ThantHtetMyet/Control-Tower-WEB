@@ -12,12 +12,12 @@ import {
 
 // Import the yes/no status service
 import yesNoStatusService from '../../../api-services/yesNoStatusService';
-import WillowlynxSumpPitCCTVCameraImage from '../../../resources/ServerPMReportForm/WillowlynxSumpPitCCTVCamera.png';
 
 const WillowlynxSumpPitCCTVCamera_Edit_Review = ({ data = {}, formData = {} }) => {
   const [result, setResult] = useState('');
   const [remarks, setRemarks] = useState('');
   const [yesNoStatusOptions, setYesNoStatusOptions] = useState([]);
+  const [imagePreview, setImagePreview] = useState(null);
 
   // Initialize data from props
   useEffect(() => {
@@ -51,6 +51,37 @@ const WillowlynxSumpPitCCTVCamera_Edit_Review = ({ data = {}, formData = {} }) =
 
     setResult(resultValue);
     setRemarks(remarksValue);
+
+    // Handle image display - check formData first (from Edit mode)
+    let imageToShow = null;
+    if (formData.willowlynxSumpPitCCTVCameraData) {
+      const cctvData = formData.willowlynxSumpPitCCTVCameraData;
+      // Check for newly uploaded image (File object)
+      if (cctvData.image && cctvData.image instanceof File) {
+        imageToShow = cctvData.image;
+      }
+      // Check for existing image URL (if not deleted)
+      else if (cctvData.existingImageUrl && !cctvData.isImageDeleted) {
+        imageToShow = cctvData.existingImageUrl;
+      }
+    }
+    // Fallback to data (direct Review mode) - check for image URL
+    else if (data && data.imageUrl) {
+      imageToShow = data.imageUrl;
+    }
+
+    // Create preview for File object
+    if (imageToShow instanceof File) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(imageToShow);
+    } else if (imageToShow) {
+      setImagePreview(imageToShow);
+    } else {
+      setImagePreview(null);
+    }
   }, [data, formData]);
 
   // Fetch YesNo Status options on component mount
@@ -85,19 +116,23 @@ const WillowlynxSumpPitCCTVCamera_Edit_Review = ({ data = {}, formData = {} }) =
         CCTV camera is working properly and the video feed is clear.
       </Typography>
 
-      {/* Screenshot */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-        <img 
-          src={WillowlynxSumpPitCCTVCameraImage} 
-          alt="Willowlynx Sump Pit CCTV Camera" 
-          style={{ 
-            maxWidth: '100%', 
-            height: 'auto',
-            border: '1px solid #ddd',
-            borderRadius: '8px'
-          }} 
-        />
-      </Box>
+      {/* Screenshot - Show uploaded image if available, otherwise show nothing */}
+      {imagePreview && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+          <img
+            src={imagePreview}
+            alt="CCTV Camera Screenshot"
+            style={{
+              width: '600px',
+              height: '400px',
+              objectFit: 'contain',
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              backgroundColor: '#f5f5f5'
+            }}
+          />
+        </Box>
+      )}
 
       {/* Result */}
       <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
