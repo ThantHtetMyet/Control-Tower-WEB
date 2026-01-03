@@ -98,6 +98,7 @@ import CMReviewReportFormEdit from './components/report-management-system/Report
 import ServerPMReportForm_Edit from './components/report-management-system/ReportFormEdit/Server_PMReportForm_Edit/ServerPMReportForm_Edit';
 import ServerPMReportForm_Edit_Review from './components/report-management-system/ReportFormEdit/Server_PMReportForm_Edit_Review/ServerPMReportForm_Edit_Review';
 import ServerPMReportForm_PDF from './components/report-management-system/utils/Server_PM_ReportForm_PDF/ServerPMReportForm_PDF';
+import ReportDashboard from './components/report-management-system/ReportDashboard';
 
 function App() {
   return (
@@ -624,7 +625,18 @@ function App() {
                   <ProtectedRoute>
                     <ReportFormNavBar />
                     <Box sx={{ flexGrow: 1, p: 3 }}>
-                      <ReportFormList />
+                      <ReportDashboard />
+                    </Box>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/report-management-system/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <ReportFormNavBar />
+                    <Box sx={{ flexGrow: 1, p: 3 }}>
+                      <ReportDashboard />
                     </Box>
                   </ProtectedRoute>
                 }

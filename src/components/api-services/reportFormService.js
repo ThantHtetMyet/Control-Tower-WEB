@@ -1718,3 +1718,17 @@ export const getServerPMReportFormWithDetails = async (id) => {
   const response = await api.get(`/PMReportFormServer/${id}`);
   return response.data;
 };
+
+// Get Dashboard Statistics
+export const getDashboardStatistics = async (startDate = null, endDate = null, reportFormTypeId = null, formStatus = null, specificType = null) => {
+  const params = new URLSearchParams();
+  
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+  if (reportFormTypeId) params.append('reportFormTypeId', reportFormTypeId);
+  if (formStatus) params.append('formStatus', formStatus);
+  if (specificType) params.append('specificType', specificType);
+  
+  const response = await api.get(`/reportform/Dashboard/Statistics?${params}`);
+  return response.data;
+};
