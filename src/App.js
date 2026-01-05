@@ -171,7 +171,7 @@ function App() {
 
               {/* SubDepartment Routes */}
               <Route
-                path="/employee-management-system/subdepartments"
+                path="/employee-management-system/sub-departments"
                 element={
                   <HRProtectedRoute>
                     <SubDepartmentList />
@@ -179,7 +179,7 @@ function App() {
                 }
               />
               <Route
-                path="/employee-management-system/subdepartments/new"
+                path="/employee-management-system/sub-departments/new"
                 element={
                   <HRProtectedRoute>
                     <SubDepartmentForm />
@@ -187,7 +187,7 @@ function App() {
                 }
               />
               <Route
-                path="/employee-management-system/subdepartments/edit/:id"
+                path="/employee-management-system/sub-departments/:id/edit"
                 element={
                   <HRProtectedRoute>
                     <SubDepartmentEdit />
@@ -195,7 +195,7 @@ function App() {
                 }
               />
               <Route
-                path="/employee-management-system/subdepartments/details/:id"
+                path="/employee-management-system/sub-departments/:id"
                 element={
                   <HRProtectedRoute>
                     <SubDepartmentDetails />

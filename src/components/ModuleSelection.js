@@ -13,6 +13,7 @@ import {
   TextField,
   InputAdornment
 } from '@mui/material';
+import { styled, keyframes } from '@mui/system';
 import {
   Assignment,
   Settings,
@@ -35,6 +36,74 @@ import { useAuth } from './contexts/AuthContext';
 import applicationService from './api-services/applicationService';
 import employeeApplicationAccessService from './api-services/employeeApplicationAccessService';
 
+// Liquid Glass Toggle Styles
+const ToggleContainer = styled(Box)({
+  position: 'fixed',
+  bottom: '30px',
+  left: '30px',
+  zIndex: 1000,
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  padding: '12px 16px',
+  background: 'rgba(255, 255, 255, 0.1)',
+  backdropFilter: 'blur(20px) saturate(180%)',
+  borderRadius: '50px',
+  border: '1px solid rgba(255, 255, 255, 0.2)',
+  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  '&:hover': {
+    background: 'rgba(255, 255, 255, 0.15)',
+    transform: 'translateY(-2px)',
+    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+  }
+});
+
+const ToggleSwitch = styled(Box)(({ isActive }) => ({
+  position: 'relative',
+  width: '60px',
+  height: '30px',
+  background: isActive 
+    ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)'
+    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)',
+  borderRadius: '15px',
+  border: '1px solid rgba(255, 255, 255, 0.3)',
+  cursor: 'pointer',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  backdropFilter: 'blur(10px)',
+  boxShadow: isActive 
+    ? '0 4px 20px rgba(52, 199, 89, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+    : '0 4px 15px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+  '&:hover': {
+    transform: 'scale(1.05)',
+    boxShadow: isActive 
+      ? '0 6px 25px rgba(52, 199, 89, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
+      : '0 6px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+  }
+}));
+
+const ToggleKnob = styled(Box)(({ isActive }) => ({
+  position: 'absolute',
+  top: '3px',
+  left: isActive ? '33px' : '3px',
+  width: '24px',
+  height: '24px',
+  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%)',
+  borderRadius: '50%',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+  border: '1px solid rgba(255, 255, 255, 0.3)',
+}));
+
+const ToggleLabel = styled(Typography)({
+  fontSize: '0.9rem',
+  fontWeight: '500',
+  color: 'rgba(255, 255, 255, 0.9)',
+  textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  userSelect: 'none',
+});
+
 const ModuleSelection = () => {
   const navigate = useNavigate();
   const { user, logout, hasHRAccess } = useAuth();
@@ -45,16 +114,18 @@ const ModuleSelection = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredModules, setFilteredModules] = useState([]);
+  const [isDarkTheme, setIsDarkTheme] = useState(true); // New state for theme toggle
 
   // Smart icon mapping based on application name keywords
   const getIconForApplication = (applicationName) => {
     const name = applicationName.toLowerCase();
+    const iconColor = isDarkTheme ? 'rgb(255, 255, 255)' : 'rgba(0, 0, 0, 0.7)';
     
     // Define keyword-based icon mapping with glass effect and colored center
     if (name.includes('user') || name.includes('staff') || name.includes('hr')) {
       return (
         <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <People sx={{ fontSize: 48, color: 'rgb(255, 255, 255)' }} />
+          <People sx={{ fontSize: 48, color: iconColor }} />
         
         </Box>
       );
@@ -62,7 +133,7 @@ const ModuleSelection = () => {
     if (name.includes('service') || name.includes('report') || name.includes('ticket')) {
       return (
         <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Assignment sx={{ fontSize: 48, color: 'rgb(255, 255, 255)' }} />
+          <Assignment sx={{ fontSize: 48, color: iconColor }} />
           
         </Box>
       );
@@ -71,7 +142,7 @@ const ModuleSelection = () => {
     if (name.includes('news') || name.includes('portal') || name.includes('article') || name.includes('media')) {
       return (
         <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Article sx={{ fontSize: 48, color: 'rgb(255, 255, 255)' }} />
+          <Article sx={{ fontSize: 48, color: iconColor }} />
           
         </Box>
       );
@@ -80,14 +151,14 @@ const ModuleSelection = () => {
     if (name.includes('room') || name.includes('booking') || name.includes('reservation')) {
       return (
         <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <MeetingRoom sx={{ fontSize: 48, color: 'rgb(255, 255, 255)' }} />
+          <MeetingRoom sx={{ fontSize: 48, color: iconColor }} />
         </Box>
       );
     }
     if (name.includes('configuration') || name.includes('config') || name.includes('setting')) {
       return (
         <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Settings sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+          <Settings sx={{ fontSize: 48, color: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }} />
           <Settings sx={{ 
             fontSize: 20, 
             color: '#FF9500', 
@@ -100,7 +171,7 @@ const ModuleSelection = () => {
     if (name.includes('leave') || name.includes('vacation') || name.includes('time off')) {
       return (
         <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <EventNote sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+          <EventNote sx={{ fontSize: 48, color: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }} />
           <EventNote sx={{ 
             fontSize: 20, 
             color: '#FF3B30', 
@@ -113,7 +184,7 @@ const ModuleSelection = () => {
     if (name.includes('dashboard') || name.includes('overview')) {
       return (
         <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Dashboard sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+          <Dashboard sx={{ fontSize: 48, color: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }} />
           <Dashboard sx={{ 
             fontSize: 20, 
             color: '#5856D6', 
@@ -126,7 +197,7 @@ const ModuleSelection = () => {
     if (name.includes('assessment') || name.includes('evaluation') || name.includes('performance')) {
       return (
         <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Assessment sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+          <Assessment sx={{ fontSize: 48, color: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }} />
           <Assessment sx={{ 
             fontSize: 20, 
             color: '#FF2D92', 
@@ -139,7 +210,7 @@ const ModuleSelection = () => {
     if (name.includes('security') || name.includes('access') || name.includes('permission')) {
       return (
         <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Security sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+          <Security sx={{ fontSize: 48, color: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }} />
           <Security sx={{ 
             fontSize: 20, 
             color: '#00C7BE', 
@@ -152,7 +223,7 @@ const ModuleSelection = () => {
     if (name.includes('business') || name.includes('company') || name.includes('organization')) {
       return (
         <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Business sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+          <Business sx={{ fontSize: 48, color: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }} />
           <Business sx={{ 
             fontSize: 20, 
             color: '#FFD60A', 
@@ -166,7 +237,7 @@ const ModuleSelection = () => {
     // Default fallback icon
     return (
       <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Apps sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.1)' }} />
+        <Apps sx={{ fontSize: 48, color: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }} />
         <Apps sx={{ 
           fontSize: 20, 
           color: '#8E8E93', 
@@ -297,7 +368,7 @@ const ModuleSelection = () => {
     };
 
     fetchAccessibleApplications();
-  }, [user?.id]);
+  }, [user?.id, isDarkTheme]); // Add isDarkTheme as dependency
 
   const handleModuleClick = (module) => {
     
@@ -344,6 +415,11 @@ const ModuleSelection = () => {
     setSearchQuery('');
   };
 
+  // Toggle between dark and light theme
+  const handleThemeToggle = () => {
+    setIsDarkTheme(!isDarkTheme);
+  };
+
   const formatDateTime = (date) => {
     return date.toLocaleString('en-US', {
       weekday: 'long',
@@ -373,9 +449,12 @@ const ModuleSelection = () => {
   return (
     <Box sx={{ 
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, rgba(55, 65, 81, 0.9) 0%, rgba(31, 41, 55, 0.95) 50%, rgba(17, 24, 39, 0.9) 100%)',
+      background: isDarkTheme 
+        ? 'linear-gradient(135deg, rgba(55, 65, 81, 0.9) 0%, rgba(31, 41, 55, 0.95) 50%, rgba(17, 24, 39, 0.9) 100%)'
+        : 'linear-gradient(135deg, rgba(240, 245, 250, 1) 0%, rgba(220, 235, 245, 1) 50%, rgba(200, 220, 240, 1) 100%)',
       py: 4,
-      position: 'relative'
+      position: 'relative',
+      transition: 'background 0.5s ease'
     }}>
       {/* Responsive Header Container */}
       <Box sx={{ 
@@ -400,9 +479,11 @@ const ModuleSelection = () => {
           <Paper
             elevation={0}
             sx={{
-              background: 'rgba(255, 255, 255, 0.15)',
+              background: isDarkTheme 
+                ? 'rgba(255, 255, 255, 0.15)'
+                : 'rgba(255, 255, 255, 0.7)',
               backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
+              border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.5)'}`,
               borderRadius: 3,
               px: 3,
               py: 1.5,
@@ -410,15 +491,16 @@ const ModuleSelection = () => {
               display: 'flex',
               alignItems: 'center',
               width: { xs: '100%', sm: 'auto' },
-              minWidth: { sm: '200px' }
+              minWidth: { sm: '200px' },
+              transition: 'all 0.3s ease'
             }}
           >
             <Typography 
               variant="body2" 
               sx={{ 
-                color: 'white',
+                color: isDarkTheme ? 'white' : 'rgba(0, 0, 0, 0.8)',
                 fontWeight: 500,
-                textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                textShadow: isDarkTheme ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
                 fontSize: { xs: '0.8rem', sm: '0.9rem' },
                 whiteSpace: 'nowrap'
               }}
@@ -445,42 +527,54 @@ const ModuleSelection = () => {
               width: { xs: '100%', sm: '100%' },
               maxWidth: { xs: '100%', sm: '400px' },
               '& .MuiOutlinedInput-root': {
-                background: 'rgba(255, 255, 255, 0.15)',
+                background: isDarkTheme 
+                  ? 'rgba(255, 255, 255, 0.15)'
+                  : 'rgba(255, 255, 255, 0.7)',
                 backdropFilter: 'blur(15px)',
                 WebkitBackdropFilter: 'blur(15px)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
+                border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.1)'}`,
                 borderRadius: 3,
-                color: 'white',
+                color: isDarkTheme ? 'white' : 'rgba(0, 0, 0, 0.8)',
                 fontSize: '0.9rem',
                 height: '40px',
+                transition: 'all 0.3s ease',
                 '& fieldset': {
                   border: 'none'
                 },
                 '&:hover': {
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  border: '1px solid rgba(255, 255, 255, 0.4)'
+                  background: isDarkTheme 
+                    ? 'rgba(255, 255, 255, 0.2)'
+                    : 'rgba(255, 255, 255, 0.85)',
+                  border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.2)'}`
                 },
                 '&.Mui-focused': {
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  border: '1px solid rgba(255, 255, 255, 0.5)',
-                  boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)'
+                  background: isDarkTheme 
+                    ? 'rgba(255, 255, 255, 0.2)'
+                    : 'rgba(255, 255, 255, 0.9)',
+                  border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.3)'}`,
+                  boxShadow: isDarkTheme 
+                    ? '0 0 20px rgba(255, 255, 255, 0.2)'
+                    : '0 0 20px rgba(0, 0, 0, 0.1)'
                 }
               },
               '& .MuiInputBase-input': {
-                color: 'white',
+                color: isDarkTheme ? 'white' : 'rgba(0, 0, 0, 0.8)',
                 '&::placeholder': {
-                  color: 'rgba(255, 255, 255, 0.7)',
+                  color: isDarkTheme ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.5)',
                   opacity: 1
                 }
               },
               '& .MuiInputAdornment-root': {
-                color: 'rgba(255, 255, 255, 0.8)'
+                color: isDarkTheme ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.6)'
               }
             }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '1.2rem' }} />
+                  <Search sx={{ 
+                    color: isDarkTheme ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.6)', 
+                    fontSize: '1.2rem' 
+                  }} />
                 </InputAdornment>
               ),
               endAdornment: searchQuery && (
@@ -489,10 +583,12 @@ const ModuleSelection = () => {
                     onClick={clearSearch}
                     size="small"
                     sx={{ 
-                      color: 'rgba(255, 255, 255, 0.8)',
+                      color: isDarkTheme ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.6)',
                       '&:hover': {
-                        color: 'white',
-                        background: 'rgba(255, 255, 255, 0.1)'
+                        color: isDarkTheme ? 'white' : 'rgba(0, 0, 0, 0.8)',
+                        background: isDarkTheme 
+                          ? 'rgba(255, 255, 255, 0.1)'
+                          : 'rgba(0, 0, 0, 0.05)'
                       }
                     }}
                   >
@@ -515,17 +611,21 @@ const ModuleSelection = () => {
             <IconButton
               onClick={handleLogout}
               sx={{
-                background: 'rgba(255, 255, 255, 0.15)',
+                background: isDarkTheme 
+                  ? 'rgba(255, 255, 255, 0.15)'
+                  : 'rgba(255, 255, 255, 0.7)',
                 backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                color: 'white',
+                border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.5)'}`,
+                color: isDarkTheme ? 'white' : 'rgba(0, 0, 0, 0.7)',
                 width: '40px',
                 height: '40px',
+                transition: 'all 0.3s ease',
                 '&:hover': {
-                  background: 'rgba(255, 255, 255, 0.25)',
+                  background: isDarkTheme 
+                    ? 'rgba(255, 255, 255, 0.25)'
+                    : 'rgba(255, 255, 255, 0.85)',
                   transform: 'scale(1.05)'
-                },
-                transition: 'all 0.3s ease'
+                }
               }}
             >
               <Logout />
@@ -550,13 +650,18 @@ const ModuleSelection = () => {
           <Paper
             elevation={0}
             sx={{
-              background: 'rgba(255, 255, 255, 0.08)',
+              background: isDarkTheme 
+                ? 'rgba(255, 255, 255, 0.08)'
+                : 'rgba(255, 255, 255, 0.6)',
               backdropFilter: 'blur(25px)',
               WebkitBackdropFilter: 'blur(25px)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
+              border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.5)'}`,
               borderRadius: 6,
               p: 6,
-              boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)'
+              boxShadow: isDarkTheme 
+                ? '0 12px 40px rgba(0, 0, 0, 0.15)'
+                : '0 12px 40px rgba(0, 0, 0, 0.08)',
+              transition: 'all 0.3s ease'
             }}
           >
             {/* Error Alert */}
@@ -565,13 +670,16 @@ const ModuleSelection = () => {
                 severity="warning" 
                 sx={{ 
                   mb: 4,
-                  background: 'rgba(255, 193, 7, 0.1)',
+                  background: isDarkTheme 
+                    ? 'rgba(255, 193, 7, 0.1)'
+                    : 'rgba(255, 193, 7, 0.15)',
                   backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 193, 7, 0.3)',
-                  color: 'white',
+                  border: `1px solid ${isDarkTheme ? 'rgba(255, 193, 7, 0.3)' : 'rgba(255, 193, 7, 0.5)'}`,
+                  color: isDarkTheme ? 'white' : 'rgba(0, 0, 0, 0.8)',
                   '& .MuiAlert-icon': {
                     color: '#ffc107'
-                  }
+                  },
+                  transition: 'all 0.3s ease'
                 }}
               >
                 {error}
@@ -583,8 +691,11 @@ const ModuleSelection = () => {
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
                 <CircularProgress 
                   sx={{ 
-                    color: 'white',
-                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                    color: isDarkTheme ? 'white' : 'rgba(0, 0, 0, 0.6)',
+                    filter: isDarkTheme 
+                      ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                      : 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                    transition: 'all 0.3s ease'
                   }} 
                 />
               </Box>
@@ -596,9 +707,14 @@ const ModuleSelection = () => {
                     <Typography 
                       variant="h5" 
                       sx={{ 
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                        mb: 2
+                        color: isDarkTheme 
+                          ? 'rgba(255, 255, 255, 0.8)'
+                          : 'rgba(0, 0, 0, 0.7)',
+                        textShadow: isDarkTheme 
+                          ? '0 1px 2px rgba(0,0,0,0.3)'
+                          : 'none',
+                        mb: 2,
+                        transition: 'color 0.3s ease'
                       }}
                     >
                       No applications found
@@ -606,8 +722,13 @@ const ModuleSelection = () => {
                     <Typography 
                       variant="body1" 
                       sx={{ 
-                        color: 'rgba(255, 255, 255, 0.6)',
-                        textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                        color: isDarkTheme 
+                          ? 'rgba(255, 255, 255, 0.6)'
+                          : 'rgba(0, 0, 0, 0.5)',
+                        textShadow: isDarkTheme 
+                          ? '0 1px 2px rgba(0,0,0,0.3)'
+                          : 'none',
+                        transition: 'color 0.3s ease'
                       }}
                     >
                       Try searching with different keywords
@@ -618,9 +739,14 @@ const ModuleSelection = () => {
                     <Typography 
                       variant="h5" 
                       sx={{ 
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                        mb: 2
+                        color: isDarkTheme 
+                          ? 'rgba(255, 255, 255, 0.8)'
+                          : 'rgba(0, 0, 0, 0.7)',
+                        textShadow: isDarkTheme 
+                          ? '0 1px 2px rgba(0,0,0,0.3)'
+                          : 'none',
+                        mb: 2,
+                        transition: 'color 0.3s ease'
                       }}
                     >
                       No Applications Available
@@ -628,8 +754,13 @@ const ModuleSelection = () => {
                     <Typography 
                       variant="body1" 
                       sx={{ 
-                        color: 'rgba(255, 255, 255, 0.6)',
-                        textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                        color: isDarkTheme 
+                          ? 'rgba(255, 255, 255, 0.6)'
+                          : 'rgba(0, 0, 0, 0.5)',
+                        textShadow: isDarkTheme 
+                          ? '0 1px 2px rgba(0,0,0,0.3)'
+                          : 'none',
+                        transition: 'color 0.3s ease'
                       }}
                     >
                       Please contact your administrator to request access to applications.
@@ -677,19 +808,31 @@ const ModuleSelection = () => {
                                 height: 100,
                                 borderRadius: 4,
                                 background: hoveredModule === module.id 
-                                  ? 'rgba(255, 255, 255, 0.15)'
-                                  : 'rgba(255, 255, 255, 0.08)',
+                                  ? (isDarkTheme 
+                                      ? 'rgba(255, 255, 255, 0.15)'
+                                      : 'rgba(255, 255, 255, 0.8)')
+                                  : (isDarkTheme 
+                                      ? 'rgba(255, 255, 255, 0.08)'
+                                      : 'rgba(255, 255, 255, 0.5)'),
                                 backdropFilter: 'blur(25px)',
                                 WebkitBackdropFilter: 'blur(25px)',
                                 border: hoveredModule === module.id 
-                                  ? '2px solid rgba(255, 255, 255, 0.3)'
-                                  : '1px solid rgba(255, 255, 255, 0.15)',
+                                  ? (isDarkTheme 
+                                      ? '2px solid rgba(255, 255, 255, 0.3)'
+                                      : '2px solid rgba(0, 0, 0, 0.1)')
+                                  : (isDarkTheme 
+                                      ? '1px solid rgba(255, 255, 255, 0.15)'
+                                      : '1px solid rgba(0, 0, 0, 0.05)'),
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 boxShadow: hoveredModule === module.id 
-                                  ? '0 16px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255,255,255,0.4)'
-                                  : '0 8px 20px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.25)',
+                                  ? (isDarkTheme 
+                                      ? '0 16px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255,255,255,0.4)'
+                                      : '0 16px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255,255,255,0.8)')
+                                  : (isDarkTheme 
+                                      ? '0 8px 20px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.25)'
+                                      : '0 8px 20px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255,255,255,0.6)'),
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                 position: 'relative',
                                 overflow: 'hidden',
@@ -701,7 +844,9 @@ const ModuleSelection = () => {
                                   right: 0,
                                   bottom: 0,
                                   borderRadius: 4,
-                                  background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 100%)',
+                                  background: isDarkTheme 
+                                    ? 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 100%)'
+                                    : 'linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)',
                                   opacity: hoveredModule === module.id ? 1 : 0.8,
                                   transition: 'opacity 0.3s ease'
                                 },
@@ -743,14 +888,35 @@ const ModuleSelection = () => {
           {/* Footer */}
           <Box sx={{ mt: 8, textAlign: 'center' }}>
             <Typography variant="body2" sx={{ 
-              color: 'rgba(255, 255, 255, 0.7)',
-              textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+              color: isDarkTheme 
+                ? 'rgba(255, 255, 255, 0.7)'
+                : 'rgba(0, 0, 0, 0.5)',
+              textShadow: isDarkTheme 
+                ? '0 1px 2px rgba(0,0,0,0.3)'
+                : 'none',
+              transition: 'color 0.3s ease'
             }}>
               © 2024 Willowglen Systems. All rights reserved.
             </Typography>
           </Box>
         </Container>
       </Box>
+
+      {/* Theme Toggle UI */}
+      <Tooltip
+        title="Switch between dark and light theme"
+        placement="right"
+        arrow
+      >
+        <ToggleContainer onClick={handleThemeToggle}>
+          <ToggleLabel>
+            {isDarkTheme ? 'Dark' : 'Light'}
+          </ToggleLabel>
+          <ToggleSwitch isActive={isDarkTheme}>
+            <ToggleKnob isActive={isDarkTheme} />
+          </ToggleSwitch>
+        </ToggleContainer>
+      </Tooltip>
     </Box>
   );
 };
