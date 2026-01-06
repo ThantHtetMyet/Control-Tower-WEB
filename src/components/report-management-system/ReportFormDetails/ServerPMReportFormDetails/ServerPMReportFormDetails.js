@@ -430,22 +430,81 @@ const ServerPMReportFormDetails = () => {
     }
 
     try {
-      const response = await downloadFinalReportAttachment(report.id);
-      const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      // Use fetch API instead of axios for better blob handling with SSL
+      const token = localStorage.getItem('token');
+      const downloadUrl = `${API_BASE_URL}/api/reportformfinalreport/download/${report.id}`;
+      
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        // Try to get error message from response
+        let errorMessage = `Failed to download final report (${response.status}).`;
+        try {
+          const errorText = await response.text();
+          const jsonMatch = errorText.match(/\{.*"message".*\}/);
+          if (jsonMatch) {
+            const errorObj = JSON.parse(jsonMatch[0]);
+            errorMessage = errorObj.message || errorMessage;
+          }
+        } catch (e) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Get the blob from response
+      const blob = await response.blob();
+      
+      // Basic validation: check if blob size is reasonable (PDFs are typically > 1KB)
+      if (blob.size < 100) {
+        // Very small blob might be an error message
+        const text = await blob.text();
+        if (text.includes('error') || text.includes('Error') || text.includes('message') || text.includes('<!DOCTYPE')) {
+          let errorMessage = 'Failed to download final report.';
+          try {
+            const jsonMatch = text.match(/\{.*"message".*\}/);
+            if (jsonMatch) {
+              const errorObj = JSON.parse(jsonMatch[0]);
+              errorMessage = errorObj.message || errorMessage;
+            }
+          } catch (e) {
+            // If parsing fails, use default message
+          }
+          throw new Error(errorMessage);
+        }
+      }
       const fileName = report.attachmentName || `FinalReport_${formData?.jobNo || 'report'}.pdf`;
-      link.href = downloadUrl;
+
+      // Create download link
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Error downloading final report:', error);
+      
+      // Extract error message
+      let errorMessage = 'Failed to download final report.';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.name === 'TypeError' && error.message?.includes('fetch')) {
+        errorMessage = 'Network error. Please check your connection and SSL certificate settings. If using HTTPS with localhost, you may need to accept the SSL certificate in your browser.';
+      }
+
       setNotification({
         open: true,
-        message: error.response?.data?.message || error.message || 'Failed to download final report.',
+        message: errorMessage,
         severity: 'error'
       });
     }

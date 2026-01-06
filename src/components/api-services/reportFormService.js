@@ -197,7 +197,12 @@ export const getFinalReportsByReportForm = async (reportFormId) => {
 
 export const downloadFinalReportAttachment = async (finalReportId) => {
   return api.get(`/reportformfinalreport/download/${finalReportId}`, {
-    responseType: 'blob'
+    responseType: 'blob',
+    timeout: 60000, // 60 seconds timeout for large files
+    validateStatus: function (status) {
+      // Accept status codes less than 500
+      return status < 500;
+    }
   });
 };
 
