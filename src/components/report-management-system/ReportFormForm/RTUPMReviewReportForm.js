@@ -28,6 +28,8 @@ import {
   Tab,
   ToggleButton,
   ToggleButtonGroup,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -43,7 +45,8 @@ import {
   UploadFile as UploadFileIcon,
   Brush as BrushIcon,
   Clear as ClearIcon,
-  PhotoCamera
+  PhotoCamera,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import RMSTheme from '../../theme-resource/RMSTheme';
@@ -292,6 +295,7 @@ const RTUPMReviewReportForm = ({
   const approvedByCanvasRef = useRef(null);
   const [isDrawingAttended, setIsDrawingAttended] = useState(false);
   const [isDrawingApproved, setIsDrawingApproved] = useState(false);
+  const [signatureClearKey, setSignatureClearKey] = useState(0); // Track signature clearing to force re-render
 
   const resolvedStatusName = (() => {
     const match = (formStatusOptions || []).find((s) => (s.id || s.ID) === formData.formstatusID);
@@ -363,6 +367,46 @@ const RTUPMReviewReportForm = ({
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    // Force re-render to update tab disabled state
+    setSignatureClearKey(prev => prev + 1);
+  };
+
+  // Helper function to check if signatures have been started
+  const hasSignaturesStarted = () => {
+    // Check if any signature file has been uploaded
+    if (attendedBySignature || approvedBySignature) {
+      return true;
+    }
+    
+    // Check if any canvas has drawing
+    if (attendedByCanvasRef.current) {
+      const canvas = attendedByCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const hasDrawing = imageData.data.some(channel => channel !== 0);
+      if (hasDrawing) return true;
+    }
+    
+    if (approvedByCanvasRef.current) {
+      const canvas = approvedByCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const hasDrawing = imageData.data.some(channel => channel !== 0);
+      if (hasDrawing) return true;
+    }
+    
+    return false;
+  };
+
+  // Handler to clear final report file
+  const handleClearFinalReportFile = () => {
+    setFinalReportFile(null);
+    setFinalReportUploadError('');
+    // Reset file input
+    const fileInput = document.querySelector('input[type="file"][accept="application/pdf"]');
+    if (fileInput) {
+      fileInput.value = '';
+    }
   };
 
   const canvasToBlob = (canvas) => {
@@ -1160,42 +1204,147 @@ const RTUPMReviewReportForm = ({
         </DialogTitle>
         
         {/* Tabs */}
-        <Tabs
-          value={activeTab}
-          onChange={(e, newValue) => {
-            setActiveTab(newValue);
-            setFinalReportUploadError(''); // Clear errors when switching tabs
-          }}
-          centered
-          sx={{
-            borderBottom: '1px solid rgba(226,232,240,0.2)',
-            '& .MuiTab-root': {
-              color: 'rgba(226,232,240,0.6)',
-              fontWeight: 600,
-              textTransform: 'none',
-              fontSize: '14px',
-              minHeight: '48px',
-              '&.Mui-selected': {
-                color: '#4ade80',
+        <Box sx={{ position: 'relative' }}>
+          <Tabs
+            value={activeTab}
+            onChange={(e, newValue) => {
+              // Prevent switching if target tab is disabled and show warning
+              if (newValue === 0 && hasSignaturesStarted()) {
+                setNotification({
+                  open: true,
+                  message: 'This option is unavailable because you have already started providing signatures. Please use only one method to close the report: either upload a PDF report or provide signatures.',
+                  severity: 'warning'
+                });
+                return;
               }
-            },
-            '& .MuiTabs-indicator': {
-              backgroundColor: '#4ade80',
-              height: '3px'
-            }
-          }}
-        >
-          <Tab 
-            icon={<UploadFileIcon sx={{ fontSize: 20 }} />} 
-            iconPosition="start"
-            label="Upload PDF Report" 
-          />
-          <Tab 
-            icon={<BrushIcon sx={{ fontSize: 20 }} />} 
-            iconPosition="start"
-            label="Provide Signatures" 
-          />
-        </Tabs>
+              if (newValue === 1 && finalReportFile) {
+                setNotification({
+                  open: true,
+                  message: 'This option is unavailable because you have already uploaded a PDF report. Please use only one method to close the report: either upload a PDF report or provide signatures.',
+                  severity: 'warning'
+                });
+                return;
+              }
+              setActiveTab(newValue);
+              setFinalReportUploadError(''); // Clear errors when switching tabs
+            }}
+            centered
+            sx={{
+              borderBottom: '1px solid rgba(226,232,240,0.2)',
+              '& .MuiTab-root': {
+                color: 'rgba(226,232,240,0.6)',
+                fontWeight: 600,
+                textTransform: 'none',
+                fontSize: '14px',
+                minHeight: '48px',
+                '&.Mui-selected': {
+                  color: '#4ade80',
+                },
+                '&.Mui-disabled': {
+                  opacity: 0.4,
+                  cursor: 'not-allowed'
+                }
+              },
+              '& .MuiTabs-indicator': {
+                backgroundColor: '#4ade80',
+                height: '3px'
+              }
+            }}
+          >
+            <Tab 
+              icon={<UploadFileIcon sx={{ fontSize: 20 }} />} 
+              iconPosition="start"
+              label="Upload PDF Report"
+              disabled={hasSignaturesStarted()}
+            />
+            <Tab 
+              icon={<BrushIcon sx={{ fontSize: 20 }} />} 
+              iconPosition="start"
+              label="Provide Signatures"
+              disabled={!!finalReportFile}
+            />
+          </Tabs>
+          
+          {/* Tooltip overlay for disabled "Upload PDF Report" tab */}
+          {hasSignaturesStarted() && (
+            <Tooltip
+              title="This option is unavailable because you have already started providing signatures. Please use only one method to close the report: either upload a PDF report or provide signatures."
+              placement="top"
+              arrow
+              componentsProps={{
+                tooltip: {
+                  sx: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    color: '#f8fafc',
+                    fontSize: '13px',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                    maxWidth: '320px'
+                  }
+                },
+                arrow: {
+                  sx: {
+                    color: 'rgba(15, 23, 42, 0.95)'
+                  }
+                }
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: 0,
+                  transform: 'translateX(calc(-50% - 150px))',
+                  width: '200px',
+                  height: '48px',
+                  zIndex: 1,
+                  cursor: 'not-allowed'
+                }}
+              />
+            </Tooltip>
+          )}
+          
+          {/* Tooltip overlay for disabled "Provide Signatures" tab */}
+          {finalReportFile && (
+            <Tooltip
+              title="This option is unavailable because you have already uploaded a PDF report. Please use only one method to close the report: either upload a PDF report or provide signatures."
+              placement="top"
+              arrow
+              componentsProps={{
+                tooltip: {
+                  sx: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    color: '#f8fafc',
+                    fontSize: '13px',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                    maxWidth: '320px'
+                  }
+                },
+                arrow: {
+                  sx: {
+                    color: 'rgba(15, 23, 42, 0.95)'
+                  }
+                }
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: 0,
+                  transform: 'translateX(calc(-50% + 150px))',
+                  width: '200px',
+                  height: '48px',
+                  zIndex: 1,
+                  cursor: 'not-allowed'
+                }}
+              />
+            </Tooltip>
+          )}
+        </Box>
 
         <DialogContent
           sx={{
@@ -1236,17 +1385,38 @@ const RTUPMReviewReportForm = ({
                 />
               </Button>
               {finalReportFile && (
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    display: 'block', 
-                    mt: 1, 
-                    textAlign: 'center', 
-                    color: '#4ade80' 
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1,
+                    mt: 1
                   }}
                 >
-                  ✓ File selected: {finalReportFile.name}
-                </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: '#4ade80',
+                      textAlign: 'center'
+                    }}
+                  >
+                    ✓ File selected: {finalReportFile.name}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={handleClearFinalReportFile}
+                    sx={{
+                      color: 'rgba(226,232,240,0.8)',
+                      '&:hover': {
+                        color: '#ef4444',
+                        backgroundColor: 'rgba(239,68,68,0.1)'
+                      }
+                    }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Box>
               )}
             </Box>
           )}
@@ -1559,12 +1729,13 @@ const RTUPMReviewReportForm = ({
         onClose={handleCloseNotification}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
+          <Alert
           onClose={handleCloseNotification}
           severity={notification.severity}
           sx={{
             width: '100%',
-            backgroundColor: notification.severity === 'success' ? '#4caf50' : '#f44336',
+            backgroundColor: notification.severity === 'success' ? '#4caf50' : 
+                            notification.severity === 'warning' ? '#ff9800' : '#f44336',
             color: 'white',
             '& .MuiAlert-icon': {
               color: 'white'
